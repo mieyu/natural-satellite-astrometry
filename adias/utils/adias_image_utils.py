@@ -7,12 +7,10 @@ from scipy.ndimage import median_filter, uniform_filter
 
 def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     """
-    迭代 Sigma-Clipping 估计图像背景均值和标准差。
-    严格对齐 Fortran 原版 cal_b 子程序：
-      1. 计算全局均值和 sigma
-      2. 剔除偏离均值超过 sigma_factor 倍 sigma 的像素
-      3. 重复直至 sigma 收敛或达到最大迭代次数
+    使用迭代 Sigma-Clipping（Sigma 剔除）算法计算图像或数组的背景均值和标准差。
 
+    该算法通过多次迭代，不断剔除掉偏离均值超过 `sigma_factor` 倍标准差的异常值，
+    从而获得更准确、不受极端值（如亮星、坏像素）影响的背景统计信息。
     Parameters
     ----------
     data          : np.ndarray，输入图像（任意形状）
@@ -25,24 +23,30 @@ def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     avervalue : float，背景均值
     sigma     : float，背景标准差
     """
-    flat = data.flatten().astype(np.float64)
+    flat = np.asarray(data, dtype=np.float64).ravel()
     n = len(flat)
     if n < 2:
         return (float(flat[0]) if n == 1 else 0.0), 0.0
 
     avervalue = np.mean(flat)
-    sigma = np.sqrt(np.sum((flat - avervalue) ** 2) / (n - 1))
+    sigma = np.std(flat, ddof=1)
 
     for _ in range(max_iter):
         old_sigma = sigma
-        clipped = flat[np.abs(flat - avervalue) <= sigma_factor * sigma]
+
+        threshold = sigma_factor * sigma
+        clipped = flat[np.abs(flat - avervalue) <= threshold]
+
         if len(clipped) < 2:
             break
+
         avervalue = np.mean(clipped)
-        sigma2 = np.sqrt(np.sum((clipped - avervalue) ** 2) / (len(clipped) - 1))
+        sigma2 = np.std(clipped, ddof=1)
+
         if sigma2 <= 1e-6 or abs(sigma2 - old_sigma) < convergence * old_sigma:
             sigma = sigma2
             break
+        
         sigma = sigma2
 
     return avervalue, sigma
