@@ -1,0 +1,515 @@
+==================== [ 1/1 ] ====================
+正在处理路径: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9
+当前配置参数: {'biasflag': 0, 'darkflag': 0, 'flatflag': 0, 'superflag': 1, 'med_length': 55, 'med_width': 1, 'bkgdmode': 2, 'enhance_flag': 1}
+已生成fit文件序列--> /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/fits.lst
+
+--- 进入super模式 ---
+--- 开始处理文件: 20251125S9-001I.fit ---
+预处理前图像背景及sigma: 690.828, 7.491
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 690.863, 6.620
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 690.858, 6.577
+3*3均值滤波后图像背景及sigma: 690.885, 2.158
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-001I_n.fit
+--- 开始处理文件: 20251125S9-002I.fit ---
+预处理前图像背景及sigma: 678.283, 7.200
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 678.308, 6.320
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 678.302, 6.280
+3*3均值滤波后图像背景及sigma: 678.325, 2.063
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-002I_n.fit
+--- 开始处理文件: 20251125S9-003I.fit ---
+预处理前图像背景及sigma: 672.295, 6.927
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 672.317, 6.199
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 672.313, 6.162
+3*3均值滤波后图像背景及sigma: 672.340, 2.009
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-003I_n.fit
+--- 开始处理文件: 20251125S9-004I.fit ---
+预处理前图像背景及sigma: 1163.572, 420.189
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 1163.577, 2.877
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 1163.572, 2.857
+3*3均值滤波后图像背景及sigma: 1163.575, 0.986
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-004I_n.fit
+--- 开始处理文件: 20251125S9-005I.fit ---
+预处理前图像背景及sigma: 555.018, 7.103
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 555.029, 2.755
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 555.026, 2.746
+3*3均值滤波后图像背景及sigma: 555.041, 0.895
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-005I_n.fit
+--- 开始处理文件: 20251125S9-006I.fit ---
+预处理前图像背景及sigma: 675.869, 7.016
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.904, 6.250
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.898, 6.210
+3*3均值滤波后图像背景及sigma: 675.926, 2.035
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-006I_n.fit
+--- 开始处理文件: 20251125S9-007I.fit ---
+预处理前图像背景及sigma: 673.092, 6.975
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 673.124, 6.181
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 673.111, 6.031
+3*3均值滤波后图像背景及sigma: 673.144, 2.002
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-007I_n.fit
+--- 开始处理文件: 20251125S9-008I.fit ---
+预处理前图像背景及sigma: 671.454, 6.903
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 671.516, 6.108
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 671.460, 6.012
+3*3均值滤波后图像背景及sigma: 671.496, 1.995
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-008I_n.fit
+--- 开始处理文件: 20251125S9-009I.fit ---
+预处理前图像背景及sigma: 700.514, 7.994
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 700.520, 6.905
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 700.512, 6.755
+3*3均值滤波后图像背景及sigma: 700.550, 2.242
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-009I_n.fit
+--- 开始处理文件: 20251125S9-010I.fit ---
+预处理前图像背景及sigma: 701.775, 8.050
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 701.829, 6.873
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 701.775, 6.770
+3*3均值滤波后图像背景及sigma: 701.810, 2.245
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-010I_n.fit
+--- 开始处理文件: 20251125S9-011I.fit ---
+预处理前图像背景及sigma: 694.774, 7.847
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 694.777, 6.733
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 694.771, 6.691
+3*3均值滤波后图像背景及sigma: 694.805, 2.221
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-011I_n.fit
+--- 开始处理文件: 20251125S9-012I.fit ---
+预处理前图像背景及sigma: 694.822, 7.863
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 694.840, 6.728
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 694.836, 6.684
+3*3均值滤波后图像背景及sigma: 694.868, 2.208
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-012I_n.fit
+--- 开始处理文件: 20251125S9-013I.fit ---
+预处理前图像背景及sigma: 695.133, 7.895
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 695.148, 6.740
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 695.145, 6.695
+3*3均值滤波后图像背景及sigma: 695.179, 2.210
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-013I_n.fit
+--- 开始处理文件: 20251125S9-014I.fit ---
+预处理前图像背景及sigma: 1646.337, 254.186
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 1646.340, 2.072
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 1646.336, 2.064
+3*3均值滤波后图像背景及sigma: 1646.347, 0.699
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-014I_n.fit
+--- 开始处理文件: 20251125S9-015I.fit ---
+预处理前图像背景及sigma: 677.157, 8.968
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 677.173, 6.707
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 677.168, 6.663
+3*3均值滤波后图像背景及sigma: 677.203, 2.200
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-015I_n.fit
+--- 开始处理文件: 20251125S9-016I.fit ---
+预处理前图像背景及sigma: 691.591, 7.944
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 691.621, 6.648
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 691.615, 6.602
+3*3均值滤波后图像背景及sigma: 691.645, 2.169
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-016I_n.fit
+--- 开始处理文件: 20251125S9-017I.fit ---
+预处理前图像背景及sigma: 692.881, 7.853
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 692.907, 6.658
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 692.901, 6.616
+3*3均值滤波后图像背景及sigma: 692.933, 2.173
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-017I_n.fit
+--- 开始处理文件: 20251125S9-018I.fit ---
+预处理前图像背景及sigma: 690.979, 7.846
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 691.010, 6.623
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 691.004, 6.581
+3*3均值滤波后图像背景及sigma: 691.035, 2.161
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-018I_n.fit
+--- 开始处理文件: 20251125S9-019I.fit ---
+预处理前图像背景及sigma: 690.460, 7.912
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 690.491, 6.612
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 690.485, 6.570
+3*3均值滤波后图像背景及sigma: 690.515, 2.157
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-019I_n.fit
+--- 开始处理文件: 20251125S9-020I.fit ---
+预处理前图像背景及sigma: 686.925, 7.788
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 686.942, 6.566
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 686.930, 6.412
+3*3均值滤波后图像背景及sigma: 686.968, 2.128
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-020I_n.fit
+--- 开始处理文件: 20251125S9-021I.fit ---
+预处理前图像背景及sigma: 685.340, 7.809
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 685.349, 6.549
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 685.339, 6.397
+3*3均值滤波后图像背景及sigma: 685.377, 2.124
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-021I_n.fit
+--- 开始处理文件: 20251125S9-022I.fit ---
+预处理前图像背景及sigma: 684.842, 7.777
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 684.891, 6.490
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 684.838, 6.389
+3*3均值滤波后图像背景及sigma: 684.875, 2.121
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-022I_n.fit
+--- 开始处理文件: 20251125S9-023I.fit ---
+预处理前图像背景及sigma: 605.334, 45.873
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 605.337, 4.265
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 605.334, 4.237
+3*3均值滤波后图像背景及sigma: 605.353, 1.378
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-023I_n.fit
+--- 开始处理文件: 20251125S9-024I.fit ---
+预处理前图像背景及sigma: 557.971, 6.070
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 557.979, 2.806
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 557.977, 2.796
+3*3均值滤波后图像背景及sigma: 557.987, 0.917
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-024I_n.fit
+--- 开始处理文件: 20251125S9-025I.fit ---
+预处理前图像背景及sigma: 681.116, 7.547
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 681.116, 6.356
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 681.116, 6.314
+3*3均值滤波后图像背景及sigma: 681.152, 2.085
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-025I_n.fit
+--- 开始处理文件: 20251125S9-026I.fit ---
+预处理前图像背景及sigma: 683.814, 7.645
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 683.811, 6.377
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 683.809, 6.335
+3*3均值滤波后图像背景及sigma: 683.846, 2.089
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-026I_n.fit
+--- 开始处理文件: 20251125S9-027I.fit ---
+预处理前图像背景及sigma: 698.616, 8.121
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 698.620, 6.752
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 698.615, 6.707
+3*3均值滤波后图像背景及sigma: 698.650, 2.214
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-027I_n.fit
+--- 开始处理文件: 20251125S9-028I.fit ---
+预处理前图像背景及sigma: 680.968, 7.455
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 680.972, 6.326
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 680.970, 6.284
+3*3均值滤波后图像背景及sigma: 680.999, 2.068
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-028I_n.fit
+--- 开始处理文件: 20251125S9-029I.fit ---
+预处理前图像背景及sigma: 679.393, 7.452
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 679.401, 6.316
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 679.398, 6.275
+3*3均值滤波后图像背景及sigma: 679.427, 2.063
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-029I_n.fit
+--- 开始处理文件: 20251125S9-030I.fit ---
+预处理前图像背景及sigma: 675.435, 7.284
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.464, 6.260
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.459, 6.221
+3*3均值滤波后图像背景及sigma: 675.489, 2.040
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-030I_n.fit
+--- 开始处理文件: 20251125S9-031I.fit ---
+预处理前图像背景及sigma: 674.982, 7.315
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.015, 6.256
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.011, 6.217
+3*3均值滤波后图像背景及sigma: 675.040, 2.040
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-031I_n.fit
+--- 开始处理文件: 20251125S9-032I.fit ---
+预处理前图像背景及sigma: 686.805, 7.647
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 686.821, 6.574
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 686.811, 6.420
+3*3均值滤波后图像背景及sigma: 686.848, 2.132
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-032I_n.fit
+--- 开始处理文件: 20251125S9-033I.fit ---
+预处理前图像背景及sigma: 675.119, 7.155
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.154, 6.265
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.149, 6.224
+3*3均值滤波后图像背景及sigma: 675.179, 2.040
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-033I_n.fit
+--- 开始处理文件: 20251125S9-034I.fit ---
+预处理前图像背景及sigma: 693.470, 7.722
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 693.498, 6.704
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 693.493, 6.660
+3*3均值滤波后图像背景及sigma: 693.525, 2.185
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-034I_n.fit
+--- 开始处理文件: 20251125S9-035I.fit ---
+预处理前图像背景及sigma: 675.823, 7.113
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.854, 6.271
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.850, 6.230
+3*3均值滤波后图像背景及sigma: 675.879, 2.041
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-035I_n.fit
+--- 开始处理文件: 20251125S9-036I.fit ---
+预处理前图像背景及sigma: 674.303, 7.096
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 674.336, 6.241
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 674.331, 6.203
+3*3均值滤波后图像背景及sigma: 674.361, 2.031
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-036I_n.fit
+--- 开始处理文件: 20251125S9-037I.fit ---
+预处理前图像背景及sigma: 675.725, 7.083
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 675.761, 6.270
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 675.756, 6.230
+3*3均值滤波后图像背景及sigma: 675.783, 2.040
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-037I_n.fit
+--- 开始处理文件: 20251125S9-038I.fit ---
+预处理前图像背景及sigma: 673.439, 6.968
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 673.471, 6.231
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 673.465, 6.192
+3*3均值滤波后图像背景及sigma: 673.494, 2.017
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-038I_n.fit
+--- 开始处理文件: 20251125S9-039I.fit ---
+预处理前图像背景及sigma: 671.899, 6.986
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 671.925, 6.205
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 671.920, 6.166
+3*3均值滤波后图像背景及sigma: 671.951, 2.024
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-039I_n.fit
+--- 开始处理文件: 20251125S9-040I.fit ---
+预处理前图像背景及sigma: 2875.658, 90.543
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 2875.662, 2.933
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 2875.665, 2.913
+3*3均值滤波后图像背景及sigma: 2875.664, 0.944
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-040I_n.fit
+--- 开始处理文件: 20251125S9-041I.fit ---
+预处理前图像背景及sigma: 672.367, 8.924
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 672.393, 6.266
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 672.390, 6.227
+3*3均值滤波后图像背景及sigma: 672.423, 2.054
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-041I_n.fit
+--- 开始处理文件: 20251125S9-042I.fit ---
+预处理前图像背景及sigma: 670.794, 6.860
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 670.805, 6.028
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 670.802, 5.988
+3*3均值滤波后图像背景及sigma: 670.833, 1.983
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-042I_n.fit
+--- 开始处理文件: 20251125S9-043I.fit ---
+预处理前图像背景及sigma: 669.438, 6.798
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 669.437, 6.015
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 669.434, 5.977
+3*3均值滤波后图像背景及sigma: 669.464, 1.976
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-043I_n.fit
+--- 开始处理文件: 20251125S9-044I.fit ---
+预处理前图像背景及sigma: 669.961, 6.755
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 669.961, 6.017
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 669.962, 5.979
+3*3均值滤波后图像背景及sigma: 669.998, 1.983
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-044I_n.fit
+--- 开始处理文件: 20251125S9-045I.fit ---
+预处理前图像背景及sigma: 667.456, 6.726
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 667.455, 5.972
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 667.454, 5.935
+3*3均值滤波后图像背景及sigma: 667.489, 1.956
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-045I_n.fit
+--- 开始处理文件: 20251125S9-046I.fit ---
+预处理前图像背景及sigma: 665.230, 6.634
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 665.234, 5.950
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 665.232, 5.912
+3*3均值滤波后图像背景及sigma: 665.260, 1.943
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-046I_n.fit
+--- 开始处理文件: 20251125S9-047I.fit ---
+预处理前图像背景及sigma: 663.684, 6.551
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 663.698, 5.928
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 663.693, 5.892
+3*3均值滤波后图像背景及sigma: 663.722, 1.937
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-047I_n.fit
+--- 开始处理文件: 20251125S9-048I.fit ---
+预处理前图像背景及sigma: 666.442, 6.744
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 666.443, 5.981
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 666.439, 5.943
+3*3均值滤波后图像背景及sigma: 666.474, 1.960
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-048I_n.fit
+--- 开始处理文件: 20251125S9-049I.fit ---
+预处理前图像背景及sigma: 693.635, 7.665
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 693.669, 6.707
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 693.660, 6.662
+3*3均值滤波后图像背景及sigma: 693.691, 2.205
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-049I_n.fit
+--- 开始处理文件: 20251125S9-050I.fit ---
+预处理前图像背景及sigma: 689.126, 7.512
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 689.154, 6.628
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 689.148, 6.584
+3*3均值滤波后图像背景及sigma: 689.177, 2.161
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-050I_n.fit
+--- 开始处理文件: 20251125S9-051I.fit ---
+预处理前图像背景及sigma: 687.864, 7.465
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 687.887, 6.605
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 687.882, 6.561
+3*3均值滤波后图像背景及sigma: 687.909, 2.153
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-051I_n.fit
+--- 开始处理文件: 20251125S9-052I.fit ---
+预处理前图像背景及sigma: 686.489, 7.364
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 686.499, 6.577
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 686.497, 6.534
+3*3均值滤波后图像背景及sigma: 686.521, 2.141
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-052I_n.fit
+--- 开始处理文件: 20251125S9-053I.fit ---
+预处理前图像背景及sigma: 687.005, 7.433
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 687.021, 6.587
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 687.018, 6.545
+3*3均值滤波后图像背景及sigma: 687.042, 2.143
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-053I_n.fit
+--- 开始处理文件: 20251125S9-054I.fit ---
+预处理前图像背景及sigma: 688.046, 7.445
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 688.066, 6.605
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 688.062, 6.561
+3*3均值滤波后图像背景及sigma: 688.092, 2.155
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-054I_n.fit
+--- 开始处理文件: 20251125S9-055I.fit ---
+预处理前图像背景及sigma: 689.788, 7.487
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 689.816, 6.643
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 689.812, 6.598
+3*3均值滤波后图像背景及sigma: 689.843, 2.169
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-055I_n.fit
+--- 开始处理文件: 20251125S9-056I.fit ---
+预处理前图像背景及sigma: 688.078, 7.463
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 688.098, 6.609
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 688.094, 6.564
+3*3均值滤波后图像背景及sigma: 688.123, 2.157
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-056I_n.fit
+--- 开始处理文件: 20251125S9-057I.fit ---
+预处理前图像背景及sigma: 687.306, 7.439
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 687.320, 6.596
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 687.317, 6.552
+3*3均值滤波后图像背景及sigma: 687.343, 2.147
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-057I_n.fit
+--- 开始处理文件: 20251125S9-058I.fit ---
+预处理前图像背景及sigma: 1978.185, 383.807
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 1978.180, 8.910
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 1978.112, 8.772
+3*3均值滤波后图像背景及sigma: 1978.153, 2.856
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-058I_n.fit
+--- 开始处理文件: 20251125S9-059I.fit ---
+预处理前图像背景及sigma: 596.205, 23.098
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 596.212, 4.065
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 596.208, 4.039
+3*3均值滤波后图像背景及sigma: 596.228, 1.345
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-059I_n.fit
+--- 开始处理文件: 20251125S9-060I.fit ---
+预处理前图像背景及sigma: 687.262, 7.450
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 687.281, 6.584
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 687.277, 6.540
+3*3均值滤波后图像背景及sigma: 687.308, 2.137
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-060I_n.fit
+--- 开始处理文件: 20251125S9-061I.fit ---
+预处理前图像背景及sigma: 692.316, 7.593
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 692.348, 6.655
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 692.342, 6.610
+3*3均值滤波后图像背景及sigma: 692.373, 2.173
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-061I_n.fit
+--- 开始处理文件: 20251125S9-062I.fit ---
+预处理前图像背景及sigma: 694.102, 7.612
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 694.128, 6.688
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 694.123, 6.645
+3*3均值滤波后图像背景及sigma: 694.152, 2.196
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-062I_n.fit
+--- 开始处理文件: 20251125S9-063I.fit ---
+预处理前图像背景及sigma: 691.785, 7.493
+第一次~中值滤波窗口(length,width): 55, 1
+第一次滤波后的图像背景及sigma: 691.820, 6.642
+第二次~中值滤波窗口(length,width): 1, 55
+第二次滤波后的图像背景及sigma: 691.814, 6.597
+3*3均值滤波后图像背景及sigma: 691.843, 2.169
+处理完成，结果已保存到: /Users/liuhongyu/PythonProject/AstroPyFITS/observation_image_S9/20251125S9-063I_n.fit
+
+==================================================
+所有 1 天的数据处理完毕。
+==================================================
+代码总耗时: 284.36 s

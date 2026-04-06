@@ -1,0 +1,47 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ===== Virtual env =====
+.venv/
+venv/
+env/
+
+# ===== IDE / OS =====
+.idea/
+.vscode/
+.DS_Store
+
+# ===== Build / packaging =====
+build/
+dist/
+*.egg-info/
+
+# ===== ADIAS pipeline generated files =====
+**/fits.lst
+**/*_n.fit
+**/*_n.fit*
+**/*.reg
+**/*.ref.reg
+
+**/object_*.out
+**/final_object_*.out
+**/final_oc_*.out
+**/00oc_*.out
+**/*_obsdata_*.out
+**/*_all_*.out
+**/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.out
+
+
+# ===== Large observation/catalog data (usually should not be in code repo) =====
+observation_image/
+observation_image_S9/
+MATH/
+MATH_S9/
+lhycat/
+lhycat_S9/
