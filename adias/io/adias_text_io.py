@@ -92,3 +92,36 @@ def clean_old_files(fitspath):
             removed += 1
     if removed:
         print(f"已清理旧文件 {removed} 个 <- {fitspath}")
+
+def write_reg_file(reg_path, stars, bkgd, bkgdsigma, snr_threshold):
+    """
+    将星象检测结果写出为 DS9 region 格式的 .reg 文件。
+
+    Parameters
+    ----------
+    reg_path      : str，输出文件路径（形如 xxx.fit.reg）
+    stars         : list[dict]，detect_stars_xzj 返回的星表
+    bkgd          : float，背景均值
+    bkgdsigma     : float，背景 sigma
+    snr_threshold : float，SNR 阈值，低于此值的星不写出
+
+    Returns
+    -------
+    int，实际写出的星数
+    """
+    n_out = 0
+    with open(reg_path, 'w') as f:
+        f.write('global color=green font="helvetica 10 normal" '
+                'select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source\n')
+        f.write('physical\n')
+        for s in stars:
+            if s['snr'] > snr_threshold and s['star_pix'] > 5:
+                f.write(
+                    f"ellipse {s['starx']:11.3f}{s['stary']:11.3f}"
+                    f"{10.0:6.1f}{10.0:6.1f}   #  "
+                    f"{s['sumi']:21.4f}{s['snr']:10.2f}"
+                    f"{s['star_id']:5d}{s['star_pix']:5d}{s['overflag']:5d}"
+                    f"{bkgd:15.3f}{bkgdsigma:15.3f}\n"
+                )
+                n_out += 1
+    return n_out

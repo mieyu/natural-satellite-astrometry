@@ -8,6 +8,7 @@ import time
 from adias.adias_config      import parse_config
 from adias.io.adias_text_io  import read_fitspath
 from adias.core.adias_preprocessor import run_pre
+from adias.core.adias_detector import run_detect
 
 
 def main():
@@ -36,9 +37,7 @@ def main():
 
     if args.step in ('detect', 'all'):
         print("========== 02: 星象检测 ==========")
-        # from adias.core.detector import run_detect
-        # run_detect(config, fitspath_list)
-        print("（detector 待接入）")
+        run_detect(config, fitspath_list)
 
     if args.step in ('match', 'all'):
         print("========== 03: 星象匹配归算 ==========")

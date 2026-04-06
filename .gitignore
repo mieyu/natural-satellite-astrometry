@@ -41,6 +41,7 @@ dist/
 # ===== Large observation/catalog data (usually should not be in code repo) =====
 observation_image/
 observation_image_S9/
+observation_image_S9_after/
 MATH/
 MATH_S9/
 lhycat/

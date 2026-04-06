@@ -1,8 +1,8 @@
 # 功能：图像统计与滤波工具函数（背景估计、中值滤波、均值滤波）。
-# 使用：from adias.utils.image_utils import cal_b, apply_superbkgd
+# 使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
 
 import numpy as np
-from scipy.ndimage import median_filter, uniform_filter
+from scipy.ndimage import median_filter, uniform_filter, label as ndimage_label
 
 
 def calculate_background(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
@@ -68,8 +68,16 @@ def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
     -------
     np.ndarray，扣除背景后的图像
     """
-    kernel = (med_width, 1) if med_width > 1 else (1, med_length)
+    # 判断：给定的 med_width 是否大于 1？
+    if med_width > 1:
+        # 如果大于 1，就生成一个“竖长条”形状的窗口
+        kernel = (med_width, 1)  
+    else:
+        # 如果不大于 1，就忽略 med_width，用 med_length 生成一个“横长条”形状的窗口
+        kernel = (1, med_length)
+        
     bg = median_filter(data, size=kernel)
+
     if bkgdmode == 1:
         return data / bg * bkgd0
     else:
@@ -89,3 +97,81 @@ def apply_smooth(data):
     np.ndarray
     """
     return uniform_filter(data, size=3)
+
+
+def detect_stars_xzj(data, bkgd_threshold, pos_method):
+    """
+    连通域星象检测 + 修正矩定中心（子像素精度）。
+
+    Parameters
+    ----------
+    data            : np.ndarray，float64 图像数据
+    bkgd_threshold  : float，背景起伏阈值系数
+    pos_method      : int，修正矩阶数（1/2/3）
+
+    Returns
+    -------
+    detected_stars : list[dict]，按亮度降序排列的星表
+        每个 dict 包含：starx, stary, sumi, snr, star_id, star_pix, overflag
+    bkgd           : float，背景均值
+    bkgdsigma      : float，背景 sigma
+    """
+    naxis2, naxis1 = data.shape
+    maxflux = 65535.0
+    minpix  = 3
+    maxpix  = int(np.pi * 40 ** 2)
+
+    bkgd, bkgdsigma = calculate_background(data)
+
+    # 阈值分割并清除边缘
+    data_thresh = data - (bkgd + bkgd_threshold * bkgdsigma)
+    data_thresh[data_thresh < 0] = 0
+    data_thresh[0, :]  = 0
+    data_thresh[-1, :] = 0
+    data_thresh[:, 0]  = 0
+    data_thresh[:, -1] = 0
+
+    structure = np.ones((3, 3), dtype=int)
+    labels, num_features = ndimage_label(data_thresh > 0, structure=structure)
+
+    if num_features == 0:
+        return [], bkgd, bkgdsigma
+
+    detected_stars = []
+    for i in range(1, num_features + 1):
+        coords  = np.where(labels == i)
+        num_pix = len(coords[0])
+        if not (minpix <= num_pix <= maxpix):
+            continue
+
+        pixel_values_orig   = data[coords]
+        if np.any(pixel_values_orig >= maxflux):   # 过曝跳过
+            continue
+
+        pixel_values_thresh = data_thresh[coords]
+        weights     = pixel_values_thresh ** pos_method
+        sum_weights = np.sum(weights)
+        if sum_weights < 1e-9:
+            continue
+
+        stary_0 = np.sum(coords[0] * weights) / sum_weights
+        starx_0 = np.sum(coords[1] * weights) / sum_weights
+        if not (10 <= starx_0 < naxis1 - 10 and 10 <= stary_0 < naxis2 - 10):
+            continue
+
+        sumi_real     = np.sum(pixel_values_thresh)
+        snr_denom     = np.sqrt(sumi_real + num_pix * bkgdsigma ** 2)
+        snr           = sumi_real / snr_denom if snr_denom > 0 else 0
+
+        detected_stars.append({
+            'starx':    starx_0 + 1,
+            'stary':    stary_0 + 1,
+            'sumi':     sumi_real,
+            'snr':      snr,
+            'star_id':  i,
+            'star_pix': num_pix,
+            'overflag': 0,
+        })
+
+    detected_stars.sort(key=lambda s: s['sumi'], reverse=True)
+    return detected_stars, bkgd, bkgdsigma
