@@ -5,7 +5,7 @@ import numpy as np
 from scipy.ndimage import median_filter, uniform_filter
 
 
-def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
+def calculate_background(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     """
     使用迭代 Sigma-Clipping（Sigma 剔除）算法计算图像或数组的背景均值和标准差。
 
@@ -46,7 +46,7 @@ def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
         if sigma2 <= 1e-6 or abs(sigma2 - old_sigma) < convergence * old_sigma:
             sigma = sigma2
             break
-        
+
         sigma = sigma2
 
     return avervalue, sigma

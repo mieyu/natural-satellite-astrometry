@@ -5,7 +5,7 @@ import os
 
 from adias.io.adias_fits_io  import read_fits, write_fits
 from adias.io.adias_text_io  import read_fits_list, write_fits_list, clean_old_files
-from adias.utils.adias_image_utils import cal_b, apply_superbkgd, apply_smooth
+from adias.utils.adias_image_utils import calculate_background, apply_superbkgd, apply_smooth
 
 
 def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_file):
@@ -23,27 +23,27 @@ def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_fi
     print(f"  处理: {os.path.basename(fitsfile)}")
     data, header = read_fits(fitsfile)
 
-    bkgd0, sigma0 = cal_b(data)
+    bkgd0, sigma0 = calculate_background(data)
     print(f"    预处理前背景/sigma: {bkgd0:.3f} / {sigma0:.3f}")
 
     if med_length == 1 or med_width == 1:
         # 第一次滤波（原始参数方向）
         processed = apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode)
-        b, s = cal_b(processed)
+        b, s = calculate_background(processed)
         print(f"    第一次滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
         # 第二次滤波（交换 length/width，处理另一方向）
         processed = apply_superbkgd(processed, bkgd0, med_width, med_length, bkgdmode)
-        b, s = cal_b(processed)
+        b, s = calculate_background(processed)
         print(f"    第二次滤波后背景/sigma: {b:.3f} / {s:.3f}")
     else:
         processed = apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode)
-        b, s = cal_b(processed)
+        b, s = calculate_background(processed)
         print(f"    滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
     if enhance_flag == 1:
         processed = apply_smooth(processed)
-        b, s = cal_b(processed)
+        b, s = calculate_background(processed)
         print(f"    3×3 均值滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
     write_fits(out_file, processed, header)
