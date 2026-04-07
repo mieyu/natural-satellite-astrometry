@@ -99,7 +99,7 @@ def apply_smooth(data):
     return uniform_filter(data, size=3)
 
 
-def detect_stars_xzj(data, bkgd_threshold, pos_method):
+def detect_stars_by_moments(data, bkgd_threshold, pos_method):
     """
     连通域星象检测 + 修正矩定中心（子像素精度）。
 

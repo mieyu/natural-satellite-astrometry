@@ -5,7 +5,7 @@ import os
 
 from adias.io.adias_fits_io  import read_fits
 from adias.io.adias_text_io  import read_fits_list, write_reg_file
-from adias.utils.adias_image_utils import detect_stars_xzj
+from adias.utils.adias_image_utils import detect_stars_by_moments
 
 
 def run_detect(config, fitspath_list):
@@ -16,7 +16,7 @@ def run_detect(config, fitspath_list):
     ----
     1. 读取 fits.lst 获取文件列表
     2. 按 superflag 决定使用原始图像还是 *_n.fit
-    3. 逐幅调用 detect_stars_xzj 检测星象
+    3. 逐幅调用 detect_stars_by_moments 检测星象
     4. 调用 write_reg_file 写出 DS9 region 文件
 
     Parameters
@@ -55,7 +55,7 @@ def run_detect(config, fitspath_list):
 
             # 读取图像并检测
             data, _ = read_fits(input_path)
-            stars, bkgd, bkgdsigma = detect_stars_xzj(
+            stars, bkgd, bkgdsigma = detect_stars_by_moments(
                 data,
                 config['bkgd_threshold'],
                 config['pos_method'],

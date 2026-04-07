@@ -9,14 +9,16 @@ from adias.adias_config      import parse_config
 from adias.io.adias_text_io  import read_fitspath
 from adias.core.adias_preprocessor import run_pre
 from adias.core.adias_detector import run_detect
+from adias.core.adias_matchor import run_match
+
 
 
 def main():
     parser = argparse.ArgumentParser(description='ADIAS CCD 图像处理流水线')
     parser.add_argument('--step',
                         choices=['pre', 'detect', 'match', 'comoc', 'all'],
-                        default='pre',
-                        help='运行阶段（默认: pre）')
+                        default='all',
+                        help='运行阶段（默认: all）')
     parser.add_argument('--config',
                         default='/Users/liuhongyu/PythonProject/AstroPyFITS/adias.cfg',
                         help='配置文件路径（默认: adias.cfg）')
@@ -41,9 +43,7 @@ def main():
 
     if args.step in ('match', 'all'):
         print("========== 03: 星象匹配归算 ==========")
-        # from adias.core.matcher import run_match
-        # run_match(config, fitspath_list)
-        print("（matcher 待接入）")
+        run_match(config, fitspath_list)
 
     if args.step in ('comoc', 'all'):
         print("========== 04: O-C 统计 ==========")
