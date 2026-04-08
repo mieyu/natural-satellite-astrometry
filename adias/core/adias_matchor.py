@@ -294,9 +294,9 @@ def run_match(config, fitspath_list):
         print(f'本日图像总数：{n_total}')
 
         # 为每个目标开启输出文件
-        fh = {}
+        object_out_files = {}
         for obj in range(1, config['obj_total'] + 1):
-            fh[obj] = open(os.path.join(fitspath, f'object_{obj}.out'), 'w')
+            object_out_files[obj] = open(os.path.join(fitspath, f'object_{obj}.out'), 'w')
 
         flag_pre = 0
         pre_par = np.zeros(30)
@@ -377,14 +377,14 @@ def run_match(config, fitspath_list):
                 # 写出目标观测结果
                 if 0.0001 < abs(result.get('sig0', 0)) < 1.0:
                     write_object_result(
-                        fh[obj], hdr['year'], hdr['month'], obj_T,
+                        object_out_files[obj], hdr['year'], hdr['month'], obj_T,
                         result['obj_obsra'], result['obj_obsde'],
                         obj_ephra, obj_ephde, result['sig0'],
                         hdr['hh'], hdr['mm'], hdr['ss'],
                         hdr['exptime'], fitsfile, config['field_angle'])
 
         # 关闭文件并排序
-        for f in fh.values():
+        for f in object_out_files.values():
             f.close()
         for obj in range(1, config['obj_total'] + 1):
             sort_output_file(os.path.join(fitspath, f'object_{obj}.out'))

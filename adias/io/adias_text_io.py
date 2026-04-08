@@ -187,7 +187,7 @@ def write_ref_file(filename, result):
         print(f"写入参考星文件错误：{e}")
 
 
-def write_object_result(fh, year, month, obj_T, obj_obsra, obj_obsde,
+def write_object_result(file_handle, year, month, obj_T, obj_obsra, obj_obsde,
                         obj_ephra, obj_ephde, sig0,
                         hh, mm, ss, exptime, objfitsfile, field_angle):
     """
@@ -195,7 +195,7 @@ def write_object_result(fh, year, month, obj_T, obj_obsra, obj_obsde,
 
     Parameters
     ----------
-    fh          : file handle（已打开）
+    file_handle : file handle（已打开）
     year, month : int
     obj_T       : float，观测时刻（day + 时间分数）
     obj_obsra/de: float，观测赤经赤纬（度）
@@ -219,7 +219,7 @@ def write_object_result(fh, year, month, obj_T, obj_obsra, obj_obsde,
             f'{obj_ephra:12.7f}{obj_ephde:12.7f}'
             f'{obj_resra:10.4f}{obj_resde:10.4f}{sig0:10.4f}'
             f'{hh:3d}{mm:3d}{ss:6.2f}{exptime:9.2f} {objfitsfile}{field_angle:7.2f}\n')
-    fh.write(line)
+    file_handle.write(line)
     print(f'    写入残差 ra/de：{obj_resra:10.4f} / {obj_resde:10.4f}')
 
 
