@@ -10,6 +10,7 @@ from adias.io.adias_text_io  import read_fitspath
 from adias.core.adias_preprocessor import run_pre
 from adias.core.adias_detector import run_detect
 from adias.core.adias_matchor import run_match
+from adias.core.adias_analyzer import run_comoc
 
 
 
@@ -47,9 +48,7 @@ def main():
 
     if args.step in ('comoc', 'all'):
         print("========== 04: O-C 统计 ==========")
-        # from adias.core.oc_analyzer import run_comoc
-        # run_comoc(config, fitspath_list)
-        print("（oc_analyzer 待接入）")
+        run_comoc(config, fitspath_list)
 
     print(f"\n总耗时: {time.time() - t0:.2f} s")
 

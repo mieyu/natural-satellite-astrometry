@@ -5,6 +5,7 @@
 #           sol_par, am2hms, print_par)
 
 import numpy as np
+import math
 from scipy.linalg import inv
 
 Q = np.pi / 180.0       # 角度 -> 弧度换算常数
@@ -307,3 +308,78 @@ def print_par(par, modeltype):
     for i in range(modeltype):
         print(f'{par[i]:10.4f}', end='')
     print()
+
+def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
+    """
+    迭代剔除 O-C 野值，对应 Fortran comoc 核心循环。
+
+    剔除策略
+    --------
+    - oc_limit > 0：按 |data - mean| < oc_limit * sigma 且 |data| < eps 剔除；
+    - oc_limit == 0：按 |data - mean| < mean_limit 剔除。
+
+    Parameters
+    ----------
+    res_ra, res_de : list[float]，O-C 残差（角秒）
+    lines          : list[str]，与残差一一对应的原始行文本
+    oc_limit       : float，sigma 倍数阈值（0 表示使用 mean_limit 模式）
+    mean_limit     : float，绝对残差阈值
+    eps            : float，残差绝对值上限
+
+    Returns
+    -------
+    new_lines  : list[str]，剔除后保留的行
+    new_ra     : list[float]
+    new_de     : list[float]
+    mean_ra    : float，剔除后均值
+    mean_de    : float
+    std_ra     : float，剔除后标准差
+    std_de     : float
+    iloop      : int，迭代次数
+    """
+    cur_ra = list(res_ra)
+    cur_de = list(res_de)
+    cur_lines = list(lines)
+    n = len(cur_ra)
+    iloop = 0
+
+    def _stats(ra_arr, de_arr):
+        k = len(ra_arr)
+        if k == 0:
+            return 0.0, 0.0, 0.0, 0.0
+        m_ra = sum(ra_arr) / k
+        m_de = sum(de_arr) / k
+        if k > 1:
+            s_ra = math.sqrt(sum((v - m_ra)**2 for v in ra_arr) / (k - 1))
+            s_de = math.sqrt(sum((v - m_de)**2 for v in de_arr) / (k - 1))
+        else:
+            s_ra = s_de = 0.0
+        return m_ra, m_de, s_ra, s_de
+
+    mean_ra, mean_de, std_ra, std_de = _stats(cur_ra, cur_de)
+
+    while True:
+        iloop += 1
+        new_ra, new_de, new_lines = [], [], []
+
+        for i in range(len(cur_ra)):
+            ra_i, de_i = cur_ra[i], cur_de[i]
+            if oc_limit > 0.0:
+                keep = (abs(ra_i - mean_ra) < oc_limit * std_ra and
+                        abs(de_i - mean_de) < oc_limit * std_de and
+                        abs(ra_i) < eps and abs(de_i) < eps)
+            else:
+                keep = (abs(ra_i - mean_ra) < mean_limit and
+                        abs(de_i - mean_de) < mean_limit)
+            if keep:
+                new_ra.append(ra_i)
+                new_de.append(de_i)
+                new_lines.append(cur_lines[i])
+
+        mean_ra, mean_de, std_ra, std_de = _stats(new_ra, new_de)
+
+        if len(new_ra) >= len(cur_ra):   # 无变化，收敛
+            break
+        cur_ra, cur_de, cur_lines = new_ra, new_de, new_lines
+
+    return new_lines, new_ra, new_de, mean_ra, mean_de, std_ra, std_de, iloop

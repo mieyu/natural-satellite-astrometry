@@ -240,3 +240,95 @@ def sort_output_file(filename):
                 f.write(lines[i] + '\n')
     except Exception:
         pass
+
+def read_object_out(filepath):
+    """
+    读取 object_X.out 文件，提取 O-C 残差列和原始行文本。
+    O-C 残差位于固定列：RA 在 [95:105]，DE 在 [105:115]。
+
+    Parameters
+    ----------
+    filepath : str
+
+    Returns
+    -------
+    lines  : list[str]，所有有效行（已去除换行符）
+    res_ra : list[float]，RA 方向 O-C（角秒）
+    res_de : list[float]，DE 方向 O-C（角秒）
+    """
+    lines, res_ra, res_de = [], [], []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                if not line.strip():
+                    continue
+                text = line.rstrip('\n')
+                if len(line) >= 115:
+                    try:
+                        ra = float(line[95:105])
+                        de = float(line[105:115])
+                        lines.append(text)
+                        res_ra.append(ra)
+                        res_de.append(de)
+                    except ValueError as e:
+                        print(f'  警告：第 {i+1} 行解析失败：{e}')
+    except FileNotFoundError:
+        pass   # 调用方检查
+    return lines, res_ra, res_de
+
+
+def write_oc_stat(filepath, n_raw, mean_ra0, mean_de0, std_ra0, std_de0,
+                  n_new, mean_ra, mean_de, std_ra, std_de, iloop, oc_limit, mean_limit):
+    """
+    写出单日单目标的 O-C 统计报告（final_oc_X.out）。
+    """
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write('=================res数据统计结果=================\n')
+        f.write(f'  原始数据数量n_obj：{n_raw:4d}\n')
+        f.write(f'  原始数据均值ra,de：{mean_ra0:12.4f}{mean_de0:12.4f}\n')
+        f.write(f'  原始数据方差ra,de：{std_ra0:12.4f}{std_de0:12.4f}\n')
+        if oc_limit > 0.0:
+            f.write(f'**** 剔除标准(oc_limit)：{oc_limit:5.2f} ****\n')
+        else:
+            f.write(f'**** 剔除标准(mean_limit)：{mean_limit:5.2f} ****\n')
+        f.write(f'  剔除后数据数量n_new：{n_new:4d}\n')
+        f.write(f'  剔除后均值ra,de：{mean_ra:12.4f}{mean_de:12.4f}\n')
+        f.write(f'  剔除后方差ra,de：{std_ra:12.4f}{std_de:12.4f}\n')
+        f.write(f'  迭代次数：{iloop:2d}\n')
+
+
+def write_comoc_lines(f_out, f_final, f_obsdata, f_month, kept_lines):
+    """
+    将剔除野值后保留的行写入 4 个输出流。
+
+    Parameters
+    ----------
+    f_out     : file，YYYYMMDDi.out
+    f_final   : file，final_object_i.out
+    f_obsdata : file，YYYYMMDDi_obsdata_i.out（截取前 48 列）
+    f_month   : file，月度汇总（截取前 147 列）
+    kept_lines: list[str]
+    """
+    for line in kept_lines:
+        out147 = (line[:147] if len(line) >= 147 else line) + '\n'
+        out48  = (line[:48]  if len(line) >= 48  else line) + '\n'
+        f_out.write(out147)
+        f_final.write(line + '\n')
+        f_obsdata.write(out48)
+        f_month.write(out147)
+
+
+def clean_proc_files(fitspath):
+    """
+    删除目录下的过程文件：*_n.fit 和 *.reg。
+    （del_flag=1 时由 run_comoc 调用）
+    """
+    removed = 0
+    try:
+        for fname in os.listdir(fitspath):
+            if fname.endswith('_n.fit') or fname.endswith('.reg'):
+                os.remove(os.path.join(fitspath, fname))
+                removed += 1
+        print(f'  已删除过程文件 {removed} 个（*_n.fit, *.reg）')
+    except Exception as e:
+        print(f'  删除过程文件出错：{e}')
