@@ -36,9 +36,9 @@ dist/
 **/*_obsdata_*.out
 **/*_all_*.out
 **/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.out
-**/observation_image_*.out
-**/observation_image_S9_*.out
-**/observation_image_S9_after1.out
+**/observation_image_*.dat
+**/observation_image_S9_*.dat
+**/observation_image_S9_after1.dat
 
 
 # ===== Large observation/catalog data (usually should not be in code repo) =====
