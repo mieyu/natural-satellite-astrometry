@@ -39,6 +39,7 @@ dist/
 **/observation_image_*.dat
 **/observation_image_S9_*.dat
 **/observation_image_S9_after1.dat
+**/observation_image_U
 
 
 # ===== Large observation/catalog data (usually should not be in code repo) =====

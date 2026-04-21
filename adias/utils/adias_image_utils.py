@@ -1,9 +1,10 @@
 # 功能：图像统计与滤波工具函数（背景估计、中值滤波、均值滤波）。
 # 使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
 
-import numpy as np
 import cv2
-from scipy.ndimage import median_filter, uniform_filter, label as ndimage_label
+import numpy as np
+from scipy.ndimage import label as ndimage_label
+from scipy.ndimage import median_filter, uniform_filter
 
 
 def calculate_background(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
@@ -72,11 +73,11 @@ def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
     # 判断：给定的 med_width 是否大于 1？
     if med_width > 1:
         # 如果大于 1，就生成一个“竖长条”形状的窗口
-        kernel = (med_width, 1)  
+        kernel = (med_width, 1)
     else:
         # 如果不大于 1，就忽略 med_width，用 med_length 生成一个“横长条”形状的窗口
         kernel = (1, med_length)
-        
+
     bg = median_filter(data, size=kernel)
 
     if bkgdmode == 1:
@@ -119,17 +120,17 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
     """
     naxis2, naxis1 = data.shape
     maxflux = 65535.0
-    minpix  = 3
-    maxpix  = int(np.pi * 40 ** 2)
+    minpix = 3
+    maxpix = int(np.pi * 40**2)
 
     bkgd, bkgdsigma = calculate_background(data)
 
     # 阈值分割并清除边缘
     data_thresh = data - (bkgd + bkgd_threshold * bkgdsigma)
     data_thresh[data_thresh < 0] = 0
-    data_thresh[0, :]  = 0
+    data_thresh[0, :] = 0
     data_thresh[-1, :] = 0
-    data_thresh[:, 0]  = 0
+    data_thresh[:, 0] = 0
     data_thresh[:, -1] = 0
 
     structure = np.ones((3, 3), dtype=int)
@@ -140,17 +141,17 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
 
     detected_stars = []
     for i in range(1, num_features + 1):
-        coords  = np.where(labels == i)
+        coords = np.where(labels == i)
         num_pix = len(coords[0])
         if not (minpix <= num_pix <= maxpix):
             continue
 
-        pixel_values_orig   = data[coords]
-        if np.any(pixel_values_orig >= maxflux):   # 过曝跳过
+        pixel_values_orig = data[coords]
+        if np.any(pixel_values_orig >= maxflux):  # 过曝跳过
             continue
 
         pixel_values_thresh = data_thresh[coords]
-        weights     = pixel_values_thresh ** pos_method
+        weights = pixel_values_thresh**pos_method
         sum_weights = np.sum(weights)
         if sum_weights < 1e-9:
             continue
@@ -160,22 +161,25 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
         if not (10 <= starx_0 < naxis1 - 10 and 10 <= stary_0 < naxis2 - 10):
             continue
 
-        sumi_real     = np.sum(pixel_values_thresh)
-        snr_denom     = np.sqrt(sumi_real + num_pix * bkgdsigma ** 2)
-        snr           = sumi_real / snr_denom if snr_denom > 0 else 0
+        sumi_real = np.sum(pixel_values_thresh)
+        snr_denom = np.sqrt(sumi_real + num_pix * bkgdsigma**2)
+        snr = sumi_real / snr_denom if snr_denom > 0 else 0
 
-        detected_stars.append({
-            'starx':    starx_0 + 1,
-            'stary':    stary_0 + 1,
-            'sumi':     sumi_real,
-            'snr':      snr,
-            'star_id':  i,
-            'star_pix': num_pix,
-            'overflag': 0,
-        })
+        detected_stars.append(
+            {
+                "starx": starx_0 + 1,
+                "stary": stary_0 + 1,
+                "sumi": sumi_real,
+                "snr": snr,
+                "star_id": i,
+                "star_pix": num_pix,
+                "overflag": 0,
+            }
+        )
 
-    detected_stars.sort(key=lambda s: s['sumi'], reverse=True)
+    detected_stars.sort(key=lambda s: s["sumi"], reverse=True)
     return detected_stars, bkgd, bkgdsigma
+
 
 def homomorphic_filter(data, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
     """
@@ -205,14 +209,16 @@ def homomorphic_filter(data, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
     x = np.linspace(-cols / 2, cols / 2, cols)
     y = np.linspace(-rows / 2, rows / 2, rows)
     xx, yy = np.meshgrid(x, y)
-    H = (gamma_high - gamma_low) * (1 - np.exp(-c * (xx**2 + yy**2) / cutoff**2)) + gamma_low
+    H = (gamma_high - gamma_low) * (
+        1 - np.exp(-c * (xx**2 + yy**2) / cutoff**2)
+    ) + gamma_low
 
     img_back = np.abs(np.fft.ifft2(np.fft.ifftshift(fft_shift * H)))
     filtered = np.exp(img_back) - 1e-6
 
     # 恢复到原始灰度值域
     bg_mask = image < np.percentile(image, 50)
-    scale  = np.std(image[bg_mask]) / (np.std(filtered[bg_mask]) + 1e-9)
+    scale = np.std(image[bg_mask]) / (np.std(filtered[bg_mask]) + 1e-9)
     offset = np.mean(image[bg_mask]) - np.mean(filtered[bg_mask]) * scale
     restored = np.clip(filtered * scale + offset, orig_min, orig_max)
 
@@ -239,12 +245,12 @@ def bilateral_retinex(data, d=15):
         return data.copy(), data.copy()
 
     img_norm = (data / max_val).astype(np.float32)
-    log_img  = np.log1p(img_norm)
+    log_img = np.log1p(img_norm)
 
     bilateral = cv2.bilateralFilter(log_img, d, 120, 120)
-    detail    = log_img - bilateral
+    detail = log_img - bilateral
 
-    reflectance  = np.expm1(detail).astype(np.float64)
+    reflectance = np.expm1(detail).astype(np.float64)
     illumination = np.expm1(bilateral).astype(np.float64)
 
     # 归一化回原始值域
@@ -254,7 +260,7 @@ def bilateral_retinex(data, d=15):
             return arr
         return (arr - a_min) / (a_max - a_min) * target_max
 
-    reflectance  = _norm_to_range(reflectance,  max_val)
+    reflectance = _norm_to_range(reflectance, max_val)
     illumination = _norm_to_range(illumination, max_val)
 
     return reflectance, illumination
