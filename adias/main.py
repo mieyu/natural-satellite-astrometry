@@ -7,10 +7,7 @@ import sys
 import time
 
 from adias.adias_config import parse_config
-from adias.core.adias_analyzer import run_comoc
-from adias.core.adias_detector import run_detect
-from adias.core.adias_matchor import run_match
-from adias.core.adias_preprocessor import run_pre
+from adias.core.adias_reportor import run_report
 from adias.io.adias_text_io import read_fitspath
 
 
@@ -39,13 +36,13 @@ def main():
     parser = argparse.ArgumentParser(description="ADIAS CCD 图像处理流水线")
     parser.add_argument(
         "--step",
-        choices=["pre", "detect", "match", "comoc", "all"],
+        choices=["pre", "detect", "match", "comoc", "report", "all"],
         default="all",
         help="运行阶段（默认: all）",
     )
     parser.add_argument(
         "--config",
-        default="/Users/liuhongyu/PythonProject/AstroPyFITS/adias202011.cfg",
+        default="/Users/liuhongyu/PythonProject/AstroPyFITS/adias2024.cfg",
         help="配置文件路径（默认: adias.cfg）",
     )
     parser.add_argument(
@@ -63,20 +60,32 @@ def main():
     print(f"共读取到 {len(fitspath_list)} 个观测目录。\n")
 
     if args.step in ("pre", "all"):
+        from adias.core.adias_preprocessor import run_pre
+
         print("========== 01: 超级背景预处理 ==========")
         run_pre(config, fitspath_list)
 
     if args.step in ("detect", "all"):
+        from adias.core.adias_detector import run_detect
+
         print("========== 02: 星象检测 ==========")
         run_detect(config, fitspath_list)
 
     if args.step in ("match", "all"):
+        from adias.core.adias_matchor import run_match
+
         print("========== 03: 星象匹配归算 ==========")
         run_match(config, fitspath_list)
 
     if args.step in ("comoc", "all"):
+        from adias.core.adias_analyzer import run_comoc
+
         print("========== 04: O-C 统计 ==========")
         run_comoc(config, fitspath_list)
+
+    if args.step in ("report", "all"):
+        print("========== 05: O-C 散点图报告 ==========")
+        run_report(config)
 
     print(f"\n总耗时: {time.time() - t0:.2f} s")
     tee.close()

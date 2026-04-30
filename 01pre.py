@@ -42,21 +42,22 @@
 #   V3.0 by lhy 2025.12.05 程序改写成python
 # ************************************************************************************************
 
-import numpy as np
-from astropy.io import fits
-from scipy.ndimage import median_filter, uniform_filter
-import os
 import glob
+import os
 import time
 
 # 引入警告模块，忽略非标准的FITS头文件警告，防止控制台输出过多干扰信息
 import warnings
+
+import numpy as np
+from astropy.io import fits
 from astropy.utils.exceptions import AstropyWarning
+from scipy.ndimage import median_filter, uniform_filter
 
 warnings.filterwarnings("ignore", category=AstropyWarning)
 
 
-def parse_config(config_path='adias.cfg'):
+def parse_config(config_path="adias.cfg"):
     """
     解析配置文件 adias.cfg。
     该函数会跳过注释行，解析形如 '1med_width = 25' 的参数，
@@ -64,8 +65,14 @@ def parse_config(config_path='adias.cfg'):
     """
     # 默认参数字典，防止配置文件缺失时程序崩溃
     params = {
-        'biasflag': 0, 'darkflag': 0, 'flatflag': 0, 'superflag': 0,
-        'med_length': 1, 'med_width': 25, 'bkgdmode': 2, 'enhance_flag': 1
+        "biasflag": 0,
+        "darkflag": 0,
+        "flatflag": 0,
+        "superflag": 0,
+        "med_length": 1,
+        "med_width": 25,
+        "bkgdmode": 2,
+        "enhance_flag": 1,
     }
 
     if not os.path.exists(config_path):
@@ -73,24 +80,28 @@ def parse_config(config_path='adias.cfg'):
         return params
 
     # 使用 utf-8-sig 编码读取，防止Windows记事本BOM头导致的解析错误
-    with open(config_path, 'r', encoding='utf-8-sig') as f:
+    with open(config_path, "r", encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
             # 跳过空行和以 !, ;, #, [ 开头的注释行
-            if not line or line.startswith(('!', ';', '#', '[')):
+            if not line or line.startswith(("!", ";", "#", "[")):
                 continue
-            if '=' in line:
-                key_part, value_part = line.split('=', 1)
+            if "=" in line:
+                key_part, value_part = line.split("=", 1)
                 key = key_part.strip()
                 # 去除值后面的注释（即 % 之后的内容）
-                value = value_part.split('%')[0].strip()
+                value = value_part.split("%")[0].strip()
 
                 # 定义配置文件中的键名到程序变量名的映射表
                 key_map = {
-                    '1biasflag': 'biasflag', '1darkflag': 'darkflag',
-                    '1flatflag': 'flatflag', '1superflag': 'superflag',
-                    '1med_length': 'med_length', '1med_width': 'med_width',
-                    '1bkgdmode': 'bkgdmode', '1enhance_flag': 'enhance_flag'
+                    "1biasflag": "biasflag",
+                    "1darkflag": "darkflag",
+                    "1flatflag": "flatflag",
+                    "1superflag": "superflag",
+                    "1med_length": "med_length",
+                    "1med_width": "med_width",
+                    "1bkgdmode": "bkgdmode",
+                    "1enhance_flag": "enhance_flag",
                 }
 
                 if key in key_map and value:
@@ -113,7 +124,8 @@ def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     """
     flat_data = data.flatten().astype(np.float64)
     npx = len(flat_data)
-    if npx < 2: return np.mean(flat_data) if npx > 0 else 0, 0
+    if npx < 2:
+        return np.mean(flat_data) if npx > 0 else 0, 0
 
     avervalue = np.mean(flat_data)
     # 使用手动计算标准差公式 (sum((x-mean)^2) / (N-1)) 以匹配 Fortran 精度
@@ -126,7 +138,8 @@ def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
         mask = np.abs(flat_data - avervalue) <= sigma_factor * sigma
         clipped_data = flat_data[mask]
         k = len(clipped_data)
-        if k < 2: break
+        if k < 2:
+            break
 
         avervalue2 = np.mean(clipped_data)
         sumvalue2_new = np.sum((clipped_data - avervalue2) ** 2)
@@ -142,7 +155,9 @@ def cal_b(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     return avervalue, sigma
 
 
-def fits_superbkgd_pro(fitsfile, med_length, med_width, bkgdmode, enhance_flag, nfitsfile):
+def fits_superbkgd_pro(
+    fitsfile, med_length, med_width, bkgdmode, enhance_flag, nfitsfile
+):
     """
     核心处理函数：执行超级背景(Super Background)扣除。
     【逻辑说明】
@@ -220,13 +235,15 @@ def fits_superbkgd_pro(fitsfile, med_length, med_width, bkgdmode, enhance_flag, 
 def main():
     """主程序入口"""
     t0 = time.time()
-    fitspath_file = 'fitspath.in'
+    fitspath_file = "fitspath.in"
     if not os.path.exists(fitspath_file):
-        print(f"错误: 主路径文件 '{fitspath_file}' 未找到。请确保该文件存在，其中包含待处理数据的目录路径。")
+        print(
+            f"错误: 主路径文件 '{fitspath_file}' 未找到。请确保该文件存在，其中包含待处理数据的目录路径。"
+        )
         return
 
     # 读取所有待处理的日期文件夹路径
-    with open(fitspath_file, 'r') as f:
+    with open(fitspath_file, "r") as f:
         all_paths = [line.strip() for line in f if line.strip()]
 
     # 遍历每一个目录进行处理
@@ -235,35 +252,43 @@ def main():
         print(f"正在处理路径: {fitspath}")
 
         # 每次循环都重新解析配置，允许不同运行间微调（虽然通常是一样的）
-        config = parse_config('adias.cfg')
+        config = parse_config("adias.cfg")
         print("当前配置参数:", config)
 
         # --- 清理旧文件 ---
         # 删除旧的 *_n.fit 结果文件和 *.lst 列表文件，确保本次运行干净
-        for f in glob.glob(os.path.join(fitspath, '*_n.fit*')) + glob.glob(os.path.join(fitspath, '*.lst')):
+        for f in glob.glob(os.path.join(fitspath, "*_n.fit*")) + glob.glob(
+            os.path.join(fitspath, "*.lst")
+        ):
             os.remove(f)
 
         # 获取当前目录下的所有原始 .fit 文件
-        science_files_to_process = sorted(glob.glob(os.path.join(fitspath, '*.fit')))
+        science_files_to_process = sorted(glob.glob(os.path.join(fitspath, "*.fit")))
         if not science_files_to_process:
             print(f"在 '{fitspath}' 中未找到FITS文件，跳过当天。")
             continue
 
         # 生成 fits.lst 文件列表（供后续程序如 02match 等使用）
-        with open(os.path.join(fitspath, 'fits.lst'), 'w') as f_lst:
+        with open(os.path.join(fitspath, "fits.lst"), "w") as f_lst:
             for ff in science_files_to_process:
                 f_lst.write(f"{ff}\n")
         print(f"已生成fit文件序列--> {os.path.join(fitspath, 'fits.lst')}")
 
         # 检查是否开启 Super Background 处理模式
-        if config['superflag'] == 1:
+        if config["superflag"] == 1:
             print("\n--- 进入super模式 ---")
             for science_file in science_files_to_process:
                 base, ext = os.path.splitext(science_file)
                 # 输出文件名加 '_n' 后缀
                 output_file = f"{base}_n{ext}"
-                fits_superbkgd_pro(science_file, config['med_length'], config['med_width'],
-                                   config['bkgdmode'], config['enhance_flag'], output_file)
+                fits_superbkgd_pro(
+                    science_file,
+                    config["med_length"],
+                    config["med_width"],
+                    config["bkgdmode"],
+                    config["enhance_flag"],
+                    output_file,
+                )
         else:
             print("根据配置文件，未启用super模式，跳过处理。")
 
@@ -271,5 +296,5 @@ def main():
     print(f"代码总耗时: {time.time() - t0:.2f} s")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

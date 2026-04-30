@@ -297,17 +297,28 @@ def write_object_result(
 
 def sort_output_file(filename):
     """
-    按第 2 列（观测时刻）对 object_X.out 文件排序。
+    按观测时刻 obj_T 对 object_X.out 文件排序。
+
+    对应 Fortran：read(line(i),'(9x,f10.6,138x)') T(i)
+    即跳过前 9 个字符，从第 10 列起读取 10 位浮点数（obj_T）。
+    Python 0 索引对应切片 [9:19]。
+
+    输出格式（write_object_result）：
+        {year:6d} {month:02d}{obj_T:10.6f}...
+        位置：0-5=year, 6=空格, 7-8=month, 9-18=obj_T
     """
     try:
-        with open(filename, "r") as f:
-            lines = [l.strip() for l in f if l.strip()]
+        with open(filename, "r", encoding="utf-8") as f:
+            lines = [l.rstrip("\n") for l in f if l.strip()]
         times = []
         for l in lines:
-            parts = l.split()
-            times.append(float(parts[1]) if len(parts) > 1 else 0.0)
+            try:
+                # Fortran：(9x,f10.6) → 跳过 9 字符，读 10 字符 = 列 9:19（0 索引）
+                times.append(float(l[9:19]))
+            except (ValueError, IndexError):
+                times.append(0.0)
         idx = np.argsort(times)
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             for i in idx:
                 f.write(lines[i] + "\n")
     except Exception:
