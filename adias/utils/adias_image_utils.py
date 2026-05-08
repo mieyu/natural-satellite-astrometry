@@ -135,16 +135,18 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method, bitpix=16):
     data_thresh = data - (bkgd + bkgd_threshold * bkgdsigma)
     data_thresh[data_thresh < 0] = 0
 
-    # [差异3] 边缘清零使用 Fortran 的 naxis1/naxis2 轴约定
-    # Fortran 外层循环：do i=2,naxis1-1 → 行扫描上界为 naxis1（而非 naxis2）
-    # Fortran 内层循环：do j=2,naxis2-1 → 列扫描上界为 naxis2（而非 naxis1）
-    # 对方形图像（naxis1==naxis2）与原逻辑完全一致；
-    # 对非方形图像，会额外清零 Fortran 同样不扫描的像素条带，
-    # 确保后续连通域结果与 Fortran 保持一致。
-    data_thresh[0, :] = 0  # 上边缘（Fortran: abox(1,j)=0）
-    data_thresh[naxis1 - 1 :, :] = 0  # 行下界用 naxis1（Fortran 外层终止于 naxis1-1）
-    data_thresh[:, 0] = 0  # 左边缘（Fortran: abox(i,1)=0）
-    data_thresh[:, naxis2 - 1 :] = 0  # 列右界用 naxis2（Fortran 内层终止于 naxis2-1）
+    # 边缘清零——四条边各清一像素，与 Fortran 边缘清零等价。
+    # 注意 Fortran 内部约定与 Python(FITS) 相反：
+    #   Fortran naxis1=行数、naxis2=列数；Python naxis2=行数、naxis1=列数
+    # 对应关系：
+    #   abox(1,j)=0      →  data_thresh[0, :]          上边缘
+    #   abox(naxis1,j)=0 →  data_thresh[naxis2-1, :]   下边缘（Fortran naxis1=行数）
+    #   abox(i,1)=0      →  data_thresh[:, 0]           左边缘
+    #   abox(i,naxis2)=0 →  data_thresh[:, naxis1-1]   右边缘（Fortran naxis2=列数）
+    data_thresh[0, :] = 0
+    data_thresh[naxis2 - 1, :] = 0
+    data_thresh[:, 0] = 0
+    data_thresh[:, naxis1 - 1] = 0
 
     structure = np.ones((3, 3), dtype=int)
     labels, num_features = ndimage_label(data_thresh > 0, structure=structure)
