@@ -16,6 +16,24 @@ env/
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
+
+# ===== Claude Code =====
+.claude/
+
+# ===== Env / secrets =====
+.env
+.env.*
+!.env.example
+
+# ===== Logs =====
+*.log
+
+# ===== Fortran build artifacts =====
+*.o
+*.mod
+*.smod
+*.obj
 
 # ===== Build / packaging =====
 build/

@@ -101,7 +101,7 @@ def apply_smooth(data):
     return uniform_filter(data, size=3)
 
 
-def detect_stars_by_moments(data, bkgd_threshold, pos_method):
+def detect_stars_by_moments(data, bkgd_threshold, pos_method, bitpix=16):
     """
     连通域星象检测 + 修正矩定中心（子像素精度）。
 
@@ -110,6 +110,8 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
     data            : np.ndarray，float64 图像数据
     bkgd_threshold  : float，背景起伏阈值系数
     pos_method      : int，修正矩阶数（1/2/3）
+    bitpix          : int，FITS 头 BITPIX 值，用于动态计算饱和阈值，默认 16
+                      对应 Fortran：maxflux = 2**bitpix - 1
 
     Returns
     -------
@@ -118,20 +120,31 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
     bkgd           : float，背景均值
     bkgdsigma      : float，背景 sigma
     """
-    naxis2, naxis1 = data.shape
-    maxflux = 65535.0
+    naxis2, naxis1 = data.shape  # naxis2=行数(Y/height), naxis1=列数(X/width)
+
+    # [差异4] maxflux 由 bitpix 动态计算，与 Fortran 的 maxflux=2**bitpix-1 一致
+    # 原 Python 硬编码 65535.0，对非 16-bit 图像会误判饱和
+    maxflux = float(2**bitpix - 1)
+
     minpix = 3
     maxpix = int(np.pi * 40**2)
 
     bkgd, bkgdsigma = calculate_background(data)
 
-    # 阈值分割并清除边缘
+    # 阈值分割
     data_thresh = data - (bkgd + bkgd_threshold * bkgdsigma)
     data_thresh[data_thresh < 0] = 0
-    data_thresh[0, :] = 0
-    data_thresh[-1, :] = 0
-    data_thresh[:, 0] = 0
-    data_thresh[:, -1] = 0
+
+    # [差异3] 边缘清零使用 Fortran 的 naxis1/naxis2 轴约定
+    # Fortran 外层循环：do i=2,naxis1-1 → 行扫描上界为 naxis1（而非 naxis2）
+    # Fortran 内层循环：do j=2,naxis2-1 → 列扫描上界为 naxis2（而非 naxis1）
+    # 对方形图像（naxis1==naxis2）与原逻辑完全一致；
+    # 对非方形图像，会额外清零 Fortran 同样不扫描的像素条带，
+    # 确保后续连通域结果与 Fortran 保持一致。
+    data_thresh[0, :] = 0  # 上边缘（Fortran: abox(1,j)=0）
+    data_thresh[naxis1 - 1 :, :] = 0  # 行下界用 naxis1（Fortran 外层终止于 naxis1-1）
+    data_thresh[:, 0] = 0  # 左边缘（Fortran: abox(i,1)=0）
+    data_thresh[:, naxis2 - 1 :] = 0  # 列右界用 naxis2（Fortran 内层终止于 naxis2-1）
 
     structure = np.ones((3, 3), dtype=int)
     labels, num_features = ndimage_label(data_thresh > 0, structure=structure)
@@ -142,26 +155,43 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
     detected_stars = []
     for i in range(1, num_features + 1):
         coords = np.where(labels == i)
-        num_pix = len(coords[0])
+        rows, cols = coords
+
+        # [差异3] 质心累加与所有统计量仅限 10 像素内边距区域内的像素
+        # 对应 Fortran 质心累加循环：do i=10,naxis2-10; do j=10,naxis1-10
+        # 原 Python 是先用全部像素算质心再做坐标过滤，与 Fortran 在边缘星象时行为不同：
+        # Fortran 只累加内部像素（边缘像素不贡献），Python 原版用全部像素算质心后丢弃。
+        interior = (
+            (rows >= 10) & (rows < naxis2 - 10) & (cols >= 10) & (cols < naxis1 - 10)
+        )
+        if not np.any(interior):
+            continue
+
+        int_rows = rows[interior]
+        int_cols = cols[interior]
+        int_thresh = data_thresh[int_rows, int_cols]  # abox(i,j) in Fortran
+        int_orig = data[int_rows, int_cols]  # abox0(i,j) in Fortran
+
+        # numpix / minpix / maxpix 均基于内边距内像素数（与 Fortran 一致）
+        num_pix = len(int_rows)
         if not (minpix <= num_pix <= maxpix):
             continue
 
-        pixel_values_orig = data[coords]
-        if np.any(pixel_values_orig >= maxflux):  # 过曝跳过
+        # [差异4] 用动态 maxflux 检测过曝（Fortran: if(abox0(i,j).ge.maxflux) overflag=1）
+        if np.any(int_orig >= maxflux):
             continue
 
-        pixel_values_thresh = data_thresh[coords]
-        weights = pixel_values_thresh**pos_method
+        weights = int_thresh**pos_method
         sum_weights = np.sum(weights)
         if sum_weights < 1e-9:
             continue
 
-        stary_0 = np.sum(coords[0] * weights) / sum_weights
-        starx_0 = np.sum(coords[1] * weights) / sum_weights
-        if not (10 <= starx_0 < naxis1 - 10 and 10 <= stary_0 < naxis2 - 10):
-            continue
+        # 质心仅由内边距内像素贡献（Fortran: starx=sumx/sumi, stary=sumy/sumi）
+        stary_0 = np.sum(int_rows * weights) / sum_weights
+        starx_0 = np.sum(int_cols * weights) / sum_weights
 
-        sumi_real = np.sum(pixel_values_thresh)
+        # sumi_real / snr 均基于内边距内像素（与 Fortran numpix/sumi_real 一致）
+        sumi_real = np.sum(int_thresh)
         snr_denom = np.sqrt(sumi_real + num_pix * bkgdsigma**2)
         snr = sumi_real / snr_denom if snr_denom > 0 else 0
 

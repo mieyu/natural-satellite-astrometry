@@ -3,8 +3,8 @@
 
 import os
 
-from adias.io.adias_fits_io  import read_fits
-from adias.io.adias_text_io  import read_fits_list, write_reg_file
+from adias.io.adias_fits_io import read_fits
+from adias.io.adias_text_io import read_fits_list, write_reg_file
 from adias.utils.adias_image_utils import detect_stars_by_moments
 
 
@@ -40,9 +40,9 @@ def run_detect(config, fitspath_list):
             print(f"\n  {n_processed:04d}-{fitsfile0}")
 
             # 按 superflag 选择输入文件
-            if config['superflag'] != 0:
+            if config["superflag"] != 0:
                 base, ext = os.path.splitext(fitsfile0)
-                input_name = base + '_n' + ext
+                input_name = base + "_n" + ext
                 print(f"    使用预处理图像: {input_name}")
             else:
                 input_name = fitsfile0
@@ -54,16 +54,21 @@ def run_detect(config, fitspath_list):
                 continue
 
             # 读取图像并检测
-            data, _ = read_fits(input_path)
+            # [差异4] 保留 header 以读取 BITPIX，用于动态计算饱和阈值 maxflux=2**bitpix-1
+            data, header = read_fits(input_path)
+            bitpix = int(header.get("BITPIX", 16))
             stars, bkgd, bkgdsigma = detect_stars_by_moments(
                 data,
-                config['bkgd_threshold'],
-                config['pos_method'],
+                config["bkgd_threshold"],
+                config["pos_method"],
+                bitpix,
             )
 
             # 写出 reg 文件（以原始文件名为基础命名）
-            reg_path = os.path.join(fitspath, fitsfile0 + '.reg')
-            n_out = write_reg_file(reg_path, stars, bkgd, bkgdsigma, config['snr_threshold'])
+            reg_path = os.path.join(fitspath, fitsfile0 + ".reg")
+            n_out = write_reg_file(
+                reg_path, stars, bkgd, bkgdsigma, config["snr_threshold"]
+            )
 
             print(f"    图像背景/sigma: {bkgd:10.3f} / {bkgdsigma:10.3f}")
             print(f"    满足条件的星数: {n_out:4d}")
