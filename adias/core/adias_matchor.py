@@ -381,7 +381,8 @@ def run_match(config, fitspath_list):
             if hdr is None:
                 continue
 
-            obj_T = hdr['day'] + (hdr['hh']*3600 + hdr['mm']*60 + hdr['ss'] + config['delta_t']) / 86400.0
+            obj_T      = hdr['day'] + (hdr['hh']*3600 + hdr['mm']*60 + hdr['ss'] +
+                                       config['delta_t']) / 86400.0
             calpm_epoch = hdr['year'] + ((hdr['month']-1)*30 + hdr['day']) / 365.0
 
             for obj in range(1, config['obj_total'] + 1):
