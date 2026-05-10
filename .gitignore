@@ -16,6 +16,24 @@ env/
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
+
+# ===== Claude Code =====
+.claude/
+
+# ===== Env / secrets =====
+.env
+.env.*
+!.env.example
+
+# ===== Logs =====
+*.log
+
+# ===== Fortran build artifacts =====
+*.o
+*.mod
+*.smod
+*.obj
 
 # ===== Build / packaging =====
 build/
@@ -36,6 +54,10 @@ dist/
 **/*_obsdata_*.out
 **/*_all_*.out
 **/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.out
+**/observation_image_*.dat
+**/observation_image_S9_*.dat
+**/observation_image_S9_after1.dat
+**/observation_image_U
 
 
 # ===== Large observation/catalog data (usually should not be in code repo) =====
@@ -44,5 +66,6 @@ observation_image_S9/
 observation_image_S9_after/
 MATH/
 MATH_S9/
+MATH_S9_after/
 lhycat/
 lhycat_S9/
