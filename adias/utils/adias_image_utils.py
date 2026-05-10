@@ -137,9 +137,15 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method, bitpix=16):
     """
     naxis2, naxis1 = data.shape  # naxis2=行数(Y/height), naxis1=列数(X/width)
 
-    # [差异4] maxflux 由 bitpix 动态计算，与 Fortran 的 maxflux=2**bitpix-1 一致
-    # 原 Python 硬编码 65535.0，对非 16-bit 图像会误判饱和
-    maxflux = float(2**bitpix - 1)
+    # [差异4] maxflux 由 bitpix 动态计算，与 Fortran 的 maxflux=2**bitpix-1 一致。
+    # 注意：Fortran 公式 2**bitpix-1 仅对整型 FITS（BITPIX>0）有意义，
+    # 对浮点 FITS（BITPIX=-32/-64）该公式会算出 ≈ -1，导致所有像素都被
+    # 判过曝。浮点 FITS 没有整型饱和概念，这里用 +inf 关闭过曝判断。
+    # （Python 预处理写出的 _n.fit 是 float32 → BITPIX=-32，必须特判）
+    if bitpix > 0:
+        maxflux = float(2**bitpix - 1)
+    else:
+        maxflux = float("inf")
 
     minpix = 3
     maxpix = int(np.pi * 40**2)
