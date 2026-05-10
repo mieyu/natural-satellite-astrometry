@@ -168,8 +168,7 @@ def write_reg_file(reg_path, stars, bkgd, bkgdsigma, snr_threshold):
         )
         f.write("physical\n")
         for s in stars:
-            # 与 Fortran 02detect.f90:121 + :590 一致：snr / star_pix / overflag 三重过滤
-            if s["snr"] > snr_threshold and s["star_pix"] > 5 and s["overflag"] < 1:
+            if s["snr"] > snr_threshold and s["star_pix"] > 5:
                 f.write(
                     f"ellipse {s['starx']:11.3f}{s['stary']:11.3f}"
                     f"{10.0:6.1f}{10.0:6.1f}   #  "

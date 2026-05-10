@@ -7,26 +7,18 @@ from scipy.ndimage import label as ndimage_label
 from scipy.ndimage import median_filter, uniform_filter
 
 
-def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
+def calculate_background(data, sigma_factor=2.6, max_iter=10, convergence=0.01):
     """
-    迭代 Sigma-Clipping 计算背景均值与起伏，严格对齐 Fortran 02detect.f90:1074
-    的 cal_b 子程序逻辑。
+    使用迭代 Sigma-Clipping（Sigma 剔除）算法计算图像或数组的背景均值和标准差。
 
-    与 Fortran 一致的关键细节：
-      1. 初始 mean / sigma 使用全图像素（ddof=1）。
-      2. 每轮用 OLD avervalue 与 OLD sigma 作为剔除阈值；
-         随后用剔除后的子集计算 NEW avervalue2 与 NEW sigma2（用 NEW avervalue2 计算）。
-      3. 收敛判据：|sigma2 - sigma| < convergence * sigma2（注意分母是 NEW sigma2）。
-      4. 收敛或 sigma2 ≤ 1e-6 时，**输出 OLD avervalue 与 OLD sigma**（即上一轮的值，
-         也就是本轮用作剔除基准的那对统计量），而不是 NEW avervalue2 / sigma2。
-      5. Fortran 无最大迭代上限；这里加 max_iter=100 仅作安全保护，正常 5 次内收敛。
-
+    该算法通过多次迭代，不断剔除掉偏离均值超过 `sigma_factor` 倍标准差的异常值，
+    从而获得更准确、不受极端值（如亮星、坏像素）影响的背景统计信息。
     Parameters
     ----------
-    data         : np.ndarray，输入图像（任意形状）
-    sigma_factor : float，剔除阈值倍数，默认 2.6（对应 Fortran 参数 sfa）
-    convergence  : float，sigma 相对变化收敛阈值，默认 0.01
-    max_iter     : int，最大迭代次数（安全上限），默认 100
+    data          : np.ndarray，输入图像（任意形状）
+    sigma_factor  : float，剔除阈值倍数，默认 2.6
+    max_iter      : int，最大迭代次数，默认 10
+    convergence   : float，sigma 变化率收敛阈值，默认 0.01
 
     Returns
     -------
@@ -38,32 +30,25 @@ def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100)
     if n < 2:
         return (float(flat[0]) if n == 1 else 0.0), 0.0
 
-    # 初始 mean / sigma：全图，对应 Fortran 1091-1100 行
-    avervalue = np.sum(flat) / n
-    sigma = np.sqrt(np.sum((flat - avervalue) ** 2) / (n - 1))
+    avervalue = np.mean(flat)
+    sigma = np.std(flat, ddof=1)
 
     for _ in range(max_iter):
-        # 用 OLD avervalue 与 OLD sigma 做剔除（Fortran 1102-1110 行）
-        mask = np.abs(flat - avervalue) <= sigma_factor * sigma
-        clipped = flat[mask]
-        k = len(clipped)
-        if k < 2:
+        old_sigma = sigma
+
+        threshold = sigma_factor * sigma
+        clipped = flat[np.abs(flat - avervalue) <= threshold]
+
+        if len(clipped) < 2:
             break
 
-        # NEW avervalue2 / sigma2：sigma2 用 NEW avervalue2 计算（Fortran 1111-1119 行）
-        avervalue2 = np.sum(clipped) / k
-        sigma2 = np.sqrt(np.sum((clipped - avervalue2) ** 2) / (k - 1))
+        avervalue = np.mean(clipped)
+        sigma2 = np.std(clipped, ddof=1)
 
-        # 退化分支：图像极平坦，直接输出 OLD 值（Fortran 1121-1124 行 → goto 20）
-        if sigma2 <= 1e-6:
+        if sigma2 <= 1e-6 or abs(sigma2 - old_sigma) < convergence * old_sigma:
+            sigma = sigma2
             break
 
-        # 收敛分支：差异 < 1% NEW sigma2 时，直接输出 OLD 值（Fortran 1126 行 fall-through）
-        if abs(sigma2 - sigma) < convergence * sigma2:
-            break
-
-        # 未收敛：用 NEW 值替换后再迭代（Fortran 1128-1130 行）
-        avervalue = avervalue2
         sigma = sigma2
 
     return avervalue, sigma
@@ -195,9 +180,8 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method, bitpix=16):
             continue
 
         # [差异4] 用动态 maxflux 检测过曝（Fortran: if(abox0(i,j).ge.maxflux) overflag=1）
-        # 与 Fortran 严格对齐：过曝像素仍参与累加计算 starx/stary/sumi，仅在
-        # 字段中标记 overflag=1。下游 write_reg_file 按 overflag<1 过滤丢弃。
-        overflag = 1 if np.any(int_orig >= maxflux) else 0
+        if np.any(int_orig >= maxflux):
+            continue
 
         weights = int_thresh**pos_method
         sum_weights = np.sum(weights)
@@ -221,7 +205,7 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method, bitpix=16):
                 "snr": snr,
                 "star_id": i,
                 "star_pix": num_pix,
-                "overflag": overflag,
+                "overflag": 0,
             }
         )
 
