@@ -40,7 +40,7 @@ def run_detect(config, fitspath_list):
             print(f"\n  {n_processed:04d}-{fitsfile0}")
 
             # 按 superflag 选择输入文件
-            if config['superflag'] != 0:
+            if config['superflag'] == 1:
                 base, ext = os.path.splitext(fitsfile0)
                 input_name = base + '_n' + ext
                 print(f"    使用预处理图像: {input_name}")

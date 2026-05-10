@@ -2,11 +2,10 @@
 # 使用：from adias.core.preprocessor import run_pre
 
 import os
-import cv2
-import numpy as np
+
 from adias.io.adias_fits_io  import read_fits, write_fits
 from adias.io.adias_text_io  import read_fits_list, write_fits_list, clean_old_files
-from adias.utils.adias_image_utils import calculate_background, apply_superbkgd, apply_smooth, homomorphic_filter, bilateral_retinex
+from adias.utils.adias_image_utils import calculate_background, apply_superbkgd, apply_smooth
 
 
 def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_file):
@@ -51,39 +50,6 @@ def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_fi
     print(f"    已写出 --> {os.path.basename(out_file)}")
 
 
-def _process_homomorphic(fitsfile, out_file,
-                          gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
-    """对单幅 FITS 图像执行同态滤波预处理。"""
-    print(f"  处理（同态滤波）: {os.path.basename(fitsfile)}")
-    data, header = read_fits(fitsfile)
-    bkgd0, sigma0 = calculate_background(data)
-    print(f"    预处理前背景/sigma: {bkgd0:.3f} / {sigma0:.3f}")
-
-    filtered = homomorphic_filter(data, gamma_low, gamma_high, cutoff, c)
-
-    bkgd, sigma = calculate_background(filtered)
-    print(f"    同态滤波后背景/sigma: {bkgd:.3f} / {sigma:.3f}")
-
-    write_fits(out_file, filtered, header)
-    print(f"    已写出 --> {os.path.basename(out_file)}")
-
-
-def _process_retinex(fitsfile, out_file, d=15):
-    """对单幅 FITS 图像执行 Retinex/BFR 预处理，输出反射分量。"""
-    print(f"  处理（Retinex）: {os.path.basename(fitsfile)}")
-    data, header = read_fits(fitsfile)
-    bkgd0, sigma0 = calculate_background(data)
-    print(f"    预处理前背景/sigma: {bkgd0:.3f} / {sigma0:.3f}")
-
-    reflectance, illumination = bilateral_retinex(data, d)
-    final = cv2.GaussianBlur(reflectance.astype(np.float32), (9, 9), 0).astype(np.float64)
-
-    bkgd, sigma = calculate_background(final)
-    print(f"    Retinex 后背景/sigma: {bkgd:.3f} / {sigma:.3f}")
-
-    write_fits(out_file, final, header)
-    print(f"    已写出 --> {os.path.basename(out_file)}")
-
 def run_pre(config, fitspath_list):
     """
     对 fitspath_list 中每个观测目录执行超级背景预处理。
@@ -115,24 +81,21 @@ def run_pre(config, fitspath_list):
             print("未找到 .fit 文件，跳过。")
             continue
 
-        if config['superflag'] == 0:
+        if config['superflag'] != 1:
             print("superflag=0，仅生成文件列表，跳过图像处理。")
             continue
 
-        mode_name = {1: '中值滤波', 2: '同态滤波', 3: 'Retinex'}.get(config['superflag'], '未知')
-        print(f"--- 进入 super 模式（{mode_name}）---")
-
+        print("--- 进入 super 模式 ---")
         for fitsfile in science_files:
             base, ext = os.path.splitext(fitsfile)
-            out_file = f"{base}_n{ext}"
-
-            if config['superflag'] == 1:
-                _process_one(fitsfile, config['med_length'], config['med_width'],
-                             config['bkgdmode'], config['enhance_flag'], out_file)
-            elif config['superflag'] == 2:
-                _process_homomorphic(fitsfile, out_file)
-            elif config['superflag'] == 3:
-                _process_retinex(fitsfile, out_file)
+            _process_one(
+                fitsfile,
+                config['med_length'],
+                config['med_width'],
+                config['bkgdmode'],
+                config['enhance_flag'],
+                f"{base}_n{ext}",
+            )
 
     print(f"\n{'=' * 50}")
     print(f"01pre 完成，共处理 {n} 个观测目录。")

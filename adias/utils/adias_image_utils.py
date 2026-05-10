@@ -2,7 +2,6 @@
 # 使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
 
 import numpy as np
-import cv2
 from scipy.ndimage import median_filter, uniform_filter, label as ndimage_label
 
 
@@ -176,85 +175,3 @@ def detect_stars_by_moments(data, bkgd_threshold, pos_method):
 
     detected_stars.sort(key=lambda s: s['sumi'], reverse=True)
     return detected_stars, bkgd, bkgdsigma
-
-def homomorphic_filter(data, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
-    """
-    同态滤波（Homomorphic Filter）。
-    通过对数域高斯高通滤波压制低频光照变化，增强高频细节。
-
-    Parameters
-    ----------
-    data       : np.ndarray，float64 图像数据
-    gamma_low  : float，低频增益（< 1 压制背景）
-    gamma_high : float，高频增益（> 1 增强细节）
-    cutoff     : float，截止频率（像素单位）
-    c          : float，滤波器过渡陡度
-
-    Returns
-    -------
-    np.ndarray，float64，滤波后图像（灰度值域与输入一致）
-    """
-    image = data.astype(np.float64)
-    orig_min, orig_max = image.min(), image.max()
-
-    log_image = np.log(image + 1e-6)
-
-    fft_shift = np.fft.fftshift(np.fft.fft2(log_image))
-
-    rows, cols = image.shape
-    x = np.linspace(-cols / 2, cols / 2, cols)
-    y = np.linspace(-rows / 2, rows / 2, rows)
-    xx, yy = np.meshgrid(x, y)
-    H = (gamma_high - gamma_low) * (1 - np.exp(-c * (xx**2 + yy**2) / cutoff**2)) + gamma_low
-
-    img_back = np.abs(np.fft.ifft2(np.fft.ifftshift(fft_shift * H)))
-    filtered = np.exp(img_back) - 1e-6
-
-    # 恢复到原始灰度值域
-    bg_mask = image < np.percentile(image, 50)
-    scale  = np.std(image[bg_mask]) / (np.std(filtered[bg_mask]) + 1e-9)
-    offset = np.mean(image[bg_mask]) - np.mean(filtered[bg_mask]) * scale
-    restored = np.clip(filtered * scale + offset, orig_min, orig_max)
-
-    return restored
-
-
-def bilateral_retinex(data, d=15):
-    """
-    双边 Retinex（BFR，Bilateral Filter Retinex）。
-    在对数域用双边滤波分离光照与反射，输出反射分量（去除背景光照后的细节图）。
-
-    Parameters
-    ----------
-    data : np.ndarray，float64 图像数据（原始 ADU 值）
-    d    : int，双边滤波邻域直径
-
-    Returns
-    -------
-    reflectance  : np.ndarray，float64，反射分量（细节）
-    illumination : np.ndarray，float64，光照分量（背景）
-    """
-    max_val = data.max()
-    if max_val <= 0:
-        return data.copy(), data.copy()
-
-    img_norm = (data / max_val).astype(np.float32)
-    log_img  = np.log1p(img_norm)
-
-    bilateral = cv2.bilateralFilter(log_img, d, 120, 120)
-    detail    = log_img - bilateral
-
-    reflectance  = np.expm1(detail).astype(np.float64)
-    illumination = np.expm1(bilateral).astype(np.float64)
-
-    # 归一化回原始值域
-    def _norm_to_range(arr, target_max):
-        a_min, a_max = arr.min(), arr.max()
-        if a_max - a_min < 1e-9:
-            return arr
-        return (arr - a_min) / (a_max - a_min) * target_max
-
-    reflectance  = _norm_to_range(reflectance,  max_val)
-    illumination = _norm_to_range(illumination, max_val)
-
-    return reflectance, illumination
