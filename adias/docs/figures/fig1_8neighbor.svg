@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="380" viewBox="0 0 520 380">
+  <defs>
+    <style>
+      .title  { font: bold 18px 'PingFang SC','Microsoft YaHei','Heiti SC',sans-serif; fill:#222; }
+      .label  { font: 14px 'PingFang SC','Microsoft YaHei',sans-serif; text-anchor: middle; fill:#333; }
+      .center { font: bold 30px sans-serif; text-anchor: middle; fill:#d9534f; }
+      .desc   { font: 13px 'PingFang SC','Microsoft YaHei',sans-serif; fill:#555; }
+      .cell   { fill:#f8f9fa; stroke:#666; stroke-width:1.5; }
+      .ccell  { fill:#fff3cd; stroke:#d9534f; stroke-width:2.5; }
+    </style>
+  </defs>
+
+  <text x="260" y="32" class="title" text-anchor="middle">图 1：8 邻接的几何定义</text>
+
+  <g transform="translate(140,60)">
+    <rect x="0"   y="0"   width="80" height="80" class="cell"/>
+    <rect x="80"  y="0"   width="80" height="80" class="cell"/>
+    <rect x="160" y="0"   width="80" height="80" class="cell"/>
+    <rect x="0"   y="80"  width="80" height="80" class="cell"/>
+    <rect x="80"  y="80"  width="80" height="80" class="ccell"/>
+    <rect x="160" y="80"  width="80" height="80" class="cell"/>
+    <rect x="0"   y="160" width="80" height="80" class="cell"/>
+    <rect x="80"  y="160" width="80" height="80" class="cell"/>
+    <rect x="160" y="160" width="80" height="80" class="cell"/>
+
+    <text x="40"  y="46"  class="label">左上</text>
+    <text x="120" y="46"  class="label">上</text>
+    <text x="200" y="46"  class="label">右上</text>
+    <text x="40"  y="126" class="label">左</text>
+    <text x="120" y="135" class="center">◯</text>
+    <text x="200" y="126" class="label">右</text>
+    <text x="40"  y="206" class="label">左下</text>
+    <text x="120" y="206" class="label">下</text>
+    <text x="200" y="206" class="label">右下</text>
+  </g>
+
+  <text x="260" y="335" class="desc" text-anchor="middle">中心像素 ◯ 与周围 8 个邻居都视作连通（含 4 对角）。</text>
+  <text x="260" y="358" class="desc" text-anchor="middle">两种连通域算法（Fortran 三段式 / scipy）都基于此邻接定义，差别在实现路径。</text>
+</svg>

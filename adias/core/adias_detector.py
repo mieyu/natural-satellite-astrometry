@@ -57,11 +57,16 @@ def run_detect(config, fitspath_list):
             # [差异4] 保留 header 以读取 BITPIX，用于动态计算饱和阈值 maxflux=2**bitpix-1
             data, header = read_fits(input_path)
             bitpix = int(header.get("BITPIX", 16))
+            # 连通域算法选择：
+            #   "fortran" - 完全按 Fortran 三段式（首遍标号 + nr=250 合并 + 等价表）
+            #   "scipy"   - Python 标准 8 连通（不含 nr=250）
+            connectivity = config.get("connectivity", "fortran")
             stars, bkgd, bkgdsigma = detect_stars_by_moments(
                 data,
                 config["bkgd_threshold"],
                 config["pos_method"],
                 bitpix,
+                connectivity=connectivity,
             )
 
             # 写出 reg 文件（以原始文件名为基础命名）
