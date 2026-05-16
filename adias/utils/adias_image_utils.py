@@ -3,8 +3,8 @@
 
 import cv2
 import numpy as np
+from scipy.ndimage import generate_binary_structure, median_filter, uniform_filter
 from scipy.ndimage import label as ndimage_label
-from scipy.ndimage import median_filter, uniform_filter
 
 
 def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
@@ -315,7 +315,7 @@ def label_connectivity_scipy(abox, naxis2, naxis1, EPS=1e-9):
     -------
     idbox2 : np.ndarray (int32, shape=(naxis2, naxis1))，连通域标号
     """
-    structure = np.ones((3, 3), dtype=int)
+    structure = generate_binary_structure(2, 2)
     labels, _ = ndimage_label(abox > EPS, structure=structure)
     return labels.astype(np.int32)
 
