@@ -135,10 +135,7 @@ def _find_obj_base_angle(
         rx, ry, rra, rde, rmag = [], [], [], [], []
 
         # 遍历所有检测星 k，投影到天球，与 GAIA 交叉匹配
-        for k in range(n_det):
-            if det_x[k] <= 0 or det_y[k] <= 0:
-                continue
-            # 量度坐标（以第 j 颗为中心）
+        for k in range(n_det):  # 量度坐标（以第 j 颗为中心）
             xn = (det_x[k] - ox) * pscale / fl
             yn = (det_y[k] - oy) * pscale / fl
             # 用初始旋转角底片常数，配合历表位置，推算赤经赤纬
@@ -156,9 +153,8 @@ def _find_obj_base_angle(
                     # 无 break，与 Fortran 一致
 
         nm = len(rx)
-        # Fortran：仅当 n_match > n_match1 时才调用 sol_par
-        # 不做"同等数量时比 sigma 大小"的判断
-        if nm <= best["n"] or nm < 3:
+        # 匹配数量少于当前最佳或不足 3 颗时直接跳过，无需调用 sol_par
+        if nm < best["n"] or nm < 3:
             continue
 
         try:
@@ -173,8 +169,12 @@ def _find_obj_base_angle(
                 modeltype,
             )
             sig0_arcsec = sig0 / Q * 3600.0
-            # 仅 sig 在合理范围内才更新最佳候选（Fortran：0.001 < sig < 0.5）
-            if 0.001 < sig0_arcsec < 0.5:
+            # sig 在合理范围内，且满足以下任一条件才更新最佳候选：
+            #   ① 匹配数量严格更多（nm > best["n"]）
+            #   ② 匹配数量相同，但 sigma 更小（nm == best["n"] and sig < best["sig"]）
+            if 0.001 < sig0_arcsec < 0.5 and (
+                nm > best["n"] or sig0_arcsec < best["sig"]
+            ):
                 best.update(
                     n=nm,
                     sig=sig0_arcsec,
