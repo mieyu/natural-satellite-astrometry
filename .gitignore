@@ -28,6 +28,7 @@ Thumbs.db
 
 # ===== Logs =====
 *.log
+控制台输出*.txt
 
 # ===== Fortran build artifacts =====
 *.o
