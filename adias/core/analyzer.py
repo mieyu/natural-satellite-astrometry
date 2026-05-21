@@ -1,44 +1,16 @@
-# 功能：04comoc O-C 统计与野值剔除批处理逻辑。
-# 使用：from adias.core.adias_oc_analyzer import run_comoc
+# 04comoc：对 03match 的 object_N.out 逐日逐目标做野值剔除与统计汇总。
+# 读 fits_out/object_N.out，写 fits_out/final_*；跨日 .dat / *_all_*.out 汇总在 cfg
+# 的 4specified-output 目录下。
 
-import math
 import os
 
-from adias.io.adias_text_io import (
-    clean_proc_files,
-    read_object_out,
-    write_comoc_lines,
-    write_oc_stat,
-)
-from adias.utils.adias_math_utils import sigma_clip_oc
-
-
-def _initial_stats(res_ra, res_de):
-    """计算原始数据的均值和标准差。"""
-    n = len(res_ra)
-    if n == 0:
-        return 999.999, 999.999, 999.999, 999.999
-    m_ra = sum(res_ra) / n
-    m_de = sum(res_de) / n
-    if n > 1:
-        s_ra = math.sqrt(sum((v - m_ra) ** 2 for v in res_ra) / (n - 1))
-        s_de = math.sqrt(sum((v - m_de) ** 2 for v in res_de) / (n - 1))
-    else:
-        s_ra = s_de = 0.0
-    if n < 2:
-        return 999.999, 999.999, 999.999, 999.999
-    return m_ra, m_de, s_ra, s_de
+from adias.io.text_io import read_object_out, write_comoc_lines, write_oc_stat
+from adias.paths import clean_proc_files, ensure_dir, list_fits, out_dir
+from adias.utils.math_utils import initial_stats, sigma_clip_oc
 
 
 def run_comoc(config, fitspath_list):
-    """
-    对每个观测目录的每个目标逐日执行 O-C 野值剔除与统计汇总。
-
-    Parameters
-    ----------
-    config        : dict，parse_config() 返回的参数字典
-    fitspath_list : list[str]，观测目录路径列表
-    """
+    """对每个观测目录的每个目标逐日执行 O-C 野值剔除与统计汇总。"""
     outdir = config["newoutfile0"]
     obj_total = config["obj_total"]
     oc_limit = config["oc_limit"]
@@ -50,8 +22,8 @@ def run_comoc(config, fitspath_list):
 
     for obj in range(1, obj_total + 1):
         obj_label = str(obj)
-
         oc_summary_path = os.path.join(outdir, f"00oc_{obj_label}.out")
+        # 月度汇总 .dat：以首个观测目录 basename 命名
         month_out_path = os.path.join(
             outdir, os.path.basename(fitspath_list[0]) + obj_label + ".dat"
         )
@@ -60,31 +32,23 @@ def run_comoc(config, fitspath_list):
             open(oc_summary_path, "a", encoding="utf-8") as f_oc_summary,
             open(month_out_path, "a", encoding="utf-8") as f_month,
         ):
-            n_day = 0
-            for fitspath in fitspath_list:
-                n_day += 1
+            for n_day, fitspath in enumerate(fitspath_list, 1):
                 print()
                 print(f"{n_day:3d}-本日fits文件：{fitspath}")
 
-                # 按需删除过程文件
                 if del_flag == 1:
                     clean_proc_files(fitspath)
 
-                # 提取日期字符串
-                try:
-                    fit_names = sorted(
-                        f
-                        for f in os.listdir(fitspath)
-                        if f.endswith(".fit") and not f.endswith("_n.fit")
-                    )
-                    date_str = fit_names[0][:8] if fit_names else "output"
-                except Exception:
-                    date_str = "output"
+                # 日期串：取首个原始 .fit basename 的前 8 位
+                fit_files = list_fits(fitspath)
+                date_str = (
+                    os.path.basename(fit_files[0])[:8] if fit_files else "output"
+                )
 
-                # 各输出文件路径
-                objout_path = os.path.join(fitspath, f"object_{obj_label}.out")
-                final_obj = os.path.join(fitspath, f"final_object_{obj_label}.out")
-                final_oc = os.path.join(fitspath, f"final_oc_{obj_label}.out")
+                fits_out = ensure_dir(out_dir(fitspath))
+                objout_path = os.path.join(fits_out, f"object_{obj_label}.out")
+                final_obj = os.path.join(fits_out, f"final_object_{obj_label}.out")
+                final_oc = os.path.join(fits_out, f"final_oc_{obj_label}.out")
                 day_out = os.path.join(outdir, date_str + obj_label + ".out")
                 obsdata_out = os.path.join(
                     outdir, date_str + f"_obsdata_{obj_label}.out"
@@ -95,48 +59,36 @@ def run_comoc(config, fitspath_list):
                     print(f"警告: 文件不存在 {objout_path}")
                     continue
 
-                # 读取 O-C 数据
                 raw_lines, res_ra, res_de = read_object_out(objout_path)
                 n_raw = len(raw_lines)
 
-                # 写出完整行（all 文件）
+                # all_out 保留原始 147 列
                 with open(all_out, "w", encoding="utf-8") as f_all:
                     for line in raw_lines:
                         f_all.write((line[:147] if len(line) >= 147 else line) + "\n")
 
-                # 原始统计
-                mean_ra0, mean_de0, std_ra0, std_de0 = _initial_stats(res_ra, res_de)
+                mean_ra0, mean_de0, std_ra0, std_de0 = initial_stats(res_ra, res_de)
 
-                print(
-                    "================04Comoc-Program execution summary=================="
-                )
+                print("================04Comoc-Program execution summary==================")
                 print("=================res数据统计结果=================")
                 print(f"  原始数据数量n_obj：{n_raw:4d}")
                 print(f"  原始数据均值ra,de：{mean_ra0:12.4f}{mean_de0:12.4f}")
                 print(f"  原始数据方差ra,de：{std_ra0:12.4f}{std_de0:12.4f}")
                 if oc_limit > 0.0:
-                    print(
-                        f"*********剔除野值标准(oc_limit)：{oc_limit:5.2f}  *********"
-                    )
+                    print(f"*********剔除野值标准(oc_limit)：{oc_limit:5.2f}  *********")
                 else:
-                    print(
-                        f"*********剔除野值标准(mean_limit)：{mean_limit:5.2f}  *********"
-                    )
+                    print(f"*********剔除野值标准(mean_limit)：{mean_limit:5.2f}  *********")
 
-                # 迭代野值剔除
                 kept_lines, new_ra, new_de, mean_ra, mean_de, std_ra, std_de, iloop = (
                     sigma_clip_oc(res_ra, res_de, raw_lines, oc_limit, mean_limit, eps)
                 )
                 n_new = len(kept_lines)
 
-                # Fortran：剔除后 n_obj < 2 时，均值/标准差置为无效值 999.999
+                # 剔除后样本数 < 2 时，均值/标准差置无效值 999.999
                 if n_new < 2:
                     mean_ra = mean_de = std_ra = std_de = 999.999
 
-                # Fortran 特殊处理（在 999.999 赋值之后覆盖）：
-                #   if(n_obj0<1)then → 原始数据为空，全部置 0
-                #   elseif(n_new<1)then → 剔除后无数据，最终统计置 0
-                # 对应 Fortran 04comoc.f90 在 sigma_clip 循环结束后的特殊分支
+                # 原始为空或剔除后为空时，统计全置 0（覆盖 999.999）
                 if n_raw < 1:
                     mean_ra0 = mean_de0 = std_ra0 = std_de0 = 0.0
                     n_new = 0
@@ -151,25 +103,13 @@ def run_comoc(config, fitspath_list):
                 print(f"  剔除野值迭代次数：{iloop:2d}")
                 print(f"  残差文件输出:{oc_summary_path}")
 
-                # 写出统计报告
                 write_oc_stat(
-                    final_oc,
-                    n_raw,
-                    mean_ra0,
-                    mean_de0,
-                    std_ra0,
-                    std_de0,
-                    n_new,
-                    mean_ra,
-                    mean_de,
-                    std_ra,
-                    std_de,
-                    iloop,
-                    oc_limit,
-                    mean_limit,
+                    final_oc, n_raw, mean_ra0, mean_de0, std_ra0, std_de0,
+                    n_new, mean_ra, mean_de, std_ra, std_de,
+                    iloop, oc_limit, mean_limit,
                 )
 
-                # 写出剔除后数据
+                # 仅当剔除后精度足够（std < 0.3″）才输出当日数据
                 if std_ra < 0.3 and std_de < 0.3 and n_new > 1:
                     with (
                         open(day_out, "w", encoding="utf-8") as f_out,

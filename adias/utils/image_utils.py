@@ -8,61 +8,40 @@ from scipy.ndimage import label as ndimage_label
 
 
 def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
-    """
-    迭代 Sigma-Clipping 计算背景均值与起伏，严格对齐 Fortran 02detect.f90:1074
-    的 cal_b 子程序逻辑。
+    """迭代 Sigma-Clipping 计算背景均值与 sigma。
 
-    与 Fortran 一致的关键细节：
-      1. 初始 mean / sigma 使用全图像素（ddof=1）。
-      2. 每轮用 OLD avervalue 与 OLD sigma 作为剔除阈值；
-         随后用剔除后的子集计算 NEW avervalue2 与 NEW sigma2（用 NEW avervalue2 计算）。
-      3. 收敛判据：|sigma2 - sigma| < convergence * sigma2（注意分母是 NEW sigma2）。
-      4. 收敛或 sigma2 ≤ 1e-6 时，**输出 OLD avervalue 与 OLD sigma**（即上一轮的值，
-         也就是本轮用作剔除基准的那对统计量），而不是 NEW avervalue2 / sigma2。
-      5. Fortran 无最大迭代上限；这里加 max_iter=100 仅作安全保护，正常 5 次内收敛。
+    关键约定：
+      - 每轮用 OLD mean/sigma 做剔除，剔除后再算 NEW mean2/sigma2
+      - 收敛判据：|sigma2 - sigma| < convergence * sigma2（分母是 NEW sigma2）
+      - 收敛或 sigma2 ≤ 1e-6 时输出 OLD mean/sigma（用作剔除基准的那对），不是 NEW
 
-    Parameters
-    ----------
-    data         : np.ndarray，输入图像（任意形状）
-    sigma_factor : float，剔除阈值倍数，默认 2.6（对应 Fortran 参数 sfa）
-    convergence  : float，sigma 相对变化收敛阈值，默认 0.01
-    max_iter     : int，最大迭代次数（安全上限），默认 100
-
-    Returns
-    -------
-    avervalue : float，背景均值
-    sigma     : float，背景标准差
+    max_iter 仅为安全保护，正常 5 次内收敛。
     """
     flat = np.asarray(data, dtype=np.float64).ravel()
     n = len(flat)
     if n < 2:
         return (float(flat[0]) if n == 1 else 0.0), 0.0
 
-    # 初始 mean / sigma：全图，对应 Fortran 1091-1100 行
     avervalue = np.sum(flat) / n
     sigma = np.sqrt(np.sum((flat - avervalue) ** 2) / (n - 1))
 
     for _ in range(max_iter):
-        # 用 OLD avervalue 与 OLD sigma 做剔除（Fortran 1102-1110 行）
         mask = np.abs(flat - avervalue) <= sigma_factor * sigma
         clipped = flat[mask]
         k = len(clipped)
         if k < 2:
             break
 
-        # NEW avervalue2 / sigma2：sigma2 用 NEW avervalue2 计算（Fortran 1111-1119 行）
         avervalue2 = np.sum(clipped) / k
         sigma2 = np.sqrt(np.sum((clipped - avervalue2) ** 2) / (k - 1))
 
-        # 退化分支：图像极平坦，直接输出 OLD 值（Fortran 1121-1124 行 → goto 20）
+        # 退化：图像极平坦，直接输出 OLD
         if sigma2 <= 1e-6:
             break
-
-        # 收敛分支：差异 < 1% NEW sigma2 时，直接输出 OLD 值（Fortran 1126 行 fall-through）
+        # 收敛：差异 < convergence * NEW sigma2，输出 OLD
         if abs(sigma2 - sigma) < convergence * sigma2:
             break
 
-        # 未收敛：用 NEW 值替换后再迭代（Fortran 1128-1130 行）
         avervalue = avervalue2
         sigma = sigma2
 
@@ -117,37 +96,22 @@ def apply_smooth(data):
 
 
 def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
-    """
-    【A 函数】完全按照 Fortran 02detect.f90 三段式连通域算法实现的连通域标号。
+    """三段式连通域标号（Fortran 算法移植，保留方图同算行为）。
 
-      Pass A（02detect.f90:255-340）：
-        首遍 4 邻居优先级标号（lty1=右上, lty2=正上, lty3=左上, lty4=左）
-        elseif 链——找到第一个非零邻居就继承其 label
-      Pass B（02detect.f90:344-377）：
-        nr=250 像素半径就地合并——针对水平相邻不同 label，
-        在 ±250 像素方框内把 idbox2 等于左侧 label 的所有像素改为右侧 label
-      Pass C（02detect.f90:380-554）：
-        8 邻接等价表收集 → 去重 → 简化合并 → 再去重 → 替换
+      Pass A: 首遍 4 邻居优先级标号（右上 > 正上 > 左上 > 左），
+              用 elseif 链继承第一个非零邻居 label
+      Pass B: 在 ±250 像素方框内就地合并水平相邻的不同 label
+      Pass C: 8 邻接等价表 → 去重 → 简化合并 → 再去重 → 替换
 
-    Parameters
-    ----------
-    abox    : np.ndarray，阈值分割后的 float 图像（已边缘清零）
-    naxis2  : int，行数
-    naxis1  : int，列数
-    EPS     : float，零值判定阈值（默认 1e-9）
+    与 scipy 标准 8 连通的差异：Pass B 的 nr=250 局部合并是 Fortran 特有，
+    在 Fortran 简化合并失败的极少数复杂形状下，scipy 结果反而更稳健。
 
-    Returns
-    -------
-    idbox2 : np.ndarray (int32, shape=(naxis2, naxis1))，最终连通域标号
+    注：Pass A 的循环上界用了 naxis1/naxis2 反置（Fortran 自身 bug），
+    对方图 naxis1==naxis2 无影响，这里完整保留以匹配原行为。
     """
     abox_l = abox.tolist()
 
-    # ============== Pass A：首遍 4 邻居优先级标号 ==============
-    # 完全对应 Fortran 02detect.f90:255-340
-    # Fortran 循环：do i=2,naxis1-1; do j=2,naxis2-1
-    # 注：Fortran 这里的 i/j 是行/列索引，但循环上界用了 naxis1/naxis2
-    # 反置——Fortran 自身 bug，对方图（naxis1==naxis2）无影响。
-    # 这里完全保留 Fortran 原貌（包括循环上界）。
+    # ── Pass A：4 邻居优先级标号 ─────────────────────────────────────
     idbox = [[0] * naxis1 for _ in range(naxis2)]
     numobj = 0
     for i in range(1, naxis1 - 1):  # Fortran i=2..naxis1-1
@@ -179,13 +143,11 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
     # 转 numpy 用于 Pass B/C 的向量化子区域操作
     idbox2 = np.array(idbox, dtype=np.int32)
 
-    # ============== Pass B：nr=250 局部合并 ==============
-    # 完全对应 Fortran 02detect.f90:344-377
-    # 循环：do i=2,naxis2-1; do j=naxis1-1,2,-1（j 从右向左）
+    # ── Pass B：±250 像素方框内合并水平相邻的不同 label ─────────────
     nr = 250
-    for i in range(1, naxis2 - 1):  # Fortran i=2..naxis2-1
+    for i in range(1, naxis2 - 1):
         row_abox_i = abox_l[i]
-        for j in range(naxis1 - 2, 0, -1):  # Fortran j=naxis1-1..2 反向
+        for j in range(naxis1 - 2, 0, -1):  # 从右向左
             if row_abox_i[j] > EPS and row_abox_i[j - 1] > EPS:
                 lab_left = int(idbox2[i, j - 1])
                 lab_cur = int(idbox2[i, j])
@@ -197,8 +159,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
                     sub = idbox2[ni1 : ni2 + 1, nj1 : nj2 + 1]
                     nrows = ni2 - ni1 + 1
                     ncols = nj2 - nj1 + 1
-                    # Fortran 条件 (i1.ne.i .and. j1.ne.j-1)：
-                    # 是 AND，排除整行 i 与整列 j-1（保留 Fortran 原貌）
+                    # 排除整行 i 与整列 j-1（Fortran 条件 i1≠i AND j1≠j-1）
                     row_mask = np.ones(nrows, dtype=bool)
                     if 0 <= i - ni1 < nrows:
                         row_mask[i - ni1] = False
@@ -208,41 +169,30 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
                     keep = row_mask[:, None] & col_mask[None, :]
                     sub_mask = (sub == lab_left) & keep
                     sub[sub_mask] = lab_cur
-                    # Fortran 02detect.f90:372：手动设置 (i, j-1) 这一点
+                    # 被排除的 (i, j-1) 单点需手动更新
                     idbox2[i, j - 1] = lab_cur
 
-    # ============== Pass C：8 邻接等价表合并 ==============
-    # 完全对应 Fortran 02detect.f90:380-554
-    # 步骤 1：扫描每个 >0 像素，对 8 邻居中 label 不同且 >0 的，
-    #        记录等价对 (min_label, max_label) 到 pairs1
-    # 顺序与 Fortran 一致：左、右、左上、上、右上、左下、下、右下
+    # ── Pass C：8 邻接等价表合并 ─────────────────────────────────────
+    # 步骤 1：扫每个 >0 像素，记录与 8 邻居中不同 label 的等价对 (min, max)
+    # 邻居顺序与 Fortran 一致：左、右、左上、上、右上、左下、下、右下
     pairs1 = []
-    for i in range(1, naxis2 - 1):  # Fortran i=2..naxis2-1
+    for i in range(1, naxis2 - 1):
         row_abox_i = abox_l[i]
         idbox2_im1 = idbox2[i - 1].tolist()
         idbox2_i = idbox2[i].tolist()
         idbox2_ip1 = idbox2[i + 1].tolist()
-        for j in range(1, naxis1 - 1):  # Fortran j=2..naxis1-1
+        for j in range(1, naxis1 - 1):
             if row_abox_i[j] > EPS:
                 cur = idbox2_i[j]
-                # Fortran 02detect.f90:389-451 顺序
                 for nb in (
-                    idbox2_i[j - 1],  # 左
-                    idbox2_i[j + 1],  # 右
-                    idbox2_im1[j - 1],  # 左上
-                    idbox2_im1[j],  # 上
-                    idbox2_im1[j + 1],  # 右上
-                    idbox2_ip1[j - 1],  # 左下
-                    idbox2_ip1[j],  # 下
-                    idbox2_ip1[j + 1],  # 右下
+                    idbox2_i[j - 1], idbox2_i[j + 1],
+                    idbox2_im1[j - 1], idbox2_im1[j], idbox2_im1[j + 1],
+                    idbox2_ip1[j - 1], idbox2_ip1[j], idbox2_ip1[j + 1],
                 ):
                     if cur != nb and nb > 0:
-                        if cur < nb:
-                            pairs1.append((cur, nb))
-                        else:
-                            pairs1.append((nb, cur))
+                        pairs1.append((cur, nb) if cur < nb else (nb, cur))
 
-    # 步骤 2：去重 1（Fortran 02detect.f90:459-475，按字符串去重，保首次出现顺序）
+    # 步骤 2：去重，保首次出现顺序
     seen = set()
     pairs2 = []
     for p in pairs1:
@@ -250,16 +200,15 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
             seen.add(p)
             pairs2.append(p)
 
-    # 步骤 3：简化合并（Fortran 02detect.f90:491-512）
-    # 对每个 pair (t1, t2)，扫描已存的 (eid1[j], eid2[j])：
-    #   - 若 t1 == eid2[j]：t1 = eid1[j]，break
-    #   - 否则若 t2 == eid2[j]：t2 = t1；t1 = eid1[j]，break
-    # 然后将 (t1, t2) 加入缓冲。即使无匹配也加入。
+    # 步骤 3：简化合并（单遍扫描，不是完整 Union-Find；在罕见复杂形状下会
+    # 合并不完整——但行为与 Fortran 一致，scipy 路径可绕开此限制）
+    # 对每对 (t1, t2)，若 t1==eid2[j] 取 t1=eid1[j]；否则若 t2==eid2[j]
+    # 则 t2=t1, t1=eid1[j]。无论是否匹配都加入缓冲。
     pairs3 = []
     eid1_buf = []
     eid2_buf = []
     for idx, (t1, t2) in enumerate(pairs2):
-        if idx > 0:  # Fortran 第一对直接写入，从第二对开始查找
+        if idx > 0:
             for jj in range(len(eid2_buf)):
                 if t1 == eid2_buf[jj]:
                     t1 = eid1_buf[jj]
@@ -272,7 +221,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
         eid2_buf.append(t2)
         pairs3.append((t1, t2))
 
-    # 步骤 4：去重 2（Fortran 02detect.f90:514-535）
+    # 步骤 4：再次去重
     seen = set()
     pairs4 = []
     for p in pairs3:
@@ -280,10 +229,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
             seen.add(p)
             pairs4.append(p)
 
-    # 步骤 5：替换（Fortran 02detect.f90:546-554）
-    # Fortran：对每个 >0 像素，按等价表顺序逐 pair 检查并替换。
-    # 等价于：按 pair 顺序，每对将所有匹配 e2 的 >0 像素改为 e1。
-    # （单像素视角：先 p1 后 p2 ... 与全图视角先全图 p1 再全图 p2 等价）
+    # 步骤 5：按等价对顺序逐对把 idbox2 中的 e2 替换为 e1
     if pairs4:
         mask_pos = abox > EPS
         for e1, e2 in pairs4:
@@ -362,12 +308,12 @@ def detect_stars_by_moments(
 
     bkgd, bkgdsigma = calculate_background(data)
 
-    # 阈值分割（Fortran 02detect.f90:222-225）
+    # 阈值分割：低于 bkgd + threshold*sigma 的像素归 0
     abox = data - (bkgd + bkgd_threshold * bkgdsigma)
     abox[abox < 0] = 0
-    abox0 = data  # 原始数据（用于 overflag 判断）
+    abox0 = data  # 原始数据（保留过曝判断）
 
-    # 边缘清零（Fortran 02detect.f90:233-240，对方图与 Fortran 完全等价）
+    # 边缘清零（最外一圈不参与连通域）
     abox[0, :] = 0
     abox[naxis2 - 1, :] = 0
     abox[:, 0] = 0
@@ -375,7 +321,7 @@ def detect_stars_by_moments(
 
     abox_l = abox.tolist()
 
-    # ============== 连通域标号（A/B 二选一）==============
+    # 连通域标号
     if connectivity == "fortran":
         idbox2 = label_connectivity_fortran(abox, naxis2, naxis1, EPS)
     elif connectivity == "scipy":
@@ -385,10 +331,8 @@ def detect_stars_by_moments(
             f"connectivity 必须为 'fortran' 或 'scipy'，收到：{connectivity!r}"
         )
 
-    # ============== 形心累加（Fortran 02detect.f90:570-625）==============
-    # numpix/sumx/sumy/sumi/sumi_real/overflag 全部从内边距区域累加。
-    # Fortran 02detect.f90:570 处 numpix=0 重置——所以 numpix 是内边距像素数，
-    # 不是 Pass A 标号阶段的全连通域像素数。
+    # 形心累加：仅扫内边距区域 [10, naxis-10)，numpix 因此是内边距像素数
+    # （不是 Pass A 标号阶段的整连通域像素数）。坐标用 1-based 行/列号。
     sumx = {}
     sumy = {}
     sumi_d = {}
@@ -399,8 +343,6 @@ def detect_stars_by_moments(
     abox0_l = abox0.tolist()
     idbox2_l = idbox2.tolist()
 
-    # Fortran：do i=10,naxis2-10; do j=10,naxis1-10（1-based 包含两端）
-    # Python 0-based：i=9..naxis2-11，即 range(9, naxis2-10)
     for i in range(9, naxis2 - 10):
         row_lab = idbox2_l[i]
         row_abox = abox_l[i]
@@ -410,7 +352,6 @@ def detect_stars_by_moments(
             if lab > 0:
                 v = row_abox[j]
                 vp = v**pos_method
-                # Fortran 累加用 1-based 行/列号（j+1, i+1）
                 if lab in sumx:
                     sumx[lab] += (j + 1) * vp
                     sumy[lab] += (i + 1) * vp
@@ -423,14 +364,11 @@ def detect_stars_by_moments(
                     sumi_d[lab] = vp
                     sumi_real_d[lab] = v
                     numpix[lab] = 1
-            # Fortran 02detect.f90:582：overflag 在 if(idbox2>0) 之外
-            # 即使 lab=0 也会写 overflag[0]=1（无害，下游不会使用 lab=0）
+            # overflag 在 lab>0 检查之外：即使 lab=0 也会标 overflag[0]=1（无害）
             if row_abox0[j] >= maxflux:
                 overflag[lab] = 1
 
-    # ============== 输出星表（Fortran 02detect.f90:589-625）==============
-    # Fortran 用 overflag<1 直接过滤；这里保留过曝星到列表（标 overflag=1），
-    # 由 write_reg_file 按 overflag<1 二次过滤——最终 .reg 输出与 Fortran 一致。
+    # 输出星表：过曝星保留但 overflag=1，最终由 write_reg_file 二次过滤
     detected_stars = []
     for lab in sorted(numpix.keys()):
         n = numpix[lab]
@@ -457,7 +395,7 @@ def detect_stars_by_moments(
             }
         )
 
-    # 按亮度 sumi_real 降序排序（Fortran 02detect.f90:629 sorting_7terms）
+    # 按亮度降序排序
     detected_stars.sort(key=lambda s: s["sumi"], reverse=True)
     return detected_stars, bkgd, bkgdsigma
 

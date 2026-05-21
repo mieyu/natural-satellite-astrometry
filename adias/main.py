@@ -1,18 +1,31 @@
-# 功能：ADIAS 统一入口，通过 --step 选择运行阶段。
-# 使用：python -m adias.main --step pre
-#       python -m adias.main --step all --config adias.cfg --fitspath fitspath.in
+# ADIAS 统一入口：通过 --step 选择运行阶段。
+# 用法:
+#   python -m adias.main                    # 跑完整 5 步
+#   python -m adias.main --step pre         # 仅跑指定步骤
+#   python -m adias.main --config my.cfg    # 指定配置文件
 
 import argparse
+import os
 import sys
 import time
 
-from adias.adias_config import parse_config
-from adias.core.adias_reportor import run_report
-from adias.io.adias_text_io import read_fitspath
+from adias import (
+    parse_config,
+    run_comoc,
+    run_detect,
+    run_match,
+    run_pre,
+    run_report,
+)
+from adias.paths import expand_fitspath
+
+DEFAULT_CONFIG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "adias2024.cfg"
+)
 
 
 class _Tee:
-    """同时向原始 stdout 和文件写出的透明代理，用于保存控制台输出。"""
+    """同时向 stdout 与文件写出的透明代理。"""
 
     def __init__(self, file_path):
         self._stdout = sys.stdout
@@ -42,13 +55,8 @@ def main():
     )
     parser.add_argument(
         "--config",
-        default="/Users/liuhongyu/PythonProject/AstroPyFITS/adias2024.cfg",
-        help="配置文件路径（默认: adias.cfg）",
-    )
-    parser.add_argument(
-        "--fitspath",
-        default="/Users/liuhongyu/PythonProject/AstroPyFITS/fitspath.in",
-        help="观测路径列表文件（默认: fitspath.in）",
+        default=DEFAULT_CONFIG,
+        help="配置文件路径（默认: 项目根目录下 adias2024.cfg）",
     )
     args = parser.parse_args()
 
@@ -56,30 +64,24 @@ def main():
     t0 = time.time()
 
     config = parse_config(args.config)
-    fitspath_list = read_fitspath(args.fitspath)
+    if not config["fitspath"]:
+        sys.exit("错误：cfg 中未配置 1fitspath，无法确定观测目录。")
+    fitspath_list = expand_fitspath(config["fitspath"])
     print(f"共读取到 {len(fitspath_list)} 个观测目录。\n")
 
     if args.step in ("pre", "all"):
-        from adias.core.adias_preprocessor import run_pre
-
         print("========== 01: 超级背景预处理 ==========")
         run_pre(config, fitspath_list)
 
     if args.step in ("detect", "all"):
-        from adias.core.adias_detector import run_detect
-
         print("========== 02: 星象检测 ==========")
         run_detect(config, fitspath_list)
 
     if args.step in ("match", "all"):
-        from adias.core.adias_matchor import run_match
-
         print("========== 03: 星象匹配归算 ==========")
         run_match(config, fitspath_list)
 
     if args.step in ("comoc", "all"):
-        from adias.core.adias_analyzer import run_comoc
-
         print("========== 04: O-C 统计 ==========")
         run_comoc(config, fitspath_list)
 

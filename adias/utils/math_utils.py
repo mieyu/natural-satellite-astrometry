@@ -1,5 +1,5 @@
 # 功能：天文数学工具函数（坐标变换、底片常数解算、拉格朗日插值等）。
-# 使用：from adias.utils.adias_math_utils import (
+# 使用：from adias.utils.math_utils import (
 #           cal_rl, interpolate, extract_field_stars,
 #           rade2ky, rade2xieta, xy2rade, xieta2xy,
 #           sol_par, am2hms, print_par)
@@ -308,6 +308,18 @@ def print_par(par, modeltype):
     for i in range(modeltype):
         print(f'{par[i]:10.4f}', end='')
     print()
+
+def initial_stats(res_ra, res_de):
+    """O-C 残差的原始均值/标准差。样本数 < 2 时一律返回 999.999 占位。"""
+    n = len(res_ra)
+    if n < 2:
+        return 999.999, 999.999, 999.999, 999.999
+    m_ra = sum(res_ra) / n
+    m_de = sum(res_de) / n
+    s_ra = math.sqrt(sum((v - m_ra) ** 2 for v in res_ra) / (n - 1))
+    s_de = math.sqrt(sum((v - m_de) ** 2 for v in res_de) / (n - 1))
+    return m_ra, m_de, s_ra, s_de
+
 
 def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
     """
