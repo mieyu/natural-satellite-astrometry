@@ -101,4 +101,3 @@ def read_fits_header(fitsfile, tele_label):
         raise
     except Exception as e:
         raise ProcessingError(f"读取 FITS 头错误：{fitsfile}: {e}") from e
-        return None

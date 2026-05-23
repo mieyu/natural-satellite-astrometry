@@ -20,12 +20,16 @@ class OutputSink:
         return self
 
     def write(self, data):
-        self._stdout.write(data)
-        self._file.write(data)
+        target = self._stdout if self._stdout is not None else sys.stdout
+        target.write(data)
+        if self._file is not None:
+            self._file.write(data)
 
     def flush(self):
-        self._stdout.flush()
-        self._file.flush()
+        target = self._stdout if self._stdout is not None else sys.stdout
+        target.flush()
+        if self._file is not None:
+            self._file.flush()
 
     def write_line(self, text=""):
         self.write(f"{text}\n")
