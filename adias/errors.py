@@ -1,4 +1,4 @@
-"""ADIAS 分层错误类型。"""
+"""ADIAS 分层异常类型。"""
 
 
 class AdiasError(Exception):

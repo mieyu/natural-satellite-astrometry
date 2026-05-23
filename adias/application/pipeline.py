@@ -1,10 +1,15 @@
 """流水线 Step 协议、运行器与 manifest 记录。"""
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
-import json
 from pathlib import Path
 from typing import Protocol
+
+from adias.application.log import get_logger
+
+
+_log = get_logger("pipeline")
 
 
 @dataclass
@@ -34,7 +39,7 @@ class PipelineRunner:
         results = []
         try:
             for step in self.steps:
-                print(step.title)
+                _log.info(step.title)
                 result = step.run(ctx)
                 results.append(result)
                 manifest.add_result(result)

@@ -3,16 +3,15 @@
 对外接口：
   - find_obj_base_angle(...)  → MatchResult   全力盲搜（首目标 / 底片常数解算）
   - find_obj_base_prepar(...) → MatchResult   复用底片常数（同图后续目标）
-  - match_result_from_legacy / match_result_to_legacy  legacy dict 互转
 
-阶段编排由 adias.core.matcher 负责。本模块纯算法 + MatchResult 进出，不涉及
-StepResult / 文件 I/O。
+本模块纯算法 + MatchResult 进出，不涉及 StepResult / 文件 I/O。
 """
 
 import numpy as np
 
+from adias.application.log import get_logger
 from adias.domain.astrometry import (
-    Q,
+    DEG2RAD,
     cal_rl,
     rade2xieta,
     sol_par,
@@ -21,17 +20,7 @@ from adias.domain.astrometry import (
 )
 from adias.domain.models import MatchResult
 
-
-# ── legacy 兼容 ───────────────────────────────────────────────────────────
-
-def match_result_from_legacy(data):
-    return MatchResult.from_legacy_dict(data)
-
-
-def match_result_to_legacy(result):
-    if isinstance(result, MatchResult):
-        return result.to_legacy_dict()
-    return result
+_log = get_logger("matching")
 
 
 # ── 内部 helper ───────────────────────────────────────────────────────────
@@ -55,7 +44,7 @@ def _empty_result(n_match1=0, par1=None, x_cen=0.0, y_cen=0.0, ra_cen=0.0, de_ce
 
 def _initial_plate_par(field_angle):
     """初始底片常数：仅含旋转角 par(1)=cos par(2)=sin par(4)=-sin par(5)=cos。"""
-    ca, sa = np.cos(field_angle * Q), np.sin(field_angle * Q)
+    ca, sa = np.cos(field_angle * DEG2RAD), np.sin(field_angle * DEG2RAD)
     par_init = np.zeros(30)
     par_init[0], par_init[1] = ca, sa
     par_init[3], par_init[4] = -sa, ca
@@ -99,10 +88,10 @@ def _coarse_match_base_angle(
         for k in range(n_det):
             xn = (det_x[k] - ox) * pscale / fl
             yn = (det_y[k] - oy) * pscale / fl
-            ra_k, de_k = xy2rade(par_init[:6], 6, xn, yn, obj_ephra * Q, obj_ephde * Q)
+            ra_k, de_k = xy2rade(par_init[:6], 6, xn, yn, obj_ephra * DEG2RAD, obj_ephde * DEG2RAD)
             for n in range(n_gaia):
-                rl = cal_rl(ra_k, de_k, gaia_ra[n] * Q, gaia_de[n] * Q)
-                if rl / Q * 3600 <= limit_match:
+                rl = cal_rl(ra_k, de_k, gaia_ra[n] * DEG2RAD, gaia_de[n] * DEG2RAD)
+                if rl / DEG2RAD * 3600 <= limit_match:
                     rx.append(xn)
                     ry.append(yn)
                     rra.append(gaia_ra[n])
@@ -124,7 +113,7 @@ def _coarse_match_base_angle(
                 obj_ephde,
                 modeltype,
             )
-            sig0_arcsec = sig0 / Q * 3600.0
+            sig0_arcsec = sig0 / DEG2RAD * 3600.0
             # 更新最佳候选：sig 在合理范围内且 (匹配更多) 或 (同匹配但 sigma 更小)
             if 0.001 < sig0_arcsec < 0.5 and (
                 nm > best["n"] or sig0_arcsec < best["sig"]
@@ -175,11 +164,11 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
     obj_xn = (x_cen - ox) * pscale / fl
     obj_yn = (y_cen - oy) * pscale / fl
     ra_cen, de_cen = xy2rade(
-        par1_first[:modeltype], modeltype, obj_xn, obj_yn, obj_ephra * Q, obj_ephde * Q
+        par1_first[:modeltype], modeltype, obj_xn, obj_yn, obj_ephra * DEG2RAD, obj_ephde * DEG2RAD
     )
-    print(
+    _log.info(
         f"    参考星星座中心xyrade：{x_cen:11.3f}{y_cen:11.3f}"
-        f"{ra_cen / Q:11.3f}{de_cen / Q:11.3f}"
+        f"{ra_cen / DEG2RAD:11.3f}{de_cen / DEG2RAD:11.3f}"
     )
 
     # 第二次：以质心为原点，ra_center/de_center 为球面中心
@@ -187,7 +176,7 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
     ryn = (ry0 - y_cen) * pscale / fl
     try:
         par1, sig0, _ = sol_par(
-            rxn, ryn, rra0, rde0, n_m, ra_cen / Q, de_cen / Q, modeltype
+            rxn, ryn, rra0, rde0, n_m, ra_cen / DEG2RAD, de_cen / DEG2RAD, modeltype
         )
     except Exception:
         return None
@@ -232,8 +221,8 @@ def _rematch_base_angle_field(
         yn = (det_y[k] - y_cen) * pscale / fl
         ra_k, de_k = xy2rade(par1[:modeltype], modeltype, xn, yn, ra_cen, de_cen)
         for n in range(n_gaia):
-            rl = cal_rl(ra_k, de_k, gaia_ra[n] * Q, gaia_de[n] * Q)
-            if rl / Q * 3600 <= limit_match:
+            rl = cal_rl(ra_k, de_k, gaia_ra[n] * DEG2RAD, gaia_de[n] * DEG2RAD)
+            if rl / DEG2RAD * 3600 <= limit_match:
                 rx_new.append(xn)
                 ry_new.append(yn)
                 rra_new.append(gaia_ra[n])
@@ -251,8 +240,8 @@ def _rematch_base_angle_field(
             np.array(rra_new),
             np.array(rde_new),
             n_m,
-            ra_cen / Q,
-            de_cen / Q,
+            ra_cen / DEG2RAD,
+            de_cen / DEG2RAD,
             modeltype,
         )
     except Exception:
@@ -266,7 +255,7 @@ def _rematch_base_angle_field(
         rmag_new=rmag_new,
         n_m=n_m,
         par1=par1,
-        sig1=sig0 / Q * 3600.0,
+        sig1=sig0 / DEG2RAD * 3600.0,
     )
 
 
@@ -288,11 +277,11 @@ def _locate_base_angle_target(
 ):
     """阶段四：历表位置反演到像素坐标，并在 3 像素内抓取目标。"""
     n_det = len(det_x)
-    xi, eta = rade2xieta(obj_ephra * Q, obj_ephde * Q, ra_cen, de_cen)
+    xi, eta = rade2xieta(obj_ephra * DEG2RAD, obj_ephde * DEG2RAD, ra_cen, de_cen)
     pre_x, pre_y = xieta2xy(xi, eta, par1[:6])
     pre_x = pre_x * fl / pscale + x_cen
     pre_y = pre_y * fl / pscale + y_cen
-    print(
+    _log.info(
         f"    预报x/y，历表ra/de：{pre_x:11.5f}{pre_y:11.5f}"
         f"{obj_ephra:11.5f}{obj_ephde:11.5f}"
     )
@@ -311,15 +300,15 @@ def _locate_base_angle_target(
             selectflag = 1
 
     if not selectflag:
-        print("    此图像未找到与预报目标位置相近的目标")
+        _log.info("    此图像未找到与预报目标位置相近的目标")
         return None
 
     xn = (obj_x_obs - x_cen) * pscale / fl
     yn = (obj_y_obs - y_cen) * pscale / fl
     obj_obsra, obj_obsde = xy2rade(par1[:modeltype], modeltype, xn, yn, ra_cen, de_cen)
-    print(
+    _log.info(
         f"    实测x/y，实测ra/de：{obj_x_obs:11.5f}{obj_y_obs:11.5f}"
-        f"{obj_obsra / Q:11.5f}{obj_obsde / Q:11.5f}"
+        f"{obj_obsra / DEG2RAD:11.5f}{obj_obsde / DEG2RAD:11.5f}"
     )
 
     return dict(
@@ -365,7 +354,7 @@ def find_obj_base_angle(
     """
     n_det = len(det_x)
     if n_det < 3:
-        print(f"    检测星少于 3 颗，跳过：{label}")
+        _log.info(f"    检测星少于 3 颗，跳过：{label}")
         r = _empty_result()
         r.nostar = 1
         return r
@@ -389,7 +378,7 @@ def find_obj_base_angle(
     )
 
     if best["n"] < 3:
-        print("    粗匹配失败：未找到足够参考星")
+        _log.info("    粗匹配失败：未找到足够参考星")
         r = _empty_result()
         r.nopre = 1
         return r
@@ -468,12 +457,12 @@ def find_obj_base_angle(
 
     # ── 阶段五：粗匹配 vs 最终位置差异 ────────────────────────────────────
     if abs(ox - obj_x_obs) > 0.001 and abs(oy - obj_y_obs) > 0.001:
-        print(
+        _log.info(
             f"    自动检测目标与最终确认目标有差异x/y "
             f"{ox - obj_x_obs:.3f} {oy - obj_y_obs:.3f}"
         )
     else:
-        print("    自动检测确认的目标==最终确认的目标")
+        _log.info("    自动检测确认的目标==最终确认的目标")
 
     # ── 参考星像素坐标输出（按 n_m 切片，不再预分配 90 万） ───────────────
     ref_x_out = np.array(rx_new) * fl / pscale + x_cen
@@ -489,8 +478,8 @@ def find_obj_base_angle(
         obj_y=obj_y_obs,
         obj_flux=obj_flux_obs,
         snr=snr_obs,
-        obj_obsra=obj_obsra / Q,
-        obj_obsde=obj_obsde / Q,
+        obj_obsra=obj_obsra / DEG2RAD,
+        obj_obsde=obj_obsde / DEG2RAD,
         n_match1=n_m,
         sig0=sig1,
         par1=par1.copy(),
@@ -542,17 +531,17 @@ def find_obj_base_prepar(
         ra_k, de_k = xy2rade(
             plate.par[:modeltype], modeltype, xn, yn, plate.ra_center, plate.de_center
         )
-        rl = cal_rl(ra_k, de_k, obj_ephra * Q, obj_ephde * Q) / Q * 3600.0
+        rl = cal_rl(ra_k, de_k, obj_ephra * DEG2RAD, obj_ephde * DEG2RAD) / DEG2RAD * 3600.0
         if rl <= limit_match and rl < rl0:
             rl0 = rl
             result.obj_x = det_x[k]
             result.obj_y = det_y[k]
             result.obj_flux = det_flux[k]
             result.snr = det_snr[k]
-            result.obj_obsra = ra_k / Q
-            result.obj_obsde = de_k / Q
+            result.obj_obsra = ra_k / DEG2RAD
+            result.obj_obsde = de_k / DEG2RAD
             result.nopre = 0
 
     if result.nopre:
-        print("    据pre_par，未找到与预报目标位置相近的目标")
+        _log.info("    据pre_par，未找到与预报目标位置相近的目标")
     return result

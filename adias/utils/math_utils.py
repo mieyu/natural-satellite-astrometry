@@ -1,18 +1,17 @@
-"""通用数学/格式/统计工具：
-  - interpolate  : 拉格朗日插值
+"""通用数学/格式/统计工具。
+
+涵盖：
+  - interpolate  : 拉格朗日插值（局部最多 8 节点）
   - am2hms       : 赤经赤纬角分 → 时分秒/度分秒
   - initial_stats: O-C 残差的原始均值/标准差
   - sigma_clip_oc: 迭代剔除 O-C 野值
-
-天文测量算法（坐标变换、底片常数、视场恒星筛选）在 adias.domain.astrometry。
 """
 
 import math
 
 
 def interpolate(x, y, n, t):
-    """
-    拉格朗日插值（对应 Fortran ENLGR 子程序）。
+    """拉格朗日插值。
 
     在 t 附近最多取 8 个相邻节点做局部 Lagrange，避免全表大阶次振荡。
     """
@@ -66,7 +65,7 @@ def initial_stats(res_ra, res_de):
 
 
 def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
-    """迭代剔除 O-C 野值，对应 Fortran comoc 核心循环。
+    """迭代剔除 O-C 野值。
 
     剔除策略：
       - oc_limit > 0：|data - mean| < oc_limit * sigma 且 |data| < eps；

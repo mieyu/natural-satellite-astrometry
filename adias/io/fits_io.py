@@ -1,20 +1,24 @@
-"""功能：FITS 文件读写工具（读取图像数据、写出处理结果）。
-使用：from adias.io.fits_io import read_fits, write_fits
+"""FITS 文件读写工具：图像数据与头部读取、处理结果落地。
+
+错误约定：
+  - 读取异常统一抛 ProcessingError，调用方应捕获后跳过单图，不中断流水线。
 """
+
+import warnings
 
 import numpy as np
 from astropy.io import fits
-import warnings
 from astropy.utils.exceptions import AstropyWarning
 
 from adias.errors import ProcessingError
 
 warnings.filterwarnings('ignore', category=AstropyWarning)
 
+
 def read_fits(fitsfile):
     """读取 FITS 文件，返回 (data: np.ndarray[float64], header)。"""
     with fits.open(fitsfile, ignore_missing_end=True) as hdul:
-        data   = hdul[0].data.astype(np.float64)
+        data = hdul[0].data.astype(np.float64)
         header = hdul[0].header.copy()
     return data, header
 
@@ -22,6 +26,7 @@ def read_fits(fitsfile):
 def write_fits(fitsfile, data, header):
     """将图像写出为 FITS（统一存为 float32 节省空间）。"""
     fits.writeto(fitsfile, data.astype(np.float32), header, overwrite=True)
+
 
 def read_fits_header(fitsfile, tele_label):
     """解析 FITS 头，返回曝光中点 UTC 时间及基本参数 dict。
@@ -32,11 +37,11 @@ def read_fits_header(fitsfile, tele_label):
     try:
         with fits.open(fitsfile) as hdul:
             h = hdul[0].header
-            naxis1  = h.get('NAXIS1',  0)
-            naxis2  = h.get('NAXIS2',  0)
-            bscale  = h.get('BSCALE',  1.0)
-            bzero   = h.get('BZERO',   0.0)
-            gain    = h.get('GAIN',    1.0)
+            naxis1 = h.get('NAXIS1', 0)
+            naxis2 = h.get('NAXIS2', 0)
+            bscale = h.get('BSCALE', 1.0)
+            bzero = h.get('BZERO', 0.0)
+            gain = h.get('GAIN', 1.0)
             exptime = h.get('EXPTIME', 0.0)
 
             # 按望远镜标签选择时间关键字
@@ -49,21 +54,25 @@ def read_fits_header(fitsfile, tele_label):
 
             p = date_str.replace('T', ' ').replace('-', ' ').replace(':', ' ').split()
             year, month, day = int(p[0]), int(p[1]), int(p[2])
-            hh,   mm,    ss  = int(p[3]), int(p[4]), float(p[5])
+            hh, mm, ss = int(p[3]), int(p[4]), float(p[5])
 
             # 修正到曝光中点
             ss += 0.5 * exptime
             while ss >= 60:
-                mm += 1; ss -= 60
+                mm += 1
+                ss -= 60
                 if mm >= 60:
-                    hh += 1; mm -= 60
+                    hh += 1
+                    mm -= 60
                     if hh >= 24:
-                        day += 1; hh -= 24
+                        day += 1
+                        hh -= 24
 
             # 北京时 -> UTC（仅 ss156 系列）
             if tele_label in ('ss156', 'ss156_2014'):
                 if hh < 8:
-                    day -= 1; hh += 24
+                    day -= 1
+                    hh += 24
                 hh -= 8
 
             return dict(naxis1=naxis1, naxis2=naxis2, bscale=bscale, bzero=bzero,

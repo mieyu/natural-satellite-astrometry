@@ -1,7 +1,7 @@
 """天文测量领域算法：坐标变换、底片常数解算、视场恒星筛选。
 
 实现要点：
-  - 角度统一以弧度参与三角运算；Q 是度→弧度换算常数。
+  - 角度统一以弧度参与三角运算；DEG2RAD 为度→弧度换算常数。
   - 底片常数模型阶数 nm ∈ {6, 12, 20, 30}；ksi/yit 各占一半。
   - 最小二乘解算迭代剔除残差超过 2.6σ 的观测对，最多 30 次。
 """
@@ -9,7 +9,11 @@
 import numpy as np
 from scipy.linalg import inv
 
-Q = np.pi / 180.0
+from adias.application.log import get_logger
+
+DEG2RAD = np.pi / 180.0
+
+_log = get_logger("astrometry")
 
 
 # ── 球面几何 ──────────────────────────────────────────────────────────────
@@ -36,7 +40,7 @@ def extract_field_stars(gaia_ra, gaia_de, gaia_pr, gaia_pd, gaia_mag, n_gaia,
                 obj_de - hw < gaia_de[i] < obj_de + hw):
             dt = epoch - 2016.0
             de_c = gaia_de[i] + dt * gaia_pd[i] / 3.6e6
-            ra_c = gaia_ra[i] + dt * gaia_pr[i] / 3.6e6 / np.cos(de_c * Q)
+            ra_c = gaia_ra[i] + dt * gaia_pr[i] / 3.6e6 / np.cos(de_c * DEG2RAD)
             ra.append(ra_c)
             de.append(de_c)
             mag.append(gaia_mag[i])
@@ -176,7 +180,7 @@ def sol_par(x, y, ra, de, n, ra0, de0, nm):
     ksi = np.zeros(n)
     yit = np.zeros(n)
     for i in range(n):
-        ksi[i], yit[i] = rade2ky(ra[i] * Q, de[i] * Q, ra0 * Q, de0 * Q)
+        ksi[i], yit[i] = rade2ky(ra[i] * DEG2RAD, de[i] * DEG2RAD, ra0 * DEG2RAD, de0 * DEG2RAD)
 
     A = _build_design_matrix(x, y, n, nm)
     C = np.zeros((2 * n, 1))
@@ -190,9 +194,5 @@ def sol_par(x, y, ra, de, n, ra0, de0, nm):
 # ── 调试输出 ──────────────────────────────────────────────────────────────
 
 def print_par(par, modeltype):
-    print(f'...底片常数（{modeltype}项）：', end='')
-    for i in range(modeltype):
-        print(f'{par[i]:10.4f}', end='')
-    print()
-
-
+    parts = "".join(f"{par[i]:10.4f}" for i in range(modeltype))
+    _log.info(f"...底片常数（{modeltype}项）：{parts}")

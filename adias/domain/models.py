@@ -1,6 +1,8 @@
-"""ADIAS 领域数据模型。
+"""领域数据模型：流水线各阶段共享的不变量结构。
 
-第一阶段只建立显式契约；旧格式读写仍由 adapters/io 层负责保持兼容。
+设计原则：
+  - 数据类只负责承载字段；I/O 与算法分别在 io/、domain/ 内部。
+  - numpy 是软依赖：未安装时降级为 list[float]，保证最小导入路径可用。
 """
 
 from dataclasses import dataclass, field
@@ -61,17 +63,6 @@ class GaiaCatalog:
     def is_empty(self):
         return self.count == 0 or self.ra is None
 
-    def iter_stars(self):
-        """逐颗遍历 ReferenceStar（不含 x/y，未投影到底片）。"""
-        for i in range(self.count):
-            yield ReferenceStar(
-                x=0.0,
-                y=0.0,
-                ra=float(self.ra[i]),
-                de=float(self.de[i]),
-                mag=float(self.mag[i]),
-            )
-
 
 @dataclass
 class Ephemeris:
@@ -94,8 +85,8 @@ class Ephemeris:
 class ObjectObservation:
     """单图单目标的归算结果。
 
-    残差不在模型里携带——object_N.out 的列宽与历史一致，
-    write_object_result adapter 由 obs_* 与 eph_* 即时算出。
+    残差不在模型里携带——写出行宽与历史一致，
+    write_object_result 由 obs_* 与 eph_* 即时算出。
     """
 
     year: int
@@ -173,31 +164,3 @@ class MatchResult:
     ref_ra: object = field(default_factory=lambda: _zeros(0))
     ref_de: object = field(default_factory=lambda: _zeros(0))
     ref_mag: object = field(default_factory=lambda: _zeros(0))
-
-    @classmethod
-    def from_legacy_dict(cls, data):
-        return cls(**{k: data[k] for k in cls.__dataclass_fields__ if k in data})
-
-    def to_legacy_dict(self):
-        return {
-            "nostar": self.nostar,
-            "nopre": self.nopre,
-            "obj_x": self.obj_x,
-            "obj_y": self.obj_y,
-            "obj_flux": self.obj_flux,
-            "snr": self.snr,
-            "obj_obsra": self.obj_obsra,
-            "obj_obsde": self.obj_obsde,
-            "n_match1": self.n_match1,
-            "sig0": self.sig0,
-            "par1": self.par1,
-            "x_center": self.x_center,
-            "y_center": self.y_center,
-            "ra_center": self.ra_center,
-            "de_center": self.de_center,
-            "ref_x": self.ref_x,
-            "ref_y": self.ref_y,
-            "ref_ra": self.ref_ra,
-            "ref_de": self.ref_de,
-            "ref_mag": self.ref_mag,
-        }

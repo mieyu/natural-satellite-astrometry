@@ -1,5 +1,10 @@
-"""功能：图像统计与滤波工具函数（背景估计、中值滤波、均值滤波）。
-使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
+"""图像统计与滤波工具：背景估计、超级背景扣除、连通域标号、星象检测。
+
+实现要点：
+  - calculate_background 使用迭代 sigma-clipping，约定收敛时返回旧均值/旋差。
+  - 连通域 fortran 路径完整移植原算法（含 nr=250 子区域合并），与 scipy
+    路径在算法等价但在罕见复杂形状下精度不同；切换由 cfg 控制。
+  - 星象检测仅扫内边距 [10, naxis-10) 内的像素累加形心。
 """
 
 import cv2
@@ -73,17 +78,17 @@ def apply_smooth(data):
 
 
 def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
-    """三段式连通域标号（Fortran 算法移植，保留方图同算行为）。
+    """三段式连通域标号（保留原算法的行为不变量）。
 
       Pass A: 首遍 4 邻居优先级标号（右上 > 正上 > 左上 > 左），
               用 elseif 链继承第一个非零邻居 label
       Pass B: 在 ±250 像素方框内就地合并水平相邻的不同 label
       Pass C: 8 邻接等价表 → 去重 → 简化合并 → 再去重 → 替换
 
-    与 scipy 标准 8 连通的差异：Pass B 的 nr=250 局部合并是 Fortran 特有，
-    在 Fortran 简化合并失败的极少数复杂形状下，scipy 结果反而更稳健。
+    与 scipy 标准 8 连通的差异：Pass B 的 nr=250 局部合并属原算法特性，
+    在简化合并失败的极少数复杂形状下，scipy 结果反而更稳健。
 
-    注：Pass A 的循环上界用了 naxis1/naxis2 反置（Fortran 自身 bug），
+    注：Pass A 的循环上界用了 naxis1/naxis2 反置（原算法 bug），
     对方图 naxis1==naxis2 无影响，这里完整保留以匹配原行为。
     """
     abox_l = abox.tolist()
@@ -91,12 +96,12 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
     # ── Pass A：4 邻居优先级标号 ──────────────────────────────────────────
     idbox = [[0] * naxis1 for _ in range(naxis2)]
     numobj = 0
-    for i in range(1, naxis1 - 1):  # Fortran i=2..naxis1-1
+    for i in range(1, naxis1 - 1):
         row_im1 = abox_l[i - 1]
         row_i = abox_l[i]
         idbox_im1 = idbox[i - 1]
         idbox_i = idbox[i]
-        for j in range(1, naxis2 - 1):  # Fortran j=2..naxis2-1
+        for j in range(1, naxis2 - 1):
             v = row_i[j]
             if v > EPS:
                 lty1 = row_im1[j + 1]  # 右上
@@ -117,14 +122,13 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
                 elif lty4 > EPS:
                     idbox_i[j] = idbox_i[j - 1]
 
-    # 转 numpy 用于 Pass B/C 的向量化子区域操作
     idbox2 = np.array(idbox, dtype=np.int32)
 
     # ── Pass B：±250 像素方框内合并水平相邻的不同 label ───────────────────
     nr = 250
     for i in range(1, naxis2 - 1):
         row_abox_i = abox_l[i]
-        for j in range(naxis1 - 2, 0, -1):  # 从右向左
+        for j in range(naxis1 - 2, 0, -1):
             if row_abox_i[j] > EPS and row_abox_i[j - 1] > EPS:
                 lab_left = int(idbox2[i, j - 1])
                 lab_cur = int(idbox2[i, j])
@@ -136,7 +140,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
                     sub = idbox2[ni1 : ni2 + 1, nj1 : nj2 + 1]
                     nrows = ni2 - ni1 + 1
                     ncols = nj2 - nj1 + 1
-                    # 排除整行 i 与整列 j-1（Fortran 条件 i1≠i AND j1≠j-1）
+                    # 排除整行 i 与整列 j-1（原条件 i1≠i AND j1≠j-1）
                     row_mask = np.ones(nrows, dtype=bool)
                     if 0 <= i - ni1 < nrows:
                         row_mask[i - ni1] = False
@@ -151,7 +155,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
 
     # ── Pass C：8 邻接等价表合并 ──────────────────────────────────────────
     # 步骤 1：扫每个 >0 像素，记录与 8 邻居中不同 label 的等价对 (min, max)
-    # 邻居顺序与 Fortran 一致：左、右、左上、上、右上、左下、下、右下
+    # 邻居顺序：左、右、左上、上、右上、左下、下、右下
     pairs1 = []
     for i in range(1, naxis2 - 1):
         row_abox_i = abox_l[i]
@@ -178,9 +182,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
             pairs2.append(p)
 
     # 步骤 3：简化合并（单遍扫描，不是完整 Union-Find；在罕见复杂形状下会
-    # 合并不完整——但行为与 Fortran 一致，scipy 路径可绕开此限制）
-    # 对每对 (t1, t2)，若 t1==eid2[j] 取 t1=eid1[j]；否则若 t2==eid2[j]
-    # 则 t2=t1, t1=eid1[j]。无论是否匹配都加入缓冲。
+    # 合并不完整——但行为与原算法一致，scipy 路径可绕开此限制）
     pairs3 = []
     eid1_buf = []
     eid2_buf = []
@@ -218,10 +220,10 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
 
 
 def label_connectivity_scipy(abox, naxis2, naxis1, EPS=1e-9):
-    """scipy 标准 8 连通标号（不含 Fortran 的 nr=250 子区域合并）。
+    """scipy 标准 8 连通标号（不含 nr=250 子区域合并）。
 
-    与 Fortran 路径在算法上等价，但 scipy 用严格 Union-Find，
-    在 Fortran 简化单遍合并可能不完整的复杂形状下更稳健。
+    与 fortran 路径在算法上等价，但 scipy 用严格 Union-Find，
+    在 fortran 简化单遍合并可能不完整的复杂形状下更稳健。
     naxis1 仅为签名一致而保留；返回 int32 标号矩阵。
     """
     structure = generate_binary_structure(2, 2)
@@ -235,13 +237,12 @@ def detect_stars_by_moments(
     """连通域星象检测 + 修正矩定中心，返回 (按亮度降序的星表, bkgd, bkgdsigma)。
 
     bitpix 用于动态计算饱和阈值 maxflux=2**bitpix-1（仅整型 FITS 有效）。
-    connectivity="fortran" 走完整 Fortran 三段式（含 nr=250 合并），
-    "scipy" 走标准 8 连通。每颗星 dict：starx/stary/sumi/snr/star_id/
-    star_pix/overflag。
+    connectivity="fortran" 走完整三段式（含 nr=250 合并），"scipy" 走标准
+    8 连通。每颗星 dict：starx/stary/sumi/snr/star_id/star_pix/overflag。
     """
     naxis2, naxis1 = data.shape  # FITS 标准：data.shape[0]=NAXIS2(行), [1]=NAXIS1(列)
 
-    # maxflux：Fortran 公式 2**bitpix-1 仅对整型 FITS（BITPIX>0）有意义；
+    # maxflux：2**bitpix-1 仅对整型 FITS（BITPIX>0）有意义；
     # 对浮点 FITS（BITPIX=-32/-64）会算出 ≈ -1，导致所有像素被误判过曝。
     # 浮点 FITS 没有整型饱和概念，用 +inf 禁用过曝判断。
     if bitpix > 0:
@@ -396,7 +397,6 @@ def bilateral_retinex(data, d=15):
     reflectance = np.expm1(detail).astype(np.float64)
     illumination = np.expm1(bilateral).astype(np.float64)
 
-    # 归一化回原始值域
     def _norm_to_range(arr, target_max):
         a_min, a_max = arr.min(), arr.max()
         if a_max - a_min < 1e-9:

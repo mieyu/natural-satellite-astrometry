@@ -1,14 +1,16 @@
-"""02detect：连通域 + 修正矩星象检测。原始 .fit 来自 fits/，预处理图来自 fits_n/，
-检测产物 *.fit.reg 落到同日 fits_reg/ 子目录。
+"""02detect：连通域 + 修正矩星象检测。
+
+原始 .fit 来自 fits/，预处理图来自 fits_n/，检测产物 *.fit.reg 落到同日
+fits_reg/ 子目录。
 """
 
-import glob
-import os
+from pathlib import Path
 
-from adias.adapters.region_adapter import write_detected_region
+from adias.application.log import get_logger
 from adias.application.pipeline import StepResult
 from adias.domain.models import DetectedStar
 from adias.io.fits_io import read_fits
+from adias.io.text_io import write_reg_file
 from adias.paths import (
     DETECT_DIR,
     PRE_DIR,
@@ -19,6 +21,24 @@ from adias.paths import (
 )
 from adias.utils.image_utils import detect_stars_by_moments
 
+_log = get_logger("detect")
+
+
+def _stars_to_reg_dicts(stars):
+    """DetectedStar 列表 → write_reg_file 期望的 dict 列表。"""
+    return [
+        {
+            "starx": s.x,
+            "stary": s.y,
+            "sumi": s.flux,
+            "snr": s.snr,
+            "star_id": s.star_id,
+            "star_pix": s.pixel_count,
+            "overflag": 1 if s.saturated else 0,
+        }
+        for s in stars
+    ]
+
 
 def run_detect(config, fitspath_list):
     """对每个观测目录的所有原始 .fit 执行星象检测。
@@ -26,14 +46,17 @@ def run_detect(config, fitspath_list):
     superflag != 0 时读 fits_n/ 下的预处理图；否则读原始 .fit。
     输出 DS9 region 写到 fits_reg/。
     """
+    pre = config.pre
+    detect = config.detect
     result = StepResult("detect")
     for idx, fitspath in enumerate(fitspath_list, 1):
-        print(f"\n第 {idx:03d} 天 - fits 文件夹：{fitspath}")
-        print("    ====================本日fits图像处理情况===================")
+        fitspath = Path(fitspath)
+        _log.info(f"\n第 {idx:03d} 天 - fits 文件夹：{fitspath}")
+        _log.info("    ====================本日fits图像处理情况===================")
 
         fits_files = list_fits(fitspath)
         if not fits_files:
-            print("    警告：未发现原始 .fit，跳过。")
+            _log.info("    警告：未发现原始 .fit，跳过。")
             result.warnings.append(f"detect: 未发现 .fit {fitspath}")
             continue
 
@@ -43,39 +66,33 @@ def run_detect(config, fitspath_list):
 
         n_processed = 0
         for fitsfile_path in fits_files:
-            fitsfile0 = os.path.basename(fitsfile_path)
             n_processed += 1
-            print(f"\n  {n_processed:04d}-{fitsfile0}")
+            _log.info(f"\n  {n_processed:04d}-{fitsfile_path.name}")
 
             # 按 superflag 选择输入：预处理图来自 fits_n/，否则用原始 .fit
-            if config["superflag"] != 0:
-                base, ext = os.path.splitext(fitsfile0)
-                input_name = f"{base}_n{ext}"
-                input_path = os.path.join(pre_input_dir, input_name)
-                print(f"    使用预处理图像: {input_name}")
+            if pre.superflag != 0:
+                input_name = f"{fitsfile_path.stem}_n{fitsfile_path.suffix}"
+                input_path = pre_input_dir / input_name
+                _log.info(f"    使用预处理图像: {input_name}")
             else:
                 input_path = fitsfile_path
-                print("    使用原始图像。")
+                _log.info("    使用原始图像。")
 
-            if not os.path.exists(input_path):
-                print(f"    错误：文件不存在 -> {input_path}")
+            if not input_path.exists():
+                _log.info(f"    错误：文件不存在 -> {input_path}")
                 result.warnings.append(f"detect: 输入缺失 {input_path}")
-                result.failed_items.append(input_path)
+                result.failed_items.append(str(input_path))
                 continue
 
             # 读取 BITPIX 用于动态计算饱和阈值 maxflux=2**bitpix-1
-            data, header = read_fits(input_path)
+            data, header = read_fits(str(input_path))
             bitpix = int(header.get("BITPIX", 16))
-            # 连通域算法可选：
-            #   "fortran" 完全按 Fortran 三段式（含 nr=250 子区域合并）
-            #   "scipy"   Python 标准 8 连通（更稳健，但与 Fortran 不完全等价）
-            connectivity = config.get("connectivity", "fortran")
             raw_stars, bkgd, bkgdsigma = detect_stars_by_moments(
                 data,
-                config["bkgd_threshold"],
-                config["pos_method"],
+                detect.bkgd_threshold,
+                detect.pos_method,
                 bitpix,
-                connectivity=connectivity,
+                connectivity=detect.connectivity,
             )
 
             stars = [
@@ -91,19 +108,21 @@ def run_detect(config, fitspath_list):
                 for s in raw_stars
             ]
 
-            out_reg = reg_path(fitspath, fitsfile0)
-            n_out = write_detected_region(
-                out_reg, stars, bkgd, bkgdsigma, config["snr_threshold"]
+            out_reg = reg_path(fitspath, fitsfile_path.name)
+            n_out = write_reg_file(
+                str(out_reg),
+                _stars_to_reg_dicts(stars),
+                bkgd,
+                bkgdsigma,
+                detect.snr_threshold,
             )
 
-            print(f"    图像背景/sigma: {bkgd:10.3f} / {bkgdsigma:10.3f}")
-            print(f"    满足条件的星数: {n_out:4d}")
+            _log.info(f"    图像背景/sigma: {bkgd:10.3f} / {bkgdsigma:10.3f}")
+            _log.info(f"    满足条件的星数: {n_out:4d}")
 
-        print(f"\n    共检测图像：{n_processed} 幅，reg 写入 {reg_out_dir}")
-        result.output_files.extend(
-            sorted(glob.glob(os.path.join(reg_out_dir, "*.fit.reg")))
-        )
+        _log.info(f"\n    共检测图像：{n_processed} 幅，reg 写入 {reg_out_dir}")
+        result.output_files.extend(str(p) for p in sorted(reg_out_dir.glob("*.fit.reg")))
 
-    print(f"\n{'=' * 50}")
-    print("02detect 完成。")
+    _log.info(f"\n{'=' * 50}")
+    _log.info("02detect 完成。")
     return result

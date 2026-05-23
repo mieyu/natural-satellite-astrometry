@@ -1,6 +1,6 @@
 """ADIAS 统一入口：通过 --step 选择运行阶段。
 
-用法:
+用法：
   python -m adias.main                    # 跑完整 5 步
   python -m adias.main --step pre         # 仅跑指定步骤
   python -m adias.main --config my.cfg    # 指定配置文件
@@ -12,7 +12,7 @@ import sys
 import time
 
 from adias.application.context import build_context
-from adias.application.output import OutputSink
+from adias.application.log import get_logger, setup_logging, teardown_logging
 from adias.application.pipeline import PipelineRunner
 from adias.application.steps import select_steps, selected_step_names
 from adias.config import load_config
@@ -40,23 +40,24 @@ def main():
     )
     args = parser.parse_args()
 
-    output = OutputSink("控制台输出.txt").install()
+    setup_logging()
+    log = get_logger()
     t0 = time.time()
 
     try:
         step_names = selected_step_names(args.step)
         config = load_config(args.config, steps=step_names)
-        ctx = build_context(config, step_names, output=output)
-        print(f"共读取到 {len(ctx.fitspath_list)} 个观测目录。\n")
+        ctx = build_context(config, step_names)
+        log.info(f"共读取到 {len(ctx.fitspath_list)} 个观测目录。\n")
 
         runner = PipelineRunner(select_steps(args.step))
         runner.run(ctx)
 
-        print(f"\n总耗时: {time.time() - t0:.2f} s")
+        log.info(f"\n总耗时: {time.time() - t0:.2f} s")
     except ConfigError as e:
         sys.exit(f"错误：{e}")
     finally:
-        output.close()
+        teardown_logging()
 
 
 if __name__ == "__main__":

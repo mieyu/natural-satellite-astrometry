@@ -1,8 +1,9 @@
-"""功能：05report O-C 散点图绘制，复现 all_data.m 的功能。
-输入：config['newoutfile0'] 目录下由 04comoc 生成的 *N.dat 文件。
-输出：outdir/OC_summary.png  （以及可选的每颗卫星单独图）
+"""05report：扫 comoc 产物 .dat，绘制 O-C 散点图。
 
-.dat 文件列说明（space-delimited，1-based与 MATLAB 对齐）：
+读取：comoc.output_dir 下由 04comoc 生成的 *N.dat 文件。
+输出：outdir/OC_summary.png  以及每颗卫星单独的 OC_UN.png。
+
+.dat 列说明（space-delimited，1-based 与上游 MATLAB 脚本对齐）：
   col 1  : year
   col 2  : month
   col 3  : day.fraction  （观测时刻，UTC 天的小数）
@@ -12,45 +13,37 @@
   col 11 : obs_de  (deg)
   col 12 : eph_ra  (deg)
   col 13 : eph_de  (deg)
-  col 14 : Δα·cosδ  O-C (arcsec)   ← MATLAB a(:,14)
-  col 15 : Δδ       O-C (arcsec)   ← MATLAB a(:,15)
+  col 14 : Δα·cosδ  O-C (arcsec)
+  col 15 : Δδ       O-C (arcsec)
   col 16 : sig0
   col 17 : obs_hh
   col 18 : obs_mm
   col 19 : obs_ss
-  col 20 : exptime                  ← MATLAB a(:,20)
+  col 20 : exptime
   col 21+: filename ...
 """
 
-import glob
-import os
 import re
 from collections import defaultdict
+from pathlib import Path
 
 import matplotlib
 import numpy as np
 
+from adias.application.log import get_logger
 from adias.application.pipeline import StepResult
 
 matplotlib.use("Agg")  # 非交互后端，适合服务器/脚本环境
 import matplotlib.pyplot as plt
 
-# ── 颜色 / 时间偏移 / 卫星标签（与 MATLAB 脚本完全对应） ──────────────────
+_log = get_logger("report")
+
+# ── 颜色 / 时间偏移 / 卫星标签（与上游脚本对应） ──────────────────────────
 _COLORS = ["r", "b", "k", "g", "c"]
 _T_OFFSET = [0.00, 0.15, 0.30, 0.45, 0.60]  # 各卫星时间轴错开量（天）
 _MONTH_EN = {
-    1: "Jan.",
-    2: "Feb.",
-    3: "Mar.",
-    4: "Apr.",
-    5: "May",
-    6: "Jun.",
-    7: "Jul.",
-    8: "Aug.",
-    9: "Sep.",
-    10: "Oct.",
-    11: "Nov.",
-    12: "Dec.",
+    1: "Jan.", 2: "Feb.", 3: "Mar.", 4: "Apr.", 5: "May", 6: "Jun.",
+    7: "Jul.", 8: "Aug.", 9: "Sep.", 10: "Oct.", 11: "Nov.", 12: "Dec.",
 }
 
 
@@ -74,31 +67,26 @@ def _load_dat(filepath):
                         {
                             "year": int(parts[0]),
                             "month": int(parts[1]),
-                            "t": float(parts[2]),  # col 3  : day fraction
-                            "ra_oc": float(parts[13]),  # col 14 : Δα·cosδ (")
-                            "de_oc": float(parts[14]),  # col 15 : Δδ (")
-                            "exptime": float(parts[19]),  # col 20 : exptime
+                            "t": float(parts[2]),
+                            "ra_oc": float(parts[13]),
+                            "de_oc": float(parts[14]),
+                            "exptime": float(parts[19]),
                         }
                     )
                 except (ValueError, IndexError) as e:
-                    print(
-                        f"  [警告] {os.path.basename(filepath)} 第 {lineno} 行解析失败：{e}"
-                    )
+                    _log.info(f"  警告：{Path(filepath).name} 第 {lineno} 行解析失败：{e}")
     except Exception as e:
-        print(f"  错误：无法读取 {filepath}：{e}")
+        _log.info(f"  错误：无法读取 {filepath}：{e}")
     return records
 
 
 def _discover_dat_files(outdir, obj_total):
-    """按 .dat 文件名末尾数字归类到卫星编号，返回 {obj_idx: [path,...]}。
-
-    兼容 MATLAB 风格 YYYYMMN.dat 与当前 <任意前缀>N.dat（末位数字 = 卫星编号）。
-    """
+    """按 .dat 文件名末尾数字归类到卫星编号，返回 {obj_idx: [path,...]}。"""
     found = {obj: [] for obj in range(1, obj_total + 1)}
     pat = re.compile(r"^(.+?)(\d)$")  # 末尾一位数字 = 卫星编号
 
-    for fp in sorted(glob.glob(os.path.join(outdir, "*.dat"))):
-        stem = os.path.splitext(os.path.basename(fp))[0]
+    for fp in sorted(outdir.glob("*.dat")):
+        stem = fp.stem
         m = pat.match(stem)
         if not m:
             continue
@@ -182,16 +170,9 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
 
 
 def _build_summary_figure(all_period_data, periods, obj_total, outdir):
-    """
-    生成多时段汇总图（n_periods 行 × 2 列），保存为 OC_summary.png。
-    """
+    """生成多时段汇总图（n_periods 行 × 2 列），保存为 OC_summary.png。"""
     n = len(periods)
-    fig, axes = plt.subplots(
-        n,
-        2,
-        figsize=(14, 3.8 * n),
-        squeeze=False,
-    )
+    fig, axes = plt.subplots(n, 2, figsize=(14, 3.8 * n), squeeze=False)
     fig.suptitle("O-C Residuals Summary", fontsize=13, y=1.01)
 
     for row, (year, month) in enumerate(periods):
@@ -205,17 +186,15 @@ def _build_summary_figure(all_period_data, periods, obj_total, outdir):
         )
 
     fig.tight_layout()
-    out_path = os.path.join(outdir, "OC_summary.png")
+    out_path = outdir / "OC_summary.png"
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  汇总图已保存：{out_path}")
+    _log.info(f"  汇总图已保存：{out_path}")
     return out_path
 
 
 def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
-    """
-    为每颗卫星生成单独的多时段图（可选），保存为 OC_UN.png。
-    """
+    """为每颗卫星生成单独的多时段图（可选），保存为 OC_UN.png。"""
     saved = []
     for obj_idx in range(1, obj_total + 1):
         n = len(periods)
@@ -247,11 +226,11 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
             ax_de.grid(True, linewidth=0.5, alpha=0.7)
 
         fig.tight_layout()
-        out_path = os.path.join(outdir, f"OC_U{obj_idx}.png")
+        out_path = outdir / f"OC_U{obj_idx}.png"
         fig.savefig(out_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         saved.append(out_path)
-        print(f"  U{obj_idx} 图已保存：{out_path}")
+        _log.info(f"  U{obj_idx} 图已保存：{out_path}")
 
     return saved
 
@@ -259,55 +238,55 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
 # ── 公开入口 ──────────────────────────────────────────────────────────────
 
 
-def run_report(config, outdir=None, per_satellite=True):
-    """读取 comoc 的 .dat 文件，生成 OC_summary.png 及（可选）各卫星单独图。
+def run_report(config, outdir=None):
+    """读取 comoc 的 .dat 文件，生成 OC_summary.png 及各卫星单独图。
 
-    outdir 默认为 config['newoutfile0']。per_satellite=True 时额外生成
-    OC_U1.png~OC_U5.png。
+    outdir 默认取 config.comoc.output_dir；per_satellite 由 config.report 控制。
     """
     result = StepResult("report")
     if outdir is None:
-        outdir = config["newoutfile0"]
+        outdir = Path(config.comoc.output_dir)
+    else:
+        outdir = Path(outdir)
 
-    obj_total = config.get("obj_total", 5)
+    obj_total = config.match.obj_total or 5
+    per_satellite = config.report.per_satellite
 
-    print(f"\n{'=' * 50}")
-    print(f"05report 开始 — 读取目录：{outdir}")
+    _log.info(f"\n{'=' * 50}")
+    _log.info(f"05report 开始 — 读取目录：{outdir}")
 
-    if not os.path.isdir(outdir):
-        print(f"  错误：输出目录不存在：{outdir}")
-        print("05report 跳过。")
+    if not outdir.is_dir():
+        _log.info(f"  错误：输出目录不存在：{outdir}")
+        _log.info("05report 跳过。")
         result.warnings.append(f"report: 输出目录不存在 {outdir}")
-        result.failed_items.append(outdir)
+        result.failed_items.append(str(outdir))
         return result
 
-    # ── 发现数据文件 ──────────────────────────────────────────────────────
     dat_files = _discover_dat_files(outdir, obj_total)
 
     total_files = sum(len(v) for v in dat_files.values())
     if total_files == 0:
-        print(f"  警告：在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
+        _log.info(f"  警告：在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
         result.warnings.append(f"report: 未发现 .dat {outdir}")
         return result
 
-    print(f"  发现 .dat 文件共 {total_files} 个：")
+    _log.info(f"  发现 .dat 文件共 {total_files} 个：")
     for obj_idx in range(1, obj_total + 1):
         flist = dat_files[obj_idx]
         if flist:
-            names = ", ".join(os.path.basename(f) for f in flist)
-            print(f"    U{obj_idx}: {names}")
+            names = ", ".join(p.name for p in flist)
+            _log.info(f"    U{obj_idx}: {names}")
 
-    # ── 读取数据并按时段分组 ──────────────────────────────────────────────
     all_period_data = _collect_by_period(dat_files, obj_total)
 
     if not all_period_data:
-        print("  警告：所有文件均无有效数据行，跳过绘图。")
+        _log.info("  警告：所有文件均无有效数据行，跳过绘图。")
         result.warnings.append(f"report: 无有效数据行 {outdir}")
         return result
 
-    periods = sorted(all_period_data.keys())  # 按 (year, month) 升序
+    periods = sorted(all_period_data.keys())
 
-    print(f"\n  数据概要（共 {len(periods)} 个观测时段）：")
+    _log.info(f"\n  数据概要（共 {len(periods)} 个观测时段）：")
     for year, month in periods:
         month_str = _MONTH_EN.get(month, str(month))
         counts = [
@@ -315,18 +294,18 @@ def run_report(config, outdir=None, per_satellite=True):
             for obj in range(1, obj_total + 1)
         ]
         count_str = "  ".join(f"U{o}:{c}" for o, c in enumerate(counts, 1) if c > 0)
-        print(f"    {year} {month_str:4s}  —  {count_str}")
+        _log.info(f"    {year} {month_str:4s}  —  {count_str}")
 
-    # ── 生成汇总图 ────────────────────────────────────────────────────────
     summary_path = _build_summary_figure(all_period_data, periods, obj_total, outdir)
-    result.output_files.append(summary_path)
+    result.output_files.append(str(summary_path))
 
-    # ── 生成各卫星单独图（可选） ──────────────────────────────────────────
     if per_satellite:
         result.output_files.extend(
-            _build_per_satellite_figures(all_period_data, periods, obj_total, outdir)
+            str(p) for p in _build_per_satellite_figures(
+                all_period_data, periods, obj_total, outdir
+            )
         )
 
-    print(f"\n{'=' * 50}")
-    print("05report 完成。")
+    _log.info(f"\n{'=' * 50}")
+    _log.info("05report 完成。")
     return result

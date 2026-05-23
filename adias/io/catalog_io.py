@@ -1,5 +1,4 @@
-"""功能：星表与历表文件读取（GAIA 星表、IMCCE 历表）。
-使用：from adias.io.catalog_io import read_catalog, read_ephemeris
+"""星表与历表文件读取（GAIA 星表、IMCCE 历表）。
 
 错误约定：
   - 文件无法打开或全文解析失败：raise DataFormatError，由调用方决定跳过策略
@@ -8,7 +7,10 @@
 
 import numpy as np
 
+from adias.application.log import get_logger
 from adias.errors import DataFormatError
+
+_log = get_logger("io.catalog")
 
 
 def read_catalog(catfile, min_mag, max_mag):
@@ -46,6 +48,7 @@ def read_catalog(catfile, min_mag, max_mag):
     n = len(ra)
     return n, np.array(ra), np.array(de), np.array(pr), np.array(pd), np.array(mag)
 
+
 def read_ephemeris(ephfile):
     """读取 IMCCE 历表，返回 (n, T, ra, de)；ra 已从时角换算为度。
 
@@ -60,7 +63,7 @@ def read_ephemeris(ephfile):
     except OSError as e:
         raise DataFormatError(f"无法打开历表 {ephfile}: {e}") from e
 
-    print(f"历表文件总行数: {len(lines)}")
+    _log.info(f"历表文件总行数: {len(lines)}")
     skipped = parsed = 0
     for i, line in enumerate(lines[10:], start=10):
         s = line.strip()
@@ -79,9 +82,9 @@ def read_ephemeris(ephfile):
             else:
                 skipped += 1
         except (ValueError, IndexError) as e:
-            print(f"第 {i+1} 行解析失败：{s}，错误：{e}")
+            _log.info(f"第 {i+1} 行解析失败：{s}，错误：{e}")
             skipped += 1
-    print(f"跳过行数：{skipped}，成功解析行数：{parsed}")
+    _log.info(f"跳过行数：{skipped}，成功解析行数：{parsed}")
 
     if parsed == 0:
         raise DataFormatError(f"历表 {ephfile} 无可解析行（共 {len(lines)} 行）")
