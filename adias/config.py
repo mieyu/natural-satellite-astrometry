@@ -34,6 +34,7 @@ _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
     ("1med_width", "pre", "med_width", int, 25),
     ("1bkgdmode", "pre", "bkgdmode", int, 2),
     ("1enhance_flag", "pre", "enhance_flag", int, 1),
+    ("1median_impl", "pre", "median_impl", str, "auto"),
     # 02detect
     ("2bkgd_threshold", "detect", "bkgd_threshold", float, 5.0),
     ("2snr_threshold", "detect", "snr_threshold", float, 5.0),
@@ -94,6 +95,7 @@ class PreConfig:
     med_width: int = 25
     bkgdmode: int = 2
     enhance_flag: int = 1
+    median_impl: str = "auto"
 
 
 @dataclass
@@ -171,6 +173,9 @@ class AdiasConfig:
 
         if self.pre.superflag not in {0, 1, 2, 3}:
             errors.append("1superflag 必须为 0/1/2/3。")
+
+        if self.pre.median_impl not in {"auto", "scipy", "scipy_threaded"}:
+            errors.append("1median_impl 必须为 auto/scipy/scipy_threaded。")
 
         if self.detect.connectivity not in {"fortran", "scipy"}:
             errors.append("2connectivity 必须为 fortran 或 scipy。")

@@ -5,9 +5,15 @@
   - find_obj_base_prepar(...) → MatchResult   复用底片常数（同图后续目标）
 
 本模块纯算法 + MatchResult 进出，不涉及 StepResult / 文件 I/O。
+
+阶段一粗匹配与阶段三全图匹配默认走 KDTree 矢量化快路径：
+GAIA 参考星投影到 tangent-plane 一次性建树，检测星批量半径查询；
+半径放大 1% 容投影误差，候选再用 cal_rl 严格复核，候选集合与暴力实现一致。
+快路径异常或未给出 ≥3 匹配时自动回退暴力实现。
 """
 
 import numpy as np
+from scipy.spatial import cKDTree
 
 from adias.application.log import get_logger
 from adias.domain.astrometry import (
@@ -21,6 +27,10 @@ from adias.domain.astrometry import (
 from adias.domain.models import MatchResult
 
 _log = get_logger("matching")
+
+# KDTree 半径放大系数：小角近似下 tangent-plane Euclidean ≈ 角距，
+# 1% 余量足够覆盖投影误差，候选再用 cal_rl 严格复核。
+_KDTREE_RADIUS_INFLATE = 1.01
 
 
 # ── 内部 helper ───────────────────────────────────────────────────────────
@@ -51,7 +61,223 @@ def _initial_plate_par(field_angle):
     return par_init
 
 
+def _rade2ky_vec(ra, de, ra0, de0):
+    """rade2ky 矢量版本，所有输入为弧度，返回 (ksi, eta) 数组。"""
+    sin_de = np.sin(de)
+    cos_de = np.cos(de)
+    sin_de0 = np.sin(de0)
+    cos_de0 = np.cos(de0)
+    sin_dra = np.sin(ra - ra0)
+    cos_dra = np.cos(ra - ra0)
+    denom = sin_de * sin_de0 + cos_de * cos_de0 * cos_dra
+    ksi = cos_de * sin_dra / denom
+    eta = (sin_de * cos_de0 - cos_de * sin_de0 * cos_dra) / denom
+    return ksi, eta
+
+
+def _xy2rade_linear_vec(par6, x, y, ra0, de0):
+    """xy2rade 矢量版（nm=6 线性模型），ra0/de0 为弧度，x/y 为数组。"""
+    ksi = par6[0] * x + par6[1] * y + par6[2]
+    eta = par6[3] * x + par6[4] * y + par6[5]
+    tand1 = ksi / np.cos(de0) / (1.0 - eta * np.tan(de0))
+    ra = ra0 + np.arctan(tand1)
+    tand2 = (eta + np.tan(de0)) * np.cos(np.arctan(tand1)) / (1.0 - eta * np.tan(de0))
+    de = np.arctan(tand2)
+    return ra, de
+
+
+def _xy2rade_poly_vec(par, nm, x, y, ra0, de0):
+    """xy2rade 矢量版，支持 nm in {6,12,20}；其他阶数回退到逐点 xy2rade。"""
+    half = nm // 2
+
+    def _poly(off):
+        if nm == 6:
+            return par[off] * x + par[off + 1] * y + par[off + 2]
+        if nm == 12:
+            return (par[off] * x + par[off + 1] * y + par[off + 2]
+                    + par[off + 3] * x * x + par[off + 4] * x * y + par[off + 5] * y * y)
+        if nm == 20:
+            x2 = x * x
+            y2 = y * y
+            return (par[off] * x + par[off + 1] * y + par[off + 2]
+                    + par[off + 3] * x2 + par[off + 4] * x * y + par[off + 5] * y2
+                    + par[off + 6] * x2 * x + par[off + 7] * x2 * y
+                    + par[off + 8] * x * y2 + par[off + 9] * y2 * y)
+        return None
+
+    ksi = _poly(0)
+    if ksi is None:
+        # nm=30 或未支持阶数：逐点回退
+        ra_arr = np.empty_like(np.asarray(x, dtype=float))
+        de_arr = np.empty_like(ra_arr)
+        for i in range(len(ra_arr)):
+            ra_arr[i], de_arr[i] = xy2rade(par[:nm], nm, float(x[i]), float(y[i]), ra0, de0)
+        return ra_arr, de_arr
+
+    eta = _poly(half)
+    tand1 = ksi / np.cos(de0) / (1.0 - eta * np.tan(de0))
+    ra = ra0 + np.arctan(tand1)
+    tand2 = (eta + np.tan(de0)) * np.cos(np.arctan(tand1)) / (1.0 - eta * np.tan(de0))
+    de = np.arctan(tand2)
+    return ra, de
+
+
+def _angular_distance_vec(ra, de, ra_ref, de_ref):
+    """成对角距（弧度），全部弧度输入，形状可广播。"""
+    cos_rl = (np.sin(de) * np.sin(de_ref)
+              + np.cos(de) * np.cos(de_ref) * np.cos(ra - ra_ref))
+    np.clip(cos_rl, -1.0, 1.0, out=cos_rl)
+    return np.arccos(cos_rl)
+
+
+def _empty_best():
+    return {
+        "n": 0,
+        "sig": 999.0,
+        "par": np.zeros(30),
+        "rx": [],
+        "ry": [],
+        "rra": [],
+        "rde": [],
+        "rmag": [],
+        "ox": 0.0,
+        "oy": 0.0,
+    }
+
+
+def _coarse_match_base_angle_fast(
+    det_x,
+    det_y,
+    par_init,
+    pscale,
+    fl,
+    limit_match,
+    obj_ephra,
+    obj_ephde,
+    gaia_ra,
+    gaia_de,
+    gaia_mag,
+    n_gaia,
+    modeltype,
+):
+    """阶段一 KDTree 快路径：GAIA 投影建树一次，每个候选目标批量查询。
+
+    候选集合经 cal_rl 严格复核，与暴力实现一致。best 更新语义与暴力路径完全相同。
+    """
+    n_det = len(det_x)
+    best = _empty_best()
+    if n_det == 0 or n_gaia == 0:
+        return best
+
+    det_x_arr = np.asarray(det_x, dtype=float)
+    det_y_arr = np.asarray(det_y, dtype=float)
+
+    ra0 = obj_ephra * DEG2RAD
+    de0 = obj_ephde * DEG2RAD
+    gaia_ra_arr = np.asarray(gaia_ra, dtype=float)
+    gaia_de_arr = np.asarray(gaia_de, dtype=float)
+    gaia_mag_arr = np.asarray(gaia_mag, dtype=float)
+    gaia_ksi, gaia_eta = _rade2ky_vec(gaia_ra_arr * DEG2RAD, gaia_de_arr * DEG2RAD, ra0, de0)
+    tree = cKDTree(np.column_stack([gaia_ksi, gaia_eta]))
+
+    p0 = par_init[:6]
+    radius = (limit_match / 3600.0) * DEG2RAD * _KDTREE_RADIUS_INFLATE
+
+    for j in range(n_det):
+        ox, oy = det_x_arr[j], det_y_arr[j]
+        xn_all = (det_x_arr - ox) * pscale / fl
+        yn_all = (det_y_arr - oy) * pscale / fl
+
+        # 与暴力实现一致：所有 k 都参与（暴力路径无 det_x[k]>0 过滤）
+        ksi_det = p0[0] * xn_all + p0[1] * yn_all + p0[2]
+        eta_det = p0[3] * xn_all + p0[4] * yn_all + p0[5]
+        ra_det, de_det = _xy2rade_linear_vec(p0, xn_all, yn_all, ra0, de0)
+
+        idx_lists = tree.query_ball_point(np.column_stack([ksi_det, eta_det]), r=radius)
+
+        rx, ry, rra, rde, rmag = [], [], [], [], []
+        for k in range(n_det):
+            cand = idx_lists[k]
+            if not cand:
+                continue
+            cand = np.asarray(cand, dtype=int)
+            rl = _angular_distance_vec(
+                ra_det[k], de_det[k],
+                gaia_ra_arr[cand] * DEG2RAD, gaia_de_arr[cand] * DEG2RAD,
+            )
+            ok = (rl / DEG2RAD * 3600.0) <= limit_match
+            sel = cand[ok]
+            if sel.size == 0:
+                continue
+            xn_k = xn_all[k]
+            yn_k = yn_all[k]
+            for n in sel:
+                rx.append(xn_k)
+                ry.append(yn_k)
+                rra.append(gaia_ra_arr[n])
+                rde.append(gaia_de_arr[n])
+                rmag.append(gaia_mag_arr[n])
+
+        nm = len(rx)
+        if nm < best["n"] or nm < 3:
+            continue
+
+        par_tmp, sig0, _ = sol_par(
+            np.array(rx), np.array(ry), np.array(rra), np.array(rde),
+            nm, obj_ephra, obj_ephde, modeltype,
+        )
+        sig0_arcsec = sig0 / DEG2RAD * 3600.0
+        if 0.001 < sig0_arcsec < 0.5 and (
+            nm > best["n"] or sig0_arcsec < best["sig"]
+        ):
+            best.update(
+                n=nm,
+                sig=sig0_arcsec,
+                par=par_tmp.copy(),
+                rx=list(rx),
+                ry=list(ry),
+                rra=list(rra),
+                rde=list(rde),
+                rmag=list(rmag),
+                ox=ox,
+                oy=oy,
+            )
+
+    return best
+
+
 def _coarse_match_base_angle(
+    det_x,
+    det_y,
+    par_init,
+    pscale,
+    fl,
+    limit_match,
+    obj_ephra,
+    obj_ephde,
+    gaia_ra,
+    gaia_de,
+    gaia_mag,
+    n_gaia,
+    modeltype,
+):
+    """阶段一粗匹配：先走 KDTree 快路径，命中失败或异常自动回退暴力实现。"""
+    try:
+        best = _coarse_match_base_angle_fast(
+            det_x, det_y, par_init, pscale, fl, limit_match,
+            obj_ephra, obj_ephde, gaia_ra, gaia_de, gaia_mag, n_gaia, modeltype,
+        )
+        if best["n"] >= 3:
+            return best
+    except Exception as exc:
+        _log.info(f"    快路径粗匹配异常，回退暴力实现：{exc}")
+    return _coarse_match_base_angle_brute(
+        det_x, det_y, par_init, pscale, fl, limit_match,
+        obj_ephra, obj_ephde, gaia_ra, gaia_de, gaia_mag, n_gaia, modeltype,
+    )
+
+
+def _coarse_match_base_angle_brute(
     det_x,
     det_y,
     par_init,
@@ -194,6 +420,82 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
     )
 
 
+def _rematch_field_candidates_fast(
+    det_x_arr, det_y_arr, par1, modeltype, pscale, fl,
+    x_cen, y_cen, ra_cen, de_cen,
+    gaia_ra_arr, gaia_de_arr, gaia_mag_arr, limit_match,
+):
+    """KDTree 矢量化候选收集：返回与暴力实现等价的 (rx, ry, rra, rde, rmag)。
+
+    暴力路径里检测星按 k 升序追加，候选 GAIA 按 n 升序追加；本实现保留同样顺序，
+    保证后续 sol_par 的输入数组与暴力实现逐位一致。
+    """
+    n_det = len(det_x_arr)
+    valid = (det_x_arr > 0) & (det_y_arr > 0)
+
+    xn_all = (det_x_arr - x_cen) * pscale / fl
+    yn_all = (det_y_arr - y_cen) * pscale / fl
+    ra_arr, de_arr = _xy2rade_poly_vec(par1[:modeltype], modeltype, xn_all, yn_all, ra_cen, de_cen)
+
+    det_ksi, det_eta = _rade2ky_vec(ra_arr, de_arr, ra_cen, de_cen)
+    tree = cKDTree(
+        np.column_stack(_rade2ky_vec(gaia_ra_arr * DEG2RAD, gaia_de_arr * DEG2RAD, ra_cen, de_cen))
+    )
+    radius = (limit_match / 3600.0) * DEG2RAD * _KDTREE_RADIUS_INFLATE
+    idx_lists = tree.query_ball_point(np.column_stack([det_ksi, det_eta]), r=radius)
+
+    rx_new, ry_new, rra_new, rde_new, rmag_new = [], [], [], [], []
+    for k in range(n_det):
+        if not valid[k]:
+            continue
+        cand = idx_lists[k]
+        if not cand:
+            continue
+        cand = np.sort(np.asarray(cand, dtype=int))  # 与暴力 n 升序一致
+        rl = _angular_distance_vec(
+            ra_arr[k], de_arr[k],
+            gaia_ra_arr[cand] * DEG2RAD, gaia_de_arr[cand] * DEG2RAD,
+        )
+        ok = (rl / DEG2RAD * 3600.0) <= limit_match
+        sel = cand[ok]
+        if sel.size == 0:
+            continue
+        xn_k = xn_all[k]
+        yn_k = yn_all[k]
+        for n in sel:
+            rx_new.append(xn_k)
+            ry_new.append(yn_k)
+            rra_new.append(gaia_ra_arr[n])
+            rde_new.append(gaia_de_arr[n])
+            rmag_new.append(gaia_mag_arr[n])
+    return rx_new, ry_new, rra_new, rde_new, rmag_new
+
+
+def _rematch_field_candidates_brute(
+    det_x, det_y, par1, modeltype, pscale, fl,
+    x_cen, y_cen, ra_cen, de_cen,
+    gaia_ra, gaia_de, gaia_mag, n_gaia, limit_match,
+):
+    """暴力候选收集（fallback）。"""
+    n_det = len(det_x)
+    rx_new, ry_new, rra_new, rde_new, rmag_new = [], [], [], [], []
+    for k in range(n_det):
+        if det_x[k] <= 0 or det_y[k] <= 0:
+            continue
+        xn = (det_x[k] - x_cen) * pscale / fl
+        yn = (det_y[k] - y_cen) * pscale / fl
+        ra_k, de_k = xy2rade(par1[:modeltype], modeltype, xn, yn, ra_cen, de_cen)
+        for n in range(n_gaia):
+            rl = cal_rl(ra_k, de_k, gaia_ra[n] * DEG2RAD, gaia_de[n] * DEG2RAD)
+            if rl / DEG2RAD * 3600 <= limit_match:
+                rx_new.append(xn)
+                ry_new.append(yn)
+                rra_new.append(gaia_ra[n])
+                rde_new.append(gaia_de[n])
+                rmag_new.append(gaia_mag[n])
+    return rx_new, ry_new, rra_new, rde_new, rmag_new
+
+
 def _rematch_base_angle_field(
     det_x,
     det_y,
@@ -211,23 +513,36 @@ def _rematch_base_angle_field(
     ra_cen,
     de_cen,
 ):
-    """阶段三：用精化常数对全图检测星重新匹配 GAIA。"""
-    n_det = len(det_x)
-    rx_new, ry_new, rra_new, rde_new, rmag_new = [], [], [], [], []
-    for k in range(n_det):
-        if det_x[k] <= 0 or det_y[k] <= 0:
-            continue
-        xn = (det_x[k] - x_cen) * pscale / fl
-        yn = (det_y[k] - y_cen) * pscale / fl
-        ra_k, de_k = xy2rade(par1[:modeltype], modeltype, xn, yn, ra_cen, de_cen)
-        for n in range(n_gaia):
-            rl = cal_rl(ra_k, de_k, gaia_ra[n] * DEG2RAD, gaia_de[n] * DEG2RAD)
-            if rl / DEG2RAD * 3600 <= limit_match:
-                rx_new.append(xn)
-                ry_new.append(yn)
-                rra_new.append(gaia_ra[n])
-                rde_new.append(gaia_de[n])
-                rmag_new.append(gaia_mag[n])
+    """阶段三：用精化常数对全图检测星重新匹配 GAIA。
+
+    默认走 KDTree 快路径；异常或未给出 ≥3 匹配时回退暴力实现。
+    """
+    det_x_arr = np.asarray(det_x, dtype=float)
+    det_y_arr = np.asarray(det_y, dtype=float)
+    gaia_ra_arr = np.asarray(gaia_ra, dtype=float)
+    gaia_de_arr = np.asarray(gaia_de, dtype=float)
+    gaia_mag_arr = np.asarray(gaia_mag, dtype=float)
+
+    rx_new = ry_new = rra_new = rde_new = rmag_new = None
+    if n_gaia > 0 and det_x_arr.size > 0:
+        try:
+            rx_new, ry_new, rra_new, rde_new, rmag_new = _rematch_field_candidates_fast(
+                det_x_arr, det_y_arr, par1, modeltype, pscale, fl,
+                x_cen, y_cen, ra_cen, de_cen,
+                gaia_ra_arr, gaia_de_arr, gaia_mag_arr, limit_match,
+            )
+            if len(rx_new) < 3:
+                rx_new = None
+        except Exception as exc:
+            _log.info(f"    快路径全图匹配异常，回退暴力实现：{exc}")
+            rx_new = None
+
+    if rx_new is None:
+        rx_new, ry_new, rra_new, rde_new, rmag_new = _rematch_field_candidates_brute(
+            det_x, det_y, par1, modeltype, pscale, fl,
+            x_cen, y_cen, ra_cen, de_cen,
+            gaia_ra, gaia_de, gaia_mag, n_gaia, limit_match,
+        )
 
     n_m = len(rx_new)
     if n_m < 3:

@@ -5,7 +5,11 @@
   - 连通域 fortran 路径完整移植原算法（含 nr=250 子区域合并），与 scipy
     路径在算法等价但在罕见复杂形状下精度不同；切换由 cfg 控制。
   - 星象检测仅扫内边距 [10, naxis-10) 内的像素累加形心。
+  - 中值滤波支持 scipy_threaded：带状核沿正交轴切块多线程，与单线程
+    median_filter 结果逐位一致（每列/行的中值仅依赖该列/行自身）。
 """
+
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
@@ -54,17 +58,64 @@ def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100)
     return avervalue, sigma
 
 
-def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
+def _median_filter_strip_threaded(data, kernel, n_threads):
+    """带状核 (N,1) 或 (1,N) 沿正交方向切块多线程 median_filter。
+
+    与单线程 median_filter(data, size=kernel) 逐位一致：带状核中每列（或每行）
+    的中值仅依赖该列/行自身，沿正交方向切块不会改变任何参与排序的元素集合。
+    scipy.ndimage 在 C 层释放 GIL，可真并行。
+
+    n_threads<=1 或非带状核退化为单线程调用。
+    """
+    if n_threads <= 1:
+        return median_filter(data, size=kernel)
+
+    h, w = data.shape
+    if kernel[0] > 1 and kernel[1] == 1:
+        slices = np.array_split(np.arange(w), n_threads)
+        out = np.empty_like(data)
+
+        def _work(idx):
+            j0, j1 = int(idx[0]), int(idx[-1]) + 1
+            out[:, j0:j1] = median_filter(data[:, j0:j1], size=kernel)
+
+        with ThreadPoolExecutor(max_workers=n_threads) as ex:
+            list(ex.map(_work, [s for s in slices if s.size > 0]))
+        return out
+
+    if kernel[0] == 1 and kernel[1] > 1:
+        slices = np.array_split(np.arange(h), n_threads)
+        out = np.empty_like(data)
+
+        def _work(idx):
+            i0, i1 = int(idx[0]), int(idx[-1]) + 1
+            out[i0:i1, :] = median_filter(data[i0:i1, :], size=kernel)
+
+        with ThreadPoolExecutor(max_workers=n_threads) as ex:
+            list(ex.map(_work, [s for s in slices if s.size > 0]))
+        return out
+
+    return median_filter(data, size=kernel)
+
+
+def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode,
+                    median_impl="scipy", n_threads=1):
     """中值滤波后按 bkgdmode 扣除背景（1=除法归一化，2=减法扣除）。
 
     bkgd0 用于恢复全场平均亮度。med_width>1 走竖窗口，否则走横窗口。
+    median_impl="scipy" 单线程；"scipy_threaded" 多线程切块，结果逐位一致。
     """
     if med_width > 1:
         kernel = (med_width, 1)
     else:
         kernel = (1, med_length)
 
-    bg = median_filter(data, size=kernel)
+    if median_impl == "scipy_threaded":
+        bg = _median_filter_strip_threaded(data, kernel, n_threads)
+    elif median_impl == "scipy":
+        bg = median_filter(data, size=kernel)
+    else:
+        raise ValueError(f"未知 median_impl: {median_impl!r}")
 
     if bkgdmode == 1:
         return data / bg * bkgd0
