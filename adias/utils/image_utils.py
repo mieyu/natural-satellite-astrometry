@@ -545,8 +545,6 @@ def detect_stars_by_moments(
     abox[:, 0] = 0
     abox[:, naxis1 - 1] = 0
 
-    abox_l = abox.tolist()
-
     if connectivity == "fortran":
         idbox2 = label_connectivity_fortran(abox, naxis2, naxis1, EPS)
     elif connectivity == "scipy":
@@ -558,65 +556,69 @@ def detect_stars_by_moments(
 
     # 形心累加：仅扫内边距区域 [10, naxis-10)，numpix 因此是内边距像素数
     # （不是 Pass A 标号阶段的整连通域像素数）。坐标用 1-based 行/列号。
-    sumx = {}
-    sumy = {}
-    sumi_d = {}
-    sumi_real_d = {}
-    numpix = {}
-    overflag = {}
+    v_inner = abox[9:naxis2 - 10, 9:naxis1 - 10]
+    v0_inner = abox0[9:naxis2 - 10, 9:naxis1 - 10]
+    lab_inner = idbox2[9:naxis2 - 10, 9:naxis1 - 10]
+    ih, iw = v_inner.shape
 
-    abox0_l = abox0.tolist()
-    idbox2_l = idbox2.tolist()
+    # 求和用 f64 累加，避免大量浮点累加带来的精度漂移
+    v_flat = v_inner.ravel().astype(np.float64, copy=False)
+    v0_flat = v0_inner.ravel()
+    lab_flat = lab_inner.ravel().astype(np.int64, copy=False)
+    rr_flat = np.broadcast_to(
+        (np.arange(ih, dtype=np.float64) + 10.0).reshape(-1, 1), (ih, iw)
+    ).ravel()
+    cc_flat = np.broadcast_to(
+        (np.arange(iw, dtype=np.float64) + 10.0).reshape(1, -1), (ih, iw)
+    ).ravel()
 
-    for i in range(9, naxis2 - 10):
-        row_lab = idbox2_l[i]
-        row_abox = abox_l[i]
-        row_abox0 = abox0_l[i]
-        for j in range(9, naxis1 - 10):
-            lab = row_lab[j]
-            if lab > 0:
-                v = row_abox[j]
-                vp = v**pos_method
-                if lab in sumx:
-                    sumx[lab] += (j + 1) * vp
-                    sumy[lab] += (i + 1) * vp
-                    sumi_d[lab] += vp
-                    sumi_real_d[lab] += v
-                    numpix[lab] += 1
-                else:
-                    sumx[lab] = (j + 1) * vp
-                    sumy[lab] = (i + 1) * vp
-                    sumi_d[lab] = vp
-                    sumi_real_d[lab] = v
-                    numpix[lab] = 1
-            # overflag 在 lab>0 检查之外：即使 lab=0 也会标 overflag[0]=1（无害）
-            if row_abox0[j] >= maxflux:
-                overflag[lab] = 1
+    if pos_method == 1:
+        vp_flat = v_flat
+    else:
+        vp_flat = v_flat**pos_method
 
-    # 输出星表：过曝星保留但 overflag=1，最终由 write_reg_file 二次过滤
+    mask = lab_flat > 0
+    n_labels = int(lab_inner.max()) if mask.any() else 0
+    minlen = n_labels + 1
+
+    lab_used = lab_flat[mask]
+    vp_used = vp_flat[mask]
+    sumx_arr = np.bincount(lab_used, weights=cc_flat[mask] * vp_used, minlength=minlen)
+    sumy_arr = np.bincount(lab_used, weights=rr_flat[mask] * vp_used, minlength=minlen)
+    sumi_arr = np.bincount(lab_used, weights=vp_used, minlength=minlen)
+    sumi_real_arr = np.bincount(lab_used, weights=v_flat[mask], minlength=minlen)
+    numpix_arr = np.bincount(lab_used, minlength=minlen)
+
+    # overflag：保留原行为——lab=0 处达到 maxflux 也会标 overflag[0]=1
+    # （下游 sorted(numpix.keys()) 不含 0，故对结果无害）。
+    overflag_arr = np.zeros(minlen, dtype=np.int32)
+    overflag_mask = v0_flat >= maxflux
+    if overflag_mask.any():
+        labs_over = np.unique(lab_flat[overflag_mask])
+        if labs_over.size and labs_over.max() < minlen:
+            overflag_arr[labs_over] = 1
+
     detected_stars = []
-    for lab in sorted(numpix.keys()):
-        n = numpix[lab]
+    bkgdsigma_sq = bkgdsigma ** 2
+    for lab in range(1, minlen):
+        n = int(numpix_arr[lab])
         if not (minpix <= n <= maxpix):
             continue
-        s_i = sumi_d[lab]
+        s_i = float(sumi_arr[lab])
         if s_i < 1e-9:
             continue
-        ofl = 1 if overflag.get(lab, 0) >= 1 else 0
-        starx = sumx[lab] / s_i
-        stary = sumy[lab] / s_i
-        sumi_real = sumi_real_d[lab]
-        denom = np.sqrt(sumi_real + n * bkgdsigma**2)
+        sumi_real = float(sumi_real_arr[lab])
+        denom = np.sqrt(sumi_real + n * bkgdsigma_sq)
         snr = sumi_real / denom if denom > 0 else 0.0
         detected_stars.append(
             {
-                "starx": starx,
-                "stary": stary,
+                "starx": float(sumx_arr[lab]) / s_i,
+                "stary": float(sumy_arr[lab]) / s_i,
                 "sumi": sumi_real,
-                "snr": snr,
+                "snr": float(snr),
                 "star_id": lab,
                 "star_pix": n,
-                "overflag": ofl,
+                "overflag": 1 if overflag_arr[lab] >= 1 else 0,
             }
         )
 
