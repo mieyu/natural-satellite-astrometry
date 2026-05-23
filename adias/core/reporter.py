@@ -1,25 +1,26 @@
-# 功能：05report O-C 散点图绘制，复现 all_data.m 的功能。
-# 输入：config['newoutfile0'] 目录下由 04comoc 生成的 *N.dat 文件。
-# 输出：outdir/OC_summary.png  （以及可选的每颗卫星单独图）
-#
-# .dat 文件列说明（space-delimited，1-based与 MATLAB 对齐）：
-#   col 1  : year
-#   col 2  : month
-#   col 3  : day.fraction  （观测时刻，UTC 天的小数）
-#   col 4-6: RA  h m s
-#   col 7-9: DE  ±d m s
-#   col 10 : obs_ra  (deg)
-#   col 11 : obs_de  (deg)
-#   col 12 : eph_ra  (deg)
-#   col 13 : eph_de  (deg)
-#   col 14 : Δα·cosδ  O-C (arcsec)   ← MATLAB a(:,14)
-#   col 15 : Δδ       O-C (arcsec)   ← MATLAB a(:,15)
-#   col 16 : sig0
-#   col 17 : obs_hh
-#   col 18 : obs_mm
-#   col 19 : obs_ss
-#   col 20 : exptime                  ← MATLAB a(:,20)
-#   col 21+: filename ...
+"""功能：05report O-C 散点图绘制，复现 all_data.m 的功能。
+输入：config['newoutfile0'] 目录下由 04comoc 生成的 *N.dat 文件。
+输出：outdir/OC_summary.png  （以及可选的每颗卫星单独图）
+
+.dat 文件列说明（space-delimited，1-based与 MATLAB 对齐）：
+  col 1  : year
+  col 2  : month
+  col 3  : day.fraction  （观测时刻，UTC 天的小数）
+  col 4-6: RA  h m s
+  col 7-9: DE  ±d m s
+  col 10 : obs_ra  (deg)
+  col 11 : obs_de  (deg)
+  col 12 : eph_ra  (deg)
+  col 13 : eph_de  (deg)
+  col 14 : Δα·cosδ  O-C (arcsec)   ← MATLAB a(:,14)
+  col 15 : Δδ       O-C (arcsec)   ← MATLAB a(:,15)
+  col 16 : sig0
+  col 17 : obs_hh
+  col 18 : obs_mm
+  col 19 : obs_ss
+  col 20 : exptime                  ← MATLAB a(:,20)
+  col 21+: filename ...
+"""
 
 import glob
 import os

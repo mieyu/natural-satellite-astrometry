@@ -1,9 +1,10 @@
-# 功能：星表与历表文件读取（GAIA 星表、IMCCE 历表）。
-# 使用：from adias.io.catalog_io import read_catalog, read_ephemeris
-#
-# 错误约定：
-#   - 文件无法打开或全文解析失败：raise DataFormatError，由调用方决定跳过策略
-#   - 单行解析失败：保持静默跳过（与历史行为一致）
+"""功能：星表与历表文件读取（GAIA 星表、IMCCE 历表）。
+使用：from adias.io.catalog_io import read_catalog, read_ephemeris
+
+错误约定：
+  - 文件无法打开或全文解析失败：raise DataFormatError，由调用方决定跳过策略
+  - 单行解析失败：保持静默跳过（与历史行为一致）
+"""
 
 import numpy as np
 

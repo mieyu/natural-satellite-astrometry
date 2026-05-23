@@ -1,5 +1,6 @@
-# 02detect：连通域 + 修正矩星象检测。原始 .fit 来自 fits/，预处理图来自 fits_n/，
-# 检测产物 *.fit.reg 落到同日 fits_reg/ 子目录。
+"""02detect：连通域 + 修正矩星象检测。原始 .fit 来自 fits/，预处理图来自 fits_n/，
+检测产物 *.fit.reg 落到同日 fits_reg/ 子目录。
+"""
 
 import glob
 import os

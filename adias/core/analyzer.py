@@ -1,6 +1,7 @@
-# 04comoc：对 03match 的 object_N.out 逐日逐目标做野值剔除与统计汇总。
-# 读 fits_out/object_N.out，写 fits_out/final_*；跨日 .dat / *_all_*.out 汇总在 cfg
-# 的 4specified-output 目录下。
+"""04comoc：对 03match 的 object_N.out 逐日逐目标做野值剔除与统计汇总。
+读 fits_out/object_N.out，写 fits_out/final_*；跨日 .dat / *_all_*.out 汇总在 cfg
+的 4specified-output 目录下。
+"""
 
 import glob
 import os

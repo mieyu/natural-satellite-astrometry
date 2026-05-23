@@ -1,5 +1,6 @@
-# 功能：FITS 文件读写工具（读取图像数据、写出处理结果）。
-# 使用：from adias.io.fits_io import read_fits, write_fits
+"""功能：FITS 文件读写工具（读取图像数据、写出处理结果）。
+使用：from adias.io.fits_io import read_fits, write_fits
+"""
 
 import numpy as np
 from astropy.io import fits

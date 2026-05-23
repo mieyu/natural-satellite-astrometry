@@ -1,11 +1,12 @@
-# 流水线产物落地的目录约定：
-#   输入  : <day>/fits/*.fit                  (原始观测图)
-#   01pre : <day>/fits_n/*_n.fit              (扣背景图)
-#   02det : <day>/fits_reg/*.fit.reg          (检测星表)
-#   03mat : <day>/fits_ref/*.fitN.ref.reg     (参考星表)
-#           <day>/fits_out/object_N.out        (匹配结果)
-#   04com : <day>/fits_out/final_*             (野值剔除过程)
-#           <specified-output>/*.dat 等        (跨日汇总，路径由 cfg 决定)
+"""流水线产物落地的目录约定：
+  输入  : <day>/fits/*.fit                  (原始观测图)
+  01pre : <day>/fits_n/*_n.fit              (扣背景图)
+  02det : <day>/fits_reg/*.fit.reg          (检测星表)
+  03mat : <day>/fits_ref/*.fitN.ref.reg     (参考星表)
+          <day>/fits_out/object_N.out        (匹配结果)
+  04com : <day>/fits_out/final_*             (野值剔除过程)
+          <specified-output>/*.dat 等        (跨日汇总，路径由 cfg 决定)
+"""
 
 import glob
 import os

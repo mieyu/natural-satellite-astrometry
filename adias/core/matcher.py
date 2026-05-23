@@ -1,12 +1,13 @@
-# 03match 阶段编排：组合 GAIA/历表读取、检测星读取、底片常数算法、目标写出。
-#
-# 算法层在 adias.domain.matching（find_obj_base_angle / find_obj_base_prepar）。
-# 本模块负责：
-#   - 逐日重读 GAIA
-#   - 逐图读头 + 检测星
-#   - 同图像跨目标的 base_angle / prepar 状态切换
-#   - 把目标观测结果通过 ObjectObservation 适配器写出
-#   - 把过程错误收敛到 StepResult.warnings / failed_items / output_files
+"""03match 阶段编排：组合 GAIA/历表读取、检测星读取、底片常数算法、目标写出。
+
+算法层在 adias.domain.matching（find_obj_base_angle / find_obj_base_prepar）。
+本模块负责：
+  - 逐日重读 GAIA
+  - 逐图读头 + 检测星
+  - 同图像跨目标的 base_angle / prepar 状态切换
+  - 把目标观测结果通过 ObjectObservation 适配器写出
+  - 把过程错误收敛到 StepResult.warnings / failed_items / output_files
+"""
 
 import glob
 import os

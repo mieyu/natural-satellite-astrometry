@@ -1,4 +1,4 @@
-# 01pre：超级背景预处理。逐幅 .fit 扣除背景后落到同日 fits_n/ 子目录。
+"""01pre：超级背景预处理。逐幅 .fit 扣除背景后落到同日 fits_n/ 子目录。"""
 
 import glob
 import os

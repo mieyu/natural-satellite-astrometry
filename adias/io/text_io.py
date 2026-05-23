@@ -1,5 +1,6 @@
-# 流水线各阶段的文本/区域文件 IO。
-# 包含：.reg（DS9 region）、object_X.out（匹配结果）、final_oc / final_object（comoc）。
+"""流水线各阶段的文本/区域文件 IO。
+包含：.reg（DS9 region）、object_X.out（匹配结果）、final_oc / final_object（comoc）。
+"""
 
 import numpy as np
 

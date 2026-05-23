@@ -1,14 +1,15 @@
-# 解析 adias.cfg：返回扁平 dict，供 5 步流水线共用。
-#
-# cfg 格式约定：
-#   - 段标题  : [n]####...   (仅做注释用，不影响解析)
-#   - 注释行  : 以 ! ; # [ 开头；行内 % 之后视为注释
-#   - 键值对  : key=value，key 前的数字前缀对应步骤号
-#   - 多值键  : 同名键追加数字后缀，如 3obj_ephfile1 / 3obj_ephfile2
-#
-# 使用：
-#   from adias import parse_config
-#   config = parse_config("adias2024.cfg")
+"""解析 adias.cfg：返回扁平 dict，供 5 步流水线共用。
+
+cfg 格式约定：
+  - 段标题  : [n]####...   (仅做注释用，不影响解析)
+  - 注释行  : 以 ! ; # [ 开头；行内 % 之后视为注释
+  - 键值对  : key=value，key 前的数字前缀对应步骤号
+  - 多值键  : 同名键追加数字后缀，如 3obj_ephfile1 / 3obj_ephfile2
+
+使用：
+  from adias import parse_config
+  config = parse_config("adias2024.cfg")
+"""
 
 from dataclasses import dataclass, field
 import os

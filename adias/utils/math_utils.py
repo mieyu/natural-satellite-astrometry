@@ -1,10 +1,11 @@
-# 通用数学/格式/统计工具：
-#   - interpolate  : 拉格朗日插值
-#   - am2hms       : 赤经赤纬角分 → 时分秒/度分秒
-#   - initial_stats: O-C 残差的原始均值/标准差
-#   - sigma_clip_oc: 迭代剔除 O-C 野值
-#
-# 天文测量算法（坐标变换、底片常数、视场恒星筛选）在 adias.domain.astrometry。
+"""通用数学/格式/统计工具：
+  - interpolate  : 拉格朗日插值
+  - am2hms       : 赤经赤纬角分 → 时分秒/度分秒
+  - initial_stats: O-C 残差的原始均值/标准差
+  - sigma_clip_oc: 迭代剔除 O-C 野值
+
+天文测量算法（坐标变换、底片常数、视场恒星筛选）在 adias.domain.astrometry。
+"""
 
 import math
 

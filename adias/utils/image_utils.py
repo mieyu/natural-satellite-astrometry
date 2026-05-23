@@ -1,5 +1,6 @@
-# 功能：图像统计与滤波工具函数（背景估计、中值滤波、均值滤波）。
-# 使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
+"""功能：图像统计与滤波工具函数（背景估计、中值滤波、均值滤波）。
+使用：from adias.utils.image_utils import calculate_background, apply_superbkgd
+"""
 
 import cv2
 import numpy as np

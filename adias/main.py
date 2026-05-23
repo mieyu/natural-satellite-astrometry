@@ -1,8 +1,10 @@
-# ADIAS 统一入口：通过 --step 选择运行阶段。
-# 用法:
-#   python -m adias.main                    # 跑完整 5 步
-#   python -m adias.main --step pre         # 仅跑指定步骤
-#   python -m adias.main --config my.cfg    # 指定配置文件
+"""ADIAS 统一入口：通过 --step 选择运行阶段。
+
+用法:
+  python -m adias.main                    # 跑完整 5 步
+  python -m adias.main --step pre         # 仅跑指定步骤
+  python -m adias.main --config my.cfg    # 指定配置文件
+"""
 
 import argparse
 import os
