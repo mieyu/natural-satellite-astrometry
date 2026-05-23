@@ -556,11 +556,3 @@ def find_obj_base_prepar(
     if result.nopre:
         print("    据pre_par，未找到与预报目标位置相近的目标")
     return result
-
-
-__all__ = [
-    "find_obj_base_angle",
-    "find_obj_base_prepar",
-    "match_result_from_legacy",
-    "match_result_to_legacy",
-]

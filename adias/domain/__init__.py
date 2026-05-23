@@ -29,30 +29,3 @@ from adias.domain.models import (
     ReferenceStar,
 )
 
-__all__ = [
-    # models
-    "DetectedStar",
-    "ReferenceStar",
-    "ObjectObservation",
-    "OCStats",
-    "MatchResult",
-    "PlateConstants",
-    "GaiaCatalog",
-    "Ephemeris",
-    # astrometry
-    "Q",
-    "cal_rl",
-    "extract_field_stars",
-    "rade2ky",
-    "rade2xieta",
-    "xy2rade",
-    "xieta2xy",
-    "least_squares",
-    "sol_par",
-    "print_par",
-    # matching
-    "find_obj_base_angle",
-    "find_obj_base_prepar",
-    "match_result_from_legacy",
-    "match_result_to_legacy",
-]

@@ -18,6 +18,3 @@ def read_target_ephemeris(ephfile):
     if n == 0 or t is None:
         return Ephemeris.empty()
     return Ephemeris(count=n, t=t, ra=ra, de=de)
-
-
-__all__ = ["read_gaia_catalog", "read_target_ephemeris"]

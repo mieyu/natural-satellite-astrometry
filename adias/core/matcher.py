@@ -239,6 +239,3 @@ def run_match(config, fitspath_list):
     print(f"\n   本时段观测任务匹配结束，共匹配天数：{len(fitspath_list)}")
     print("=================================================================")
     return step_result
-
-
-__all__ = ["run_match"]

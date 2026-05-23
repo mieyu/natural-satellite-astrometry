@@ -36,14 +36,3 @@ def write_detected_region(reg_path, stars, bkgd, bkgdsigma, snr_threshold):
         for s in stars
     ]
     return write_reg_file(reg_path, legacy, bkgd, bkgdsigma, snr_threshold)
-
-
-__all__ = [
-    "read_detection_region",
-    "read_detected_stars",
-    "write_detected_region",
-    "write_reference_region",
-    "read_reg_file",
-    "write_reg_file",
-    "write_ref_file",
-]
