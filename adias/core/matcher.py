@@ -52,7 +52,6 @@ def run_match(config, fitspath_list):
     for idx, fitspath in enumerate(fitspath_list, 1):
         print(f"\n{'#' * 10} 本观测时段，第{idx:02d}日：fits文件夹：{fitspath}")
 
-        # 逐日重读 GAIA 星表
         try:
             gaia = read_gaia_catalog(
                 config["gaiacatpath"], config["min_mag"], config["max_mag"]
@@ -77,17 +76,14 @@ def run_match(config, fitspath_list):
         n_total = len(fits_files)
         print(f"======本日观测图像数量共计：{n_total} 幅")
 
-        # 产物目录就位
         stages = stage_dirs(fitspath)
         ensure_dir(stages[REF_DIR])
         out_directory = ensure_dir(stages[OUT_DIR])
 
-        # 批量打开 object_N.out
         object_out_files = open_object_output_files(
             out_directory, config["obj_total"]
         )
 
-        # 逐幅图像
         for n_fits, fitsfile in enumerate(fits_files, 1):
             print(f"\n======当前图像：{n_fits:3d}/{n_total} - {os.path.basename(fitsfile)}")
 
@@ -223,7 +219,6 @@ def run_match(config, fitspath_list):
                 continue
             print("======本幅图像处理完毕，处理下一幅图像======")
 
-        # 关闭 + 按观测时刻排序
         close_object_output_files(object_out_files)
         sort_object_outputs(out_directory, config["obj_total"])
 

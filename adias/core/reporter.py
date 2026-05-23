@@ -141,7 +141,6 @@ def _collect_by_period(dat_files, obj_total):
     -------
     dict  { (year, month): { obj_idx: {'t': ndarray, 'ra': ndarray, 'de': ndarray} } }
     """
-    # 用 defaultdict 先收集 list，之后转 ndarray
     raw = defaultdict(
         lambda: {obj: {"t": [], "ra": [], "de": []} for obj in range(1, obj_total + 1)}
     )
@@ -154,7 +153,6 @@ def _collect_by_period(dat_files, obj_total):
                 raw[key][obj_idx]["ra"].append(rec["ra_oc"])
                 raw[key][obj_idx]["de"].append(rec["de_oc"])
 
-    # list → ndarray
     result = {}
     for key, sats in raw.items():
         result[key] = {
@@ -207,7 +205,6 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
         ax_de.plot(t_arr + offset, de_arr, ".", color=color, markersize=6, label=label)
         legend_handles.append(h)
 
-    # 装饰 RA 子图
     ax_ra.set_xlabel(xlabel, fontsize=8)
     ax_ra.set_ylabel(r"$\Delta\alpha\cos\delta$ (\")", fontsize=9)
     ax_ra.grid(True, linewidth=0.5, alpha=0.7)
@@ -220,7 +217,6 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
             framealpha=0.6,
         )
 
-    # 装饰 DE 子图
     ax_de.set_xlabel(xlabel, fontsize=8)
     ax_de.set_ylabel(r"$\Delta\delta$ (\")", fontsize=9)
     ax_de.grid(True, linewidth=0.5, alpha=0.7)
@@ -363,7 +359,6 @@ def run_report(config, outdir=None, per_satellite=True):
 
     periods = sorted(all_period_data.keys())  # 按 (year, month) 升序
 
-    # 统计概要
     print(f"\n  数据概要（共 {len(periods)} 个观测时段）：")
     for year, month in periods:
         month_str = _MONTH_EN.get(month, str(month))

@@ -65,12 +65,9 @@ def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
     -------
     np.ndarray，扣除背景后的图像
     """
-    # 判断：给定的 med_width 是否大于 1？
     if med_width > 1:
-        # 如果大于 1，就生成一个“竖长条”形状的窗口
         kernel = (med_width, 1)
     else:
-        # 如果不大于 1，就忽略 med_width，用 med_length 生成一个“横长条”形状的窗口
         kernel = (1, med_length)
 
     bg = median_filter(data, size=kernel)
@@ -322,7 +319,6 @@ def detect_stars_by_moments(
 
     abox_l = abox.tolist()
 
-    # 连通域标号
     if connectivity == "fortran":
         idbox2 = label_connectivity_fortran(abox, naxis2, naxis1, EPS)
     elif connectivity == "scipy":
@@ -396,7 +392,6 @@ def detect_stars_by_moments(
             }
         )
 
-    # 按亮度降序排序
     detected_stars.sort(key=lambda s: s["sumi"], reverse=True)
     return detected_stars, bkgd, bkgdsigma
 

@@ -120,7 +120,6 @@ def parse_config(config_path="adias.cfg"):
     with open(config_path, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
 
-    # 多值键先收集（idx -> value），最后按 idx 排序展开为列表
     list_buckets = {prefix: {} for prefix in LIST_KEY_PREFIXES}
 
     for line in lines:
@@ -133,7 +132,6 @@ def parse_config(config_path="adias.cfg"):
         if not value:
             continue
 
-        # 单值键
         if key in KEY_MAP:
             var_name, typ = KEY_MAP[key]
             try:
@@ -154,7 +152,6 @@ def parse_config(config_path="adias.cfg"):
             list_buckets[prefix][idx] = _cast(value, str)
             break
 
-    # 多值键按后缀升序输出为列表
     for prefix, dest in LIST_KEY_PREFIXES.items():
         bucket = list_buckets[prefix]
         if not bucket:

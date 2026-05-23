@@ -22,7 +22,6 @@ def read_detected_stars(regfile):
 
 
 def write_detected_region(reg_path, stars, bkgd, bkgdsigma, snr_threshold):
-    """业务层传 list[DetectedStar]，adapter 翻成旧 .reg 字节格式。"""
     legacy = [
         {
             "starx": s.x,
