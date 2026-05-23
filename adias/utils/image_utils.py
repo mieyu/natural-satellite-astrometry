@@ -22,6 +22,12 @@ try:
 except ImportError:
     _HAS_BOTTLENECK = False
 
+try:
+    import numba as _numba
+    _HAS_NUMBA = True
+except ImportError:
+    _HAS_NUMBA = False
+
 
 def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
     """迭代 Sigma-Clipping 计算背景均值与 sigma。
@@ -181,7 +187,188 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
 
     注：Pass A 的循环上界用了 naxis1/naxis2 反置（原算法 bug），
     对方图 naxis1==naxis2 无影响，这里完整保留以匹配原行为。
+
+    numba 可用时走 JIT 路径，否则回退到 Python list 兜底。
     """
+    if _HAS_NUMBA:
+        return _label_connectivity_fortran_numba(abox, naxis2, naxis1, EPS)
+    return _label_connectivity_fortran_python(abox, naxis2, naxis1, EPS)
+
+
+if _HAS_NUMBA:
+    @_numba.njit(cache=True)
+    def _pass_ab_numba(abox, naxis2, naxis1, EPS):
+        idbox = np.zeros((naxis2, naxis1), dtype=np.int32)
+        numobj = 0
+        # Pass A：naxis1/naxis2 反置是原算法 bug，对方图无影响，完整保留
+        for i in range(1, naxis1 - 1):
+            for j in range(1, naxis2 - 1):
+                v = abox[i, j]
+                if v > EPS:
+                    lty1 = abox[i - 1, j + 1]
+                    lty2 = abox[i - 1, j]
+                    lty3 = abox[i - 1, j - 1]
+                    lty4 = abox[i, j - 1]
+                    if lty1 + lty2 + lty3 + lty4 <= EPS:
+                        numobj += 1
+                        idbox[i, j] = numobj
+                    elif lty1 > EPS:
+                        idbox[i, j] = idbox[i - 1, j + 1]
+                    elif lty2 > EPS:
+                        idbox[i, j] = idbox[i - 1, j]
+                    elif lty3 > EPS:
+                        idbox[i, j] = idbox[i - 1, j - 1]
+                    elif lty4 > EPS:
+                        idbox[i, j] = idbox[i, j - 1]
+
+        # Pass B：±nr=250 方框合并水平相邻的不同 label
+        nr = 250
+        for i in range(1, naxis2 - 1):
+            for j in range(naxis1 - 2, 0, -1):
+                if abox[i, j] > EPS and abox[i, j - 1] > EPS:
+                    lab_left = idbox[i, j - 1]
+                    lab_cur = idbox[i, j]
+                    if lab_cur != lab_left:
+                        ni1 = i - nr if i - nr > 0 else 0
+                        ni2 = i + nr if i + nr < naxis2 - 1 else naxis2 - 1
+                        nj1 = j - nr if j - nr > 0 else 0
+                        nj2 = j + nr if j + nr < naxis1 - 1 else naxis1 - 1
+                        for i1 in range(ni1, ni2 + 1):
+                            if i1 == i:
+                                continue
+                            for j1 in range(nj1, nj2 + 1):
+                                if j1 == j - 1:
+                                    continue
+                                if idbox[i1, j1] == lab_left:
+                                    idbox[i1, j1] = lab_cur
+                        idbox[i, j - 1] = lab_cur
+        return idbox
+
+    @_numba.njit(cache=True)
+    def _pass_c_count_numba(abox, idbox2, naxis2, naxis1, EPS):
+        count = 0
+        for i in range(1, naxis2 - 1):
+            for j in range(1, naxis1 - 1):
+                if abox[i, j] > EPS:
+                    cur = idbox2[i, j]
+                    # 邻居顺序：左、右、左上、上、右上、左下、下、右下
+                    for kk in range(8):
+                        if kk == 0:
+                            nb = idbox2[i, j - 1]
+                        elif kk == 1:
+                            nb = idbox2[i, j + 1]
+                        elif kk == 2:
+                            nb = idbox2[i - 1, j - 1]
+                        elif kk == 3:
+                            nb = idbox2[i - 1, j]
+                        elif kk == 4:
+                            nb = idbox2[i - 1, j + 1]
+                        elif kk == 5:
+                            nb = idbox2[i + 1, j - 1]
+                        elif kk == 6:
+                            nb = idbox2[i + 1, j]
+                        else:
+                            nb = idbox2[i + 1, j + 1]
+                        if cur != nb and nb > 0:
+                            count += 1
+        return count
+
+    @_numba.njit(cache=True)
+    def _pass_c_fill_numba(abox, idbox2, naxis2, naxis1, EPS, pairs):
+        count = 0
+        for i in range(1, naxis2 - 1):
+            for j in range(1, naxis1 - 1):
+                if abox[i, j] > EPS:
+                    cur = idbox2[i, j]
+                    for kk in range(8):
+                        if kk == 0:
+                            nb = idbox2[i, j - 1]
+                        elif kk == 1:
+                            nb = idbox2[i, j + 1]
+                        elif kk == 2:
+                            nb = idbox2[i - 1, j - 1]
+                        elif kk == 3:
+                            nb = idbox2[i - 1, j]
+                        elif kk == 4:
+                            nb = idbox2[i - 1, j + 1]
+                        elif kk == 5:
+                            nb = idbox2[i + 1, j - 1]
+                        elif kk == 6:
+                            nb = idbox2[i + 1, j]
+                        else:
+                            nb = idbox2[i + 1, j + 1]
+                        if cur != nb and nb > 0:
+                            if cur < nb:
+                                pairs[count, 0] = cur
+                                pairs[count, 1] = nb
+                            else:
+                                pairs[count, 0] = nb
+                                pairs[count, 1] = cur
+                            count += 1
+
+
+def _label_connectivity_fortran_numba(abox, naxis2, naxis1, EPS):
+    """numba JIT 实现：Pass A/B + Pass C 步骤 1 numba 化；
+    步骤 2-4（pair 去重 / 简化合并 / 再去重）在 Python 上做（典型 100 对量级，
+    Python set 已足够快）；步骤 5 用 numpy 向量化替换。"""
+    abox = np.ascontiguousarray(abox)
+    idbox2 = _pass_ab_numba(abox, naxis2, naxis1, EPS)
+
+    n_raw = _pass_c_count_numba(abox, idbox2, naxis2, naxis1, EPS)
+    if n_raw == 0:
+        return idbox2
+
+    pairs_arr = np.empty((n_raw, 2), dtype=np.int32)
+    _pass_c_fill_numba(abox, idbox2, naxis2, naxis1, EPS, pairs_arr)
+
+    # 步骤 2：去重，保首次出现顺序
+    seen = set()
+    pairs2 = []
+    for k in range(n_raw):
+        tup = (int(pairs_arr[k, 0]), int(pairs_arr[k, 1]))
+        if tup not in seen:
+            seen.add(tup)
+            pairs2.append(tup)
+
+    # 步骤 3：简化合并（单遍扫描，保留原算法语义——在罕见复杂形状下会合并不完整）
+    pairs3 = []
+    eid1_buf = []
+    eid2_buf = []
+    for idx, (t1, t2) in enumerate(pairs2):
+        if idx > 0:
+            for jj in range(len(eid2_buf)):
+                if t1 == eid2_buf[jj]:
+                    t1 = eid1_buf[jj]
+                    break
+                elif t2 == eid2_buf[jj]:
+                    t2 = t1
+                    t1 = eid1_buf[jj]
+                    break
+        eid1_buf.append(t1)
+        eid2_buf.append(t2)
+        pairs3.append((t1, t2))
+
+    # 步骤 4：再次去重
+    seen = set()
+    pairs4 = []
+    for p in pairs3:
+        if p not in seen:
+            seen.add(p)
+            pairs4.append(p)
+
+    # 步骤 5：按 pair 顺序把 idbox2 中的 e2 替换为 e1
+    if pairs4:
+        mask_pos = abox > EPS
+        for e1, e2 in pairs4:
+            replace_mask = (idbox2 == e2) & mask_pos
+            if replace_mask.any():
+                idbox2[replace_mask] = e1
+
+    return idbox2
+
+
+def _label_connectivity_fortran_python(abox, naxis2, naxis1, EPS=1e-9):
+    """三段式连通域标号（Python list 实现，作为 numba 不可用时的兜底）。"""
     abox_l = abox.tolist()
 
     # ── Pass A：4 邻居优先级标号 ──────────────────────────────────────────
