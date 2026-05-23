@@ -85,7 +85,7 @@ def _load_dat(filepath):
                         f"  [警告] {os.path.basename(filepath)} 第 {lineno} 行解析失败：{e}"
                     )
     except Exception as e:
-        print(f"  [错误] 无法读取 {filepath}：{e}")
+        print(f"  错误：无法读取 {filepath}：{e}")
     return records
 
 
@@ -275,7 +275,7 @@ def run_report(config, outdir=None, per_satellite=True):
     print(f"05report 开始 — 读取目录：{outdir}")
 
     if not os.path.isdir(outdir):
-        print(f"  [错误] 输出目录不存在：{outdir}")
+        print(f"  错误：输出目录不存在：{outdir}")
         print("05report 跳过。")
         result.warnings.append(f"report: 输出目录不存在 {outdir}")
         result.failed_items.append(outdir)
@@ -286,7 +286,7 @@ def run_report(config, outdir=None, per_satellite=True):
 
     total_files = sum(len(v) for v in dat_files.values())
     if total_files == 0:
-        print(f"  [警告] 在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
+        print(f"  警告：在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
         result.warnings.append(f"report: 未发现 .dat {outdir}")
         return result
 
@@ -301,7 +301,7 @@ def run_report(config, outdir=None, per_satellite=True):
     all_period_data = _collect_by_period(dat_files, obj_total)
 
     if not all_period_data:
-        print("  [警告] 所有文件均无有效数据行，跳过绘图。")
+        print("  警告：所有文件均无有效数据行，跳过绘图。")
         result.warnings.append(f"report: 无有效数据行 {outdir}")
         return result
 

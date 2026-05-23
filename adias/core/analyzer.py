@@ -65,7 +65,7 @@ def run_comoc(config, fitspath_list):
                 all_out = os.path.join(outdir, date_str + f"_all_{obj_label}.out")
 
                 if not os.path.exists(objout_path):
-                    print(f"警告: 文件不存在 {objout_path}")
+                    print(f"警告：文件不存在 {objout_path}")
                     result.warnings.append(f"comoc: 缺失 {objout_path}")
                     result.failed_items.append(objout_path)
                     continue
