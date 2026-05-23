@@ -26,7 +26,7 @@ Thumbs.db
 .env.*
 !.env.example
 
-# ===== Logs =====
+# ===== Logs / console output =====
 *.log
 控制台输出*.txt
 
@@ -41,32 +41,26 @@ build/
 dist/
 *.egg-info/
 
-# ===== ADIAS pipeline generated files =====
-**/fits.lst
+# ===== Observation FITS images (raw data, too large for repo) =====
+observation_images/
+observation_image_S/
+
+# ===== ADIAS pipeline generated files (anywhere in repo) =====
+# 预处理后图像
 **/*_n.fit
-**/*_n.fit*
+# 检测区域文件
 **/*.reg
 **/*.ref.reg
-
+# 图像列表
+**/fits.lst
+# 逐帧归算输出
 **/object_*.out
-**/final_object_*.out
-**/final_oc_*.out
-**/00oc_*.out
+**/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.out
+# 汇总输出
 **/*_obsdata_*.out
 **/*_all_*.out
-**/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.out
+**/00oc_*.out
+**/final_object_*.out
+**/final_oc_*.out
+# 归算中间数据
 **/observation_image_*.dat
-**/observation_image_S9_*.dat
-**/observation_image_S9_after1.dat
-**/observation_image_U
-
-
-# ===== Large observation/catalog data (usually should not be in code repo) =====
-observation_image/
-observation_image_S9/
-observation_image_S9_after/
-MATH/
-MATH_S9/
-MATH_S9_after/
-lhycat/
-lhycat_S9/
