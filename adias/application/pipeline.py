@@ -1,6 +1,7 @@
 """流水线 Step 协议、运行器与 manifest 记录。"""
 
 import json
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ class StepResult:
     warnings: list[str] = field(default_factory=list)
     failed_items: list[str] = field(default_factory=list)
     output_files: list[str] = field(default_factory=list)
+    elapsed: float = 0.0
 
 
 class PipelineStep(Protocol):
@@ -40,7 +42,10 @@ class PipelineRunner:
         try:
             for step in self.steps:
                 _log.info(step.title)
+                t_step = time.time()
                 result = step.run(ctx)
+                result.elapsed = time.time() - t_step
+                _log.info(f"阶段耗时: {result.elapsed:.2f} s")
                 results.append(result)
                 manifest.add_result(result)
         except Exception as exc:
@@ -65,6 +70,7 @@ class RunManifest:
             "output_files": [],
             "warnings": [],
             "failed_items": [],
+            "step_timings": {},
         }
 
     def start(self, steps):
@@ -78,6 +84,7 @@ class RunManifest:
         self.data["warnings"].extend(result.warnings)
         self.data["failed_items"].extend(result.failed_items)
         self.data["output_files"].extend(result.output_files)
+        self.data["step_timings"][result.name] = round(result.elapsed, 2)
 
     def add_failure(self, name, message):
         self.data["failed_items"].append(f"{name}: {message}")
