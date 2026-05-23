@@ -10,7 +10,7 @@ CCD 天文图像处理流水线，5 步将原始 FITS 观测数据归算为天�
 | `detect` | detector | `fits_n/*_n.fit` 或 `fits/*.fit` | `fits_reg/*.fit.reg` |
 | `match` | matcher | `fits_reg/*.fit.reg` + GAIA 星表 + 历表 | `fits_ref/*.ref.reg` + `fits_out/object_N.out` |
 | `comoc` | analyzer | `fits_out/object_N.out` | `fits_out/final_*` + `<MATH>/*N.dat` |
-| `report` | reporter | `<MATH>/*N.dat` | `<MATH>/OC_summary.png` + `OC_UN.png` |
+| `report` | reporter | `<MATH>/*N.dat` | `<MATH>/OC_summary.png` + `OC_U{N}.png` |
 
 `<MATH>` 为 cfg 中 `4specified-output` 指定的跨日汇总目录。
 
@@ -108,27 +108,39 @@ python -m adias.main --config /path/to/adias2024.cfg
 └── fits_out/         # 03/04 产物：object_N.out, final_object_N.out, final_oc_N.out
 ```
 
-跨日汇总（`.dat`、`OC_UN.png`、`OC_summary.png`、`00oc_*.out`、`*_all_*.out`、
+跨日汇总（`.dat`、`OC_U{N}.png`、`OC_summary.png`、`00oc_*.out`、`*_all_*.out`、
 `*_obsdata_*.out`）落在 cfg `4specified-output` 指定的目录。
 
 ## 作为库调用
 
-5 个入口与配置解析已在顶层包导出：
+推荐复用 CLI 相同的流水线封装，这样会保留配置校验与 `runs/<run_id>/manifest.json` 记录：
 
 ```python
-from adias import (
-    parse_config, expand_fitspath,
-    run_pre, run_detect, run_match, run_comoc, run_report,
-)
+from adias.application.context import build_context
+from adias.application.pipeline import PipelineRunner
+from adias.application.steps import select_steps, selected_step_names
+from adias.config import load_config
 
-config = parse_config("configs/adias2024.cfg")
-fitspath_list = expand_fitspath(config["fitspath"])
+step = "all"  # 或 pre / detect / match / comoc / report
+step_names = selected_step_names(step)
+
+config = load_config("configs/adias2024.cfg", steps=step_names)
+ctx = build_context(config, step_names)
+
+PipelineRunner(select_steps(step)).run(ctx)
+```
+
+如需直接调用单步核心函数，应从 `adias.core.*` 显式导入：
+
+```python
+from adias.config import load_config
+from adias.core.preprocessor import run_pre
+from adias.paths import expand_fitspath
+
+config = load_config("configs/adias2024.cfg", steps=["pre"])
+fitspath_list = expand_fitspath(config.fitspaths)
 
 run_pre(config, fitspath_list)
-run_detect(config, fitspath_list)
-run_match(config, fitspath_list)
-run_comoc(config, fitspath_list)
-run_report(config)
 ```
 
 ## 分层
@@ -137,8 +149,7 @@ run_report(config)
 |---|---|
 | `core/` | 5 步流程编排（pre / detect / match / comoc / report） |
 | `domain/` | 领域模型与算法（astrometry、matching、数据模型） |
-| `adapters/` | 文件格式适配（GAIA/历表 / object_out / .reg） |
-| `application/` | 流水线运行器（PipelineRunner / OutputSink / RunManifest） |
-| `io/` | 底层文件 IO |
+| `application/` | 流水线运行器、运行上下文与 manifest 记录（PipelineRunner / RunManifest） |
+| `io/` | 文件格式读写（FITS、GAIA/历表、object_out、.reg） |
 | `utils/` | 通用工具（图像、数学） |
 | `errors.py` | 分层异常：ConfigError / DataFormatError / ProcessingError |
