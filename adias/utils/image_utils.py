@@ -50,20 +50,9 @@ def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100)
 
 
 def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
-    """
-    对图像执行一次中值滤波并按 bkgdmode 扣除背景。
+    """中值滤波后按 bkgdmode 扣除背景（1=除法归一化，2=减法扣除）。
 
-    Parameters
-    ----------
-    data      : np.ndarray，输入图像
-    bkgd0     : float，全场背景均值（用于恢复平均亮度）
-    med_length: int，滤波窗口列方向尺寸
-    med_width : int，滤波窗口行方向尺寸
-    bkgdmode  : int，1=除法归一化，2=减法扣除
-
-    Returns
-    -------
-    np.ndarray，扣除背景后的图像
+    bkgd0 用于恢复全场平均亮度。med_width>1 走竖窗口，否则走横窗口。
     """
     if med_width > 1:
         kernel = (med_width, 1)
@@ -79,17 +68,7 @@ def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode):
 
 
 def apply_smooth(data):
-    """
-    3×3 均值滤波轻微降噪（对应 enhance_flag=1）。
-
-    Parameters
-    ----------
-    data : np.ndarray
-
-    Returns
-    -------
-    np.ndarray
-    """
+    """3×3 均值滤波轻微降噪（对应 enhance_flag=1）。"""
     return uniform_filter(data, size=3)
 
 
@@ -239,25 +218,11 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
 
 
 def label_connectivity_scipy(abox, naxis2, naxis1, EPS=1e-9):
-    """
-    【B 函数】基于 scipy.ndimage_label 的标准 8 连通标号
-    （不含 Fortran 的 nr=250 子区域合并）。
+    """scipy 标准 8 连通标号（不含 Fortran 的 nr=250 子区域合并）。
 
-    Pass A 的 4 邻居优先级标号 + Pass C 的等价表传递闭包合并，
-    在算法上等价于标准 8 连通；scipy 实现使用严格 Union-Find，
-    比 Fortran 的简化单遍合并更稳健（在 Fortran 简化合并算法
-    可能出现合并不完整的极少数复杂形状下，scipy 给出正确结果）。
-
-    Parameters
-    ----------
-    abox    : np.ndarray，阈值分割后的 float 图像（已边缘清零）
-    naxis2  : int，行数
-    naxis1  : int，列数（仅用于签名一致，scipy 内部不需要）
-    EPS     : float，零值判定阈值（默认 1e-9）
-
-    Returns
-    -------
-    idbox2 : np.ndarray (int32, shape=(naxis2, naxis1))，连通域标号
+    与 Fortran 路径在算法上等价，但 scipy 用严格 Union-Find，
+    在 Fortran 简化单遍合并可能不完整的复杂形状下更稳健。
+    naxis1 仅为签名一致而保留；返回 int32 标号矩阵。
     """
     structure = generate_binary_structure(2, 2)
     labels, _ = ndimage_label(abox > EPS, structure=structure)
@@ -267,28 +232,12 @@ def label_connectivity_scipy(abox, naxis2, naxis1, EPS=1e-9):
 def detect_stars_by_moments(
     data, bkgd_threshold, pos_method, bitpix=16, connectivity="fortran"
 ):
-    """
-    连通域星象检测 + 修正矩定中心（子像素精度）。
+    """连通域星象检测 + 修正矩定中心，返回 (按亮度降序的星表, bkgd, bkgdsigma)。
 
-    Parameters
-    ----------
-    data            : np.ndarray，float64 图像数据
-    bkgd_threshold  : float，背景起伏阈值系数
-    pos_method      : int，修正矩阶数（1/2/3）
-    bitpix          : int，FITS 头 BITPIX 值，用于动态计算饱和阈值，默认 16
-                      对应 Fortran：maxflux = 2**bitpix - 1（仅对整型 FITS 有效）
-    connectivity    : str，连通域算法选择
-                      - "fortran"（默认）：A 函数 label_connectivity_fortran，
-                        完全按 Fortran 三段式实现（首遍标号 + nr=250 合并 + 等价表）
-                      - "scipy"：B 函数 label_connectivity_scipy，
-                        Python 标准 8 连通，不含 nr=250 子区域合并
-
-    Returns
-    -------
-    detected_stars : list[dict]，按亮度（sumi_real）降序排列的星表
-        每个 dict 包含：starx, stary, sumi, snr, star_id, star_pix, overflag
-    bkgd           : float，背景均值
-    bkgdsigma      : float，背景 sigma
+    bitpix 用于动态计算饱和阈值 maxflux=2**bitpix-1（仅整型 FITS 有效）。
+    connectivity="fortran" 走完整 Fortran 三段式（含 nr=250 合并），
+    "scipy" 走标准 8 连通。每颗星 dict：starx/stary/sumi/snr/star_id/
+    star_pix/overflag。
     """
     naxis2, naxis1 = data.shape  # FITS 标准：data.shape[0]=NAXIS2(行), [1]=NAXIS1(列)
 
@@ -397,21 +346,10 @@ def detect_stars_by_moments(
 
 
 def homomorphic_filter(data, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
-    """
-    同态滤波（Homomorphic Filter）。
-    通过对数域高斯高通滤波压制低频光照变化，增强高频细节。
+    """同态滤波：对数域高斯高通压低频光照、增强高频细节。
 
-    Parameters
-    ----------
-    data       : np.ndarray，float64 图像数据
-    gamma_low  : float，低频增益（< 1 压制背景）
-    gamma_high : float，高频增益（> 1 增强细节）
-    cutoff     : float，截止频率（像素单位）
-    c          : float，滤波器过渡陡度
-
-    Returns
-    -------
-    np.ndarray，float64，滤波后图像（灰度值域与输入一致）
+    gamma_low<1 压背景，gamma_high>1 增细节，cutoff 截止频率（像素）。
+    输出灰度值域恢复到与输入一致。
     """
     image = data.astype(np.float64)
     orig_min, orig_max = image.min(), image.max()
@@ -441,19 +379,9 @@ def homomorphic_filter(data, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
 
 
 def bilateral_retinex(data, d=15):
-    """
-    双边 Retinex（BFR，Bilateral Filter Retinex）。
-    在对数域用双边滤波分离光照与反射，输出反射分量（去除背景光照后的细节图）。
+    """双边 Retinex：对数域双边滤波分离 (反射, 光照) 分量。
 
-    Parameters
-    ----------
-    data : np.ndarray，float64 图像数据（原始 ADU 值）
-    d    : int，双边滤波邻域直径
-
-    Returns
-    -------
-    reflectance  : np.ndarray，float64，反射分量（细节）
-    illumination : np.ndarray，float64，光照分量（背景）
+    输出已分别归一化回原始 ADU 值域。d 为双边滤波邻域直径。
     """
     max_val = data.max()
     if max_val <= 0:

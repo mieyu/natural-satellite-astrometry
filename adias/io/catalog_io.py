@@ -12,25 +12,11 @@ from adias.errors import DataFormatError
 
 
 def read_catalog(catfile, min_mag, max_mag):
-    """
-    读取 GAIA 星表文件。
-    格式：跳过前 60 行，之后每行从第 39 列起读取：
-    RA(deg)  DE(deg)  pmRA(mas/yr)  pmDE(mas/yr)  Gmag
+    """读取 GAIA 星表，按星等过滤后返回 (n, ra, de, pmRA, pmDE, mag)。
 
-    Parameters
-    ----------
-    catfile  : str，星表文件路径
-    min_mag  : float，星等下限
-    max_mag  : float，星等上限
-
-    Returns
-    -------
-    n_gaia   : int
-    gaia_ra  : np.ndarray，赤经（度）
-    gaia_de  : np.ndarray，赤纬（度）
-    gaia_pr  : np.ndarray，RA 方向自行（mas/yr）
-    gaia_pd  : np.ndarray，DE 方向自行（mas/yr）
-    gaia_mag : np.ndarray，G 星等
+    格式：跳过前 60 行，之后每行从第 39 列起读取
+    RA(deg) DE(deg) pmRA(mas/yr) pmDE(mas/yr) Gmag。
+    打开/全文解析失败抛 DataFormatError。
     """
     ra, de, pr, pd, mag = [], [], [], [], []
     try:
@@ -61,21 +47,11 @@ def read_catalog(catfile, min_mag, max_mag):
     return n, np.array(ra), np.array(de), np.array(pr), np.array(pd), np.array(mag)
 
 def read_ephemeris(ephfile):
-    """
-    读取 IMCCE 历表文件。
-    格式：跳过前 10 行，之后每行：
-    year month day hh mm ss  RA(h)  DE(deg)  ...
+    """读取 IMCCE 历表，返回 (n, T, ra, de)；ra 已从时角换算为度。
 
-    Parameters
-    ----------
-    ephfile : str，历表文件路径
-
-    Returns
-    -------
-    n_eph   : int
-    eph_T   : np.ndarray，儒略日内时间（day + 时间分数）
-    eph_ra  : np.ndarray，赤经（度，已从时角换算）
-    eph_de  : np.ndarray，赤纬（度）
+    格式：跳过前 10 行，之后每行 year month day hh mm ss RA(h) DE(deg) ...。
+    T 为 day + 时间分数。打开失败或全部行解析失败时抛 DataFormatError；
+    单行失败保持静默跳过（与历史行为一致）。
     """
     T, ra_list, de_list = [], [], []
     try:

@@ -12,18 +12,7 @@ from adias.errors import ProcessingError
 warnings.filterwarnings('ignore', category=AstropyWarning)
 
 def read_fits(fitsfile):
-    """
-    读取 FITS 文件，返回图像数据（float64）和头信息。
-
-    Parameters
-    ----------
-    fitsfile : str
-
-    Returns
-    -------
-    data   : np.ndarray，float64
-    header : astropy.io.fits.Header
-    """
+    """读取 FITS 文件，返回 (data: np.ndarray[float64], header)。"""
     with fits.open(fitsfile, ignore_missing_end=True) as hdul:
         data   = hdul[0].data.astype(np.float64)
         header = hdul[0].header.copy()
@@ -31,31 +20,13 @@ def read_fits(fitsfile):
 
 
 def write_fits(fitsfile, data, header):
-    """
-    将处理后的图像写出为 FITS 文件（float32 节省空间）。
-
-    Parameters
-    ----------
-    fitsfile : str
-    data     : np.ndarray
-    header   : astropy.io.fits.Header
-    """
+    """将图像写出为 FITS（统一存为 float32 节省空间）。"""
     fits.writeto(fitsfile, data.astype(np.float32), header, overwrite=True)
 
 def read_fits_header(fitsfile, tele_label):
-    """
-    解析 FITS 头，返回曝光中点 UTC 时间及基本参数。
-    支持望远镜标签：ss156 / ss156_2014 / km100 / lj240 / km100B。
+    """解析 FITS 头，返回曝光中点 UTC 时间及基本参数 dict。
 
-    Parameters
-    ----------
-    fitsfile   : str
-    tele_label : str，望远镜标签
-
-    Returns
-    -------
-    dict，包含：naxis1, naxis2, bscale, bzero, gain, exptime,
-               year, month, day, hh, mm, ss
+    支持 tele_label：ss156 / ss156_2014 / km100 / lj240 / km100B。
     解析失败时抛 ProcessingError（单图错误，调用方应捕获后跳过此图）。
     """
     try:

@@ -60,17 +60,7 @@ _MONTH_EN = {
 
 
 def _load_dat(filepath):
-    """
-    读取单个 .dat 文件，返回记录列表。
-
-    Parameters
-    ----------
-    filepath : str
-
-    Returns
-    -------
-    list[dict]，每条记录含：year, month, t, ra_oc, de_oc, exptime
-    """
+    """读取单个 .dat 文件，返回记录列表，每条含 year/month/t/ra_oc/de_oc/exptime。"""
     records = []
     try:
         with open(filepath, "r", encoding="utf-8") as fh:
@@ -102,21 +92,9 @@ def _load_dat(filepath):
 
 
 def _discover_dat_files(outdir, obj_total):
-    """
-    在 outdir 中发现各卫星编号对应的 .dat 数据文件。
+    """按 .dat 文件名末尾数字归类到卫星编号，返回 {obj_idx: [path,...]}。
 
-    支持两种命名规则（自动识别）：
-    - MATLAB 风格  : ``YYYYMMN.dat``  (7 位前缀 + 卫星编号)
-    - 当前项目风格 : ``<任意前缀>N.dat``  (末尾数字 = 卫星编号)
-
-    Parameters
-    ----------
-    outdir    : str，comoc 输出目录
-    obj_total : int，卫星总数
-
-    Returns
-    -------
-    dict  {obj_idx(int): list[str]}，每颗卫星对应的文件路径列表（已排序）
+    兼容 MATLAB 风格 YYYYMMN.dat 与当前 <任意前缀>N.dat（末位数字 = 卫星编号）。
     """
     found = {obj: [] for obj in range(1, obj_total + 1)}
     pat = re.compile(r"^(.+?)(\d)$")  # 末尾一位数字 = 卫星编号
@@ -134,13 +112,7 @@ def _discover_dat_files(outdir, obj_total):
 
 
 def _collect_by_period(dat_files, obj_total):
-    """
-    读入所有 .dat 文件并按 (year, month) 分组。
-
-    Returns
-    -------
-    dict  { (year, month): { obj_idx: {'t': ndarray, 'ra': ndarray, 'de': ndarray} } }
-    """
+    """读入 .dat 并按 (year, month) → obj_idx → {t, ra, de} 分组（值为 ndarray）。"""
     raw = defaultdict(
         lambda: {obj: {"t": [], "ra": [], "de": []} for obj in range(1, obj_total + 1)}
     )
@@ -172,16 +144,7 @@ def _collect_by_period(dat_files, obj_total):
 
 
 def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
-    """
-    在一对子图（ax_ra / ax_de）上绘制单个观测时段的 O-C 散点。
-
-    Parameters
-    ----------
-    ax_ra, ax_de : matplotlib Axes
-    period_data  : dict  { obj_idx: {'t', 'ra', 'de'} }
-    obj_total    : int
-    year, month  : int
-    """
+    """在 (ax_ra, ax_de) 子图对上绘制单个观测时段的 O-C 散点。"""
     month_str = _MONTH_EN.get(month, str(month))
     xlabel = f"Time in day (UTC) in {month_str} {year}"
     legend_handles = []
@@ -303,19 +266,10 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
 
 
 def run_report(config, outdir=None, per_satellite=True):
-    """
-    读取 comoc 输出的 .dat 文件，生成 O-C 散点图。
+    """读取 comoc 的 .dat 文件，生成 OC_summary.png 及（可选）各卫星单独图。
 
-    生成文件
-    --------
-    - ``outdir/OC_summary.png``      所有时段、所有卫星的汇总图
-    - ``outdir/OC_U1.png`` ~ ``OC_U5.png``  各卫星单独图（per_satellite=True 时）
-
-    Parameters
-    ----------
-    config        : dict，parse_config() 返回的参数字典
-    outdir        : str | None，数据目录，默认使用 config['newoutfile0']
-    per_satellite : bool，是否额外生成每颗卫星的单独图（默认 True）
+    outdir 默认为 config['newoutfile0']。per_satellite=True 时额外生成
+    OC_U1.png~OC_U5.png。
     """
     result = StepResult("report")
     if outdir is None:

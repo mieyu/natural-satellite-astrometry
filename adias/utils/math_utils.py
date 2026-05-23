@@ -40,18 +40,7 @@ def interpolate(x, y, n, t):
 
 
 def am2hms(ra_arcmin, de_arcmin):
-    """
-    赤经赤纬（角分）-> 时分秒 / 度分秒。
-
-    Parameters
-    ----------
-    ra_arcmin : float，赤经（角分）
-    de_arcmin : float，赤纬（角分）
-
-    Returns
-    -------
-    hh, mm, ss, sign, ddd, dmm, dss
-    """
+    """赤经赤纬（角分）→ (hh, mm, ss, sign, ddd, dmm, dss)。"""
     hh = int(ra_arcmin / 60.0 / 15.0)
     mm = int((ra_arcmin - hh * 900.0) / 15.0)
     ss = (ra_arcmin - hh * 900.0 - mm * 15.0) * 4.0
@@ -77,32 +66,12 @@ def initial_stats(res_ra, res_de):
 
 
 def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
-    """
-    迭代剔除 O-C 野值，对应 Fortran comoc 核心循环。
+    """迭代剔除 O-C 野值，对应 Fortran comoc 核心循环。
 
-    剔除策略
-    --------
-    - oc_limit > 0：按 |data - mean| < oc_limit * sigma 且 |data| < eps 剔除；
-    - oc_limit == 0：按 |data - mean| < mean_limit 剔除。
-
-    Parameters
-    ----------
-    res_ra, res_de : list[float]，O-C 残差（角秒）
-    lines          : list[str]，与残差一一对应的原始行文本
-    oc_limit       : float，sigma 倍数阈值（0 表示使用 mean_limit 模式）
-    mean_limit     : float，绝对残差阈值
-    eps            : float，残差绝对值上限
-
-    Returns
-    -------
-    new_lines  : list[str]，剔除后保留的行
-    new_ra     : list[float]
-    new_de     : list[float]
-    mean_ra    : float，剔除后均值
-    mean_de    : float
-    std_ra     : float，剔除后标准差
-    std_de     : float
-    iloop      : int，迭代次数
+    剔除策略：
+      - oc_limit > 0：|data - mean| < oc_limit * sigma 且 |data| < eps；
+      - oc_limit == 0：|data - mean| < mean_limit。
+    返回 (new_lines, new_ra, new_de, mean_ra, mean_de, std_ra, std_de, iloop)。
     """
     cur_ra = list(res_ra)
     cur_de = list(res_de)
