@@ -26,30 +26,34 @@ except ImportError:
 def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
     """迭代 Sigma-Clipping 计算背景均值与 sigma。
 
-    关键约定：
+    关键约定（不可破坏的不变量）：
       - 每轮用 OLD mean/sigma 做剔除，剔除后再算 NEW mean2/sigma2
       - 收敛判据：|sigma2 - sigma| < convergence * sigma2（分母是 NEW sigma2）
       - 收敛或 sigma2 ≤ 1e-6 时输出 OLD mean/sigma（用作剔除基准的那对），不是 NEW
 
-    max_iter 仅为安全保护，正常 5 次内收敛。
+    max_iter 仅为安全保护，正常 5 次内收敛。整张图只算一对统计量，
+    f32 精度已足够；用 mean/std + np.fabs(out=tmp) 复用 buffer 避免重复 alloc。
     """
-    flat = np.asarray(data, dtype=np.float64).ravel()
+    flat = np.asarray(data, dtype=np.float32).ravel()
     n = len(flat)
     if n < 2:
         return (float(flat[0]) if n == 1 else 0.0), 0.0
 
-    avervalue = np.sum(flat) / n
-    sigma = np.sqrt(np.sum((flat - avervalue) ** 2) / (n - 1))
+    avervalue = float(flat.mean())
+    sigma = float(flat.std(ddof=1))
 
+    tmp = np.empty_like(flat)
     for _ in range(max_iter):
-        mask = np.abs(flat - avervalue) <= sigma_factor * sigma
+        np.subtract(flat, np.float32(avervalue), out=tmp)
+        np.fabs(tmp, out=tmp)
+        mask = tmp <= np.float32(sigma_factor * sigma)
         clipped = flat[mask]
-        k = len(clipped)
+        k = clipped.size
         if k < 2:
             break
 
-        avervalue2 = np.sum(clipped) / k
-        sigma2 = np.sqrt(np.sum((clipped - avervalue2) ** 2) / (k - 1))
+        avervalue2 = float(clipped.mean())
+        sigma2 = float(clipped.std(ddof=1))
 
         # 退化：图像极平坦，直接输出 OLD
         if sigma2 <= 1e-6:
