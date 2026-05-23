@@ -22,7 +22,7 @@ from adias.domain.astrometry import (
 from adias.domain.models import MatchResult
 
 
-# ─── legacy 兼容 ──────────────────────────────────────────────────────────
+# ── legacy 兼容 ───────────────────────────────────────────────────────────
 
 def match_result_from_legacy(data):
     return MatchResult.from_legacy_dict(data)
@@ -34,7 +34,7 @@ def match_result_to_legacy(result):
     return result
 
 
-# ─── 内部 helper ──────────────────────────────────────────────────────────
+# ── 内部 helper ───────────────────────────────────────────────────────────
 
 def _empty_result(n_match1=0, par1=None, x_cen=0.0, y_cen=0.0, ra_cen=0.0, de_cen=0.0):
     """构造默认/失败时的 MatchResult，参考星数组按 0 长创建。"""
@@ -332,7 +332,7 @@ def _locate_base_angle_target(
     )
 
 
-# ─── 对外接口 ────────────────────────────────────────────────────────────
+# ── 对外接口 ──────────────────────────────────────────────────────────────
 
 def find_obj_base_angle(
     det_x,
@@ -370,7 +370,7 @@ def find_obj_base_angle(
         r.nostar = 1
         return r
 
-    # ── 阶段一：暴力粗匹配 ────────────────────────────────────────────
+    # ── 阶段一：暴力粗匹配 ────────────────────────────────────────────────
     par_init = _initial_plate_par(field_angle)
     best = _coarse_match_base_angle(
         det_x,
@@ -394,7 +394,7 @@ def find_obj_base_angle(
         r.nopre = 1
         return r
 
-    # ── 阶段二：精化中心（两次 sol_par） ─────────────────────────────
+    # ── 阶段二：精化中心（两次 sol_par） ──────────────────────────────────
     refined = _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
     if refined is None:
         r = _empty_result()
@@ -407,7 +407,7 @@ def find_obj_base_angle(
     de_cen = refined["de_cen"]
     par1 = refined["par1"]
 
-    # ── 阶段三：全图再匹配 ────────────────────────────────────────────
+    # ── 阶段三：全图再匹配 ────────────────────────────────────────────────
     rematched = _rematch_base_angle_field(
         det_x,
         det_y,
@@ -438,7 +438,7 @@ def find_obj_base_angle(
     par1 = rematched["par1"]
     sig1 = rematched["sig1"]
 
-    # ── 阶段四：预报并抓取目标 ────────────────────────────────────────
+    # ── 阶段四：预报并抓取目标 ────────────────────────────────────────────
     target = _locate_base_angle_target(
         det_x,
         det_y,
@@ -466,7 +466,7 @@ def find_obj_base_angle(
     obj_obsra = target["obj_obsra"]
     obj_obsde = target["obj_obsde"]
 
-    # ── 阶段五：粗匹配 vs 最终位置差异 ────────────────────────────────
+    # ── 阶段五：粗匹配 vs 最终位置差异 ────────────────────────────────────
     if abs(ox - obj_x_obs) > 0.001 and abs(oy - obj_y_obs) > 0.001:
         print(
             f"    自动检测目标与最终确认目标有差异x/y "
@@ -475,7 +475,7 @@ def find_obj_base_angle(
     else:
         print("    自动检测确认的目标==最终确认的目标")
 
-    # ── 参考星像素坐标输出（按 n_m 切片，不再预分配 90 万）─────────────
+    # ── 参考星像素坐标输出（按 n_m 切片，不再预分配 90 万） ───────────────
     ref_x_out = np.array(rx_new) * fl / pscale + x_cen
     ref_y_out = np.array(ry_new) * fl / pscale + y_cen
     ref_ra_out = np.array(rra_new)

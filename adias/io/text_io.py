@@ -7,7 +7,7 @@ import numpy as np
 from adias.utils.math_utils import am2hms
 
 
-# ── DS9 region 文件（.reg / .ref.reg） ───────────────────────────────────
+# ── DS9 region 文件（.reg / .ref.reg） ────────────────────────────────────
 
 def write_reg_file(reg_path, stars, bkgd, bkgdsigma, snr_threshold):
     """将检测星表写为 DS9 region 文件，并按 snr/star_pix/overflag 三重过滤。"""
@@ -82,7 +82,7 @@ def write_ref_file(filename, result):
         print(f"写入参考星文件错误：{e}")
 
 
-# ── object_X.out / final_oc / comoc 写出 ────────────────────────────────
+# ── object_X.out / final_oc / comoc 写出 ──────────────────────────────────
 
 def write_object_result(
     file_handle,

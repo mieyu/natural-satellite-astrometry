@@ -12,7 +12,7 @@ from scipy.linalg import inv
 Q = np.pi / 180.0
 
 
-# ─── 球面几何 ─────────────────────────────────────────────────────────────
+# ── 球面几何 ──────────────────────────────────────────────────────────────
 
 def cal_rl(ra1, dec1, ra2, dec2):
     """大圆弧长（弧度）。输入均为弧度。"""
@@ -22,7 +22,7 @@ def cal_rl(ra1, dec1, ra2, dec2):
     return np.arccos(cosrl)
 
 
-# ─── 视场恒星筛选（含自行改正） ─────────────────────────────────────────
+# ── 视场恒星筛选（含自行改正） ────────────────────────────────────────────
 
 def extract_field_stars(gaia_ra, gaia_de, gaia_pr, gaia_pd, gaia_mag, n_gaia,
                         obj_ra, obj_de, fsize, epoch):
@@ -44,7 +44,7 @@ def extract_field_stars(gaia_ra, gaia_de, gaia_pr, gaia_pd, gaia_mag, n_gaia,
     return n, np.array(ra), np.array(de), np.array(mag)
 
 
-# ─── 坐标变换 ─────────────────────────────────────────────────────────────
+# ── 坐标变换 ──────────────────────────────────────────────────────────────
 
 def rade2ky(ra, de, ra0, de0):
     """赤道坐标 → 理想坐标 (ksi, yit)。输入均为弧度。"""
@@ -105,7 +105,7 @@ def xieta2xy(xi, eta, par):
     return sx, sy
 
 
-# ─── 底片常数解算 ────────────────────────────────────────────────────────
+# ── 底片常数解算 ──────────────────────────────────────────────────────────
 
 def _build_design_matrix(x, y, n, nm):
     """构造 2n×nm 设计矩阵 A。"""
@@ -187,7 +187,7 @@ def sol_par(x, y, ra, de, n, ra0, de0, nm):
     return least_squares(A, C, nm, n)
 
 
-# ─── 调试输出 ─────────────────────────────────────────────────────────────
+# ── 调试输出 ──────────────────────────────────────────────────────────────
 
 def print_par(par, modeltype):
     print(f'...底片常数（{modeltype}项）：', end='')

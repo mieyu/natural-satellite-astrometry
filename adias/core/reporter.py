@@ -35,7 +35,7 @@ from adias.application.pipeline import StepResult
 matplotlib.use("Agg")  # 非交互后端，适合服务器/脚本环境
 import matplotlib.pyplot as plt
 
-# ── 颜色 / 时间偏移 / 卫星标签（与 MATLAB 脚本完全对应）────────────────────
+# ── 颜色 / 时间偏移 / 卫星标签（与 MATLAB 脚本完全对应） ──────────────────
 _COLORS = ["r", "b", "k", "g", "c"]
 _T_OFFSET = [0.00, 0.15, 0.30, 0.45, 0.60]  # 各卫星时间轴错开量（天）
 _MONTH_EN = {
@@ -54,9 +54,7 @@ _MONTH_EN = {
 }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 内部工具函数
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 内部工具函数 ──────────────────────────────────────────────────────────
 
 
 def _load_dat(filepath):
@@ -138,9 +136,7 @@ def _collect_by_period(dat_files, obj_total):
     return result
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 绘图函数
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 绘图函数 ──────────────────────────────────────────────────────────────
 
 
 def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
@@ -260,9 +256,7 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
     return saved
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 公开入口
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 公开入口 ──────────────────────────────────────────────────────────────
 
 
 def run_report(config, outdir=None, per_satellite=True):
@@ -287,7 +281,7 @@ def run_report(config, outdir=None, per_satellite=True):
         result.failed_items.append(outdir)
         return result
 
-    # ── 发现数据文件 ──────────────────────────────────────────────────────────
+    # ── 发现数据文件 ──────────────────────────────────────────────────────
     dat_files = _discover_dat_files(outdir, obj_total)
 
     total_files = sum(len(v) for v in dat_files.values())
@@ -303,7 +297,7 @@ def run_report(config, outdir=None, per_satellite=True):
             names = ", ".join(os.path.basename(f) for f in flist)
             print(f"    U{obj_idx}: {names}")
 
-    # ── 读取数据并按时段分组 ─────────────────────────────────────────────────
+    # ── 读取数据并按时段分组 ──────────────────────────────────────────────
     all_period_data = _collect_by_period(dat_files, obj_total)
 
     if not all_period_data:
@@ -323,11 +317,11 @@ def run_report(config, outdir=None, per_satellite=True):
         count_str = "  ".join(f"U{o}:{c}" for o, c in enumerate(counts, 1) if c > 0)
         print(f"    {year} {month_str:4s}  —  {count_str}")
 
-    # ── 生成汇总图 ────────────────────────────────────────────────────────────
+    # ── 生成汇总图 ────────────────────────────────────────────────────────
     summary_path = _build_summary_figure(all_period_data, periods, obj_total, outdir)
     result.output_files.append(summary_path)
 
-    # ── 生成各卫星单独图（可选）──────────────────────────────────────────────
+    # ── 生成各卫星单独图（可选） ──────────────────────────────────────────
     if per_satellite:
         result.output_files.extend(
             _build_per_satellite_figures(all_period_data, periods, obj_total, outdir)

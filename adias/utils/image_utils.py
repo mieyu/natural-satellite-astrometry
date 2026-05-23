@@ -88,7 +88,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
     """
     abox_l = abox.tolist()
 
-    # ── Pass A：4 邻居优先级标号 ─────────────────────────────────────
+    # ── Pass A：4 邻居优先级标号 ──────────────────────────────────────────
     idbox = [[0] * naxis1 for _ in range(naxis2)]
     numobj = 0
     for i in range(1, naxis1 - 1):  # Fortran i=2..naxis1-1
@@ -120,7 +120,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
     # 转 numpy 用于 Pass B/C 的向量化子区域操作
     idbox2 = np.array(idbox, dtype=np.int32)
 
-    # ── Pass B：±250 像素方框内合并水平相邻的不同 label ─────────────
+    # ── Pass B：±250 像素方框内合并水平相邻的不同 label ───────────────────
     nr = 250
     for i in range(1, naxis2 - 1):
         row_abox_i = abox_l[i]
@@ -149,7 +149,7 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
                     # 被排除的 (i, j-1) 单点需手动更新
                     idbox2[i, j - 1] = lab_cur
 
-    # ── Pass C：8 邻接等价表合并 ─────────────────────────────────────
+    # ── Pass C：8 邻接等价表合并 ──────────────────────────────────────────
     # 步骤 1：扫每个 >0 像素，记录与 8 邻居中不同 label 的等价对 (min, max)
     # 邻居顺序与 Fortran 一致：左、右、左上、上、右上、左下、下、右下
     pairs1 = []

@@ -43,7 +43,7 @@ class ObservationDir:
         )
 
 
-# ── fitspath 展开与原始 .fit 扫描 ──────────────────────────────────────────
+# ── fitspath 展开与原始 .fit 扫描 ─────────────────────────────────────────
 
 def expand_fitspath(cfg_paths):
     """根据 cfg 的 fitspath 列表展开为实际观测目录（每日一个）。
