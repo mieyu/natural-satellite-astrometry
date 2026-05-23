@@ -5,8 +5,8 @@
   - 连通域 fortran 路径完整移植原算法（含 nr=250 子区域合并），与 scipy
     路径在算法等价但在罕见复杂形状下精度不同；切换由 cfg 控制。
   - 星象检测仅扫内边距 [10, naxis-10) 内的像素累加形心。
-  - 中值滤波支持 scipy_threaded：带状核沿正交轴切块多线程，与单线程
-    median_filter 结果逐位一致（每列/行的中值仅依赖该列/行自身）。
+  - 中值滤波带状核优先走 bottleneck.move_median（C 实现的滚动中值），
+    scipy_threaded 是切块多线程备路，scipy 是最稳的兜底。
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +15,12 @@ import cv2
 import numpy as np
 from scipy.ndimage import generate_binary_structure, median_filter, uniform_filter
 from scipy.ndimage import label as ndimage_label
+
+try:
+    import bottleneck as _bn
+    _HAS_BOTTLENECK = True
+except ImportError:
+    _HAS_BOTTLENECK = False
 
 
 def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100):
@@ -56,6 +62,25 @@ def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100)
         sigma = sigma2
 
     return avervalue, sigma
+
+
+def _median_filter_1d_bn(data, window, axis):
+    """bottleneck.move_median 中心对齐版本。
+
+    bottleneck 输出右对齐 lag（result[i] 是窗口 [i-w+1, i] 的中值），先对
+    data 在该轴做 reflect padding 把窗口转成中心对齐，再切片回原尺寸。
+    与 scipy.ndimage.median_filter(mode='reflect') 在内部像素逐位一致，
+    边界处因 reflect 语义差异 ≤1 个像素的最小偏差。
+    """
+    pad_left = window // 2
+    pad_right = window - 1 - pad_left
+    pad_width = [(0, 0), (0, 0)]
+    pad_width[axis] = (pad_left, pad_right)
+    padded = np.pad(data, pad_width, mode="reflect")
+    out = _bn.move_median(padded, window=window, axis=axis)
+    sl = [slice(None), slice(None)]
+    sl[axis] = slice(window - 1, window - 1 + data.shape[axis])
+    return out[tuple(sl)].astype(data.dtype, copy=False)
 
 
 def _median_filter_strip_threaded(data, kernel, n_threads):
@@ -102,25 +127,36 @@ def apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode,
                     median_impl="scipy", n_threads=1):
     """中值滤波后按 bkgdmode 扣除背景（1=除法归一化，2=减法扣除）。
 
-    bkgd0 用于恢复全场平均亮度。med_width>1 走竖窗口，否则走横窗口。
-    median_impl="scipy" 单线程；"scipy_threaded" 多线程切块，结果逐位一致。
+    工作 dtype 收敛到 f32，bg 也是 f32。med_width>1 走竖窗口（kernel=(W,1)），
+    否则走横窗口（kernel=(1,L)）。
+    median_impl="bottleneck" 走 move_median；"scipy_threaded" 切块多线程；
+    "scipy" 单线程兜底。非带状核（两维均>1）一律走 scipy。
     """
+    data = np.asarray(data, dtype=np.float32)
+
     if med_width > 1:
         kernel = (med_width, 1)
     else:
         kernel = (1, med_length)
+    banded = (kernel[0] == 1) ^ (kernel[1] == 1)
 
-    if median_impl == "scipy_threaded":
-        bg = _median_filter_strip_threaded(data, kernel, n_threads)
-    elif median_impl == "scipy":
-        bg = median_filter(data, size=kernel)
+    if median_impl == "bottleneck" and banded:
+        if not _HAS_BOTTLENECK:
+            raise RuntimeError("median_impl='bottleneck' 但未安装 bottleneck。")
+        window = kernel[0] if kernel[0] > 1 else kernel[1]
+        axis = 0 if kernel[0] > 1 else 1
+        bg = _median_filter_1d_bn(data, window, axis)
+    elif median_impl == "scipy_threaded":
+        bg = _median_filter_strip_threaded(data, kernel, n_threads).astype(np.float32, copy=False)
+    elif median_impl == "scipy" or (median_impl == "bottleneck" and not banded):
+        bg = median_filter(data, size=kernel).astype(np.float32, copy=False)
     else:
         raise ValueError(f"未知 median_impl: {median_impl!r}")
 
     if bkgdmode == 1:
-        return data / bg * bkgd0
+        return data / bg * np.float32(bkgd0)
     else:
-        return data - bg + bkgd0
+        return data - bg + np.float32(bkgd0)
 
 
 def apply_smooth(data):

@@ -141,17 +141,20 @@ def _worker(mode, fitsfile, kwargs):
     return buf.getvalue(), None
 
 
-def _resolve_parallel(median_impl_cfg, n_files):
-    """根据文件数与 CPU 核数自动选并发参数。
+def _resolve_parallel(median_impl_cfg, n_files, banded):
+    """根据文件数、CPU 核数与核形状自动选并发参数。
 
     返回 (n_workers, resolved_impl, n_threads)：
       - n_workers = min(文件数, CPU)
-      - median_impl="auto" 解析为 "scipy_threaded"
+      - median_impl="auto"：带状核解析为 "bottleneck"，否则 "scipy_threaded"
       - 仅当 impl="scipy_threaded" 时 n_threads = max(1, CPU // n_workers)
     """
     cpu = os.cpu_count() or 1
     n_workers = max(1, min(n_files, cpu))
-    resolved = "scipy_threaded" if median_impl_cfg == "auto" else median_impl_cfg
+    if median_impl_cfg == "auto":
+        resolved = "bottleneck" if banded else "scipy_threaded"
+    else:
+        resolved = median_impl_cfg
     if resolved == "scipy_threaded":
         n_threads = max(1, cpu // n_workers)
     else:
@@ -203,8 +206,9 @@ def run_pre(config, fitspath_list):
         mode_name = {1: "中值滤波", 2: "同态滤波", 3: "Retinex"}.get(pre.superflag, "未知")
         _log.info(f"--- 进入 super 模式（{mode_name}）→ {pre_dir} ---")
 
+        banded = (pre.med_length == 1) or (pre.med_width == 1)
         n_workers, resolved_impl, n_threads = _resolve_parallel(
-            pre.median_impl, len(science_files)
+            pre.median_impl, len(science_files), banded
         )
         if pre.superflag == 1:
             _log.info(

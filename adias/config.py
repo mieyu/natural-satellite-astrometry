@@ -174,8 +174,8 @@ class AdiasConfig:
         if self.pre.superflag not in {0, 1, 2, 3}:
             errors.append("1superflag 必须为 0/1/2/3。")
 
-        if self.pre.median_impl not in {"auto", "scipy", "scipy_threaded"}:
-            errors.append("1median_impl 必须为 auto/scipy/scipy_threaded。")
+        if self.pre.median_impl not in {"auto", "scipy", "scipy_threaded", "bottleneck"}:
+            errors.append("1median_impl 必须为 auto/scipy/scipy_threaded/bottleneck。")
 
         if self.detect.connectivity not in {"fortran", "scipy"}:
             errors.append("2connectivity 必须为 fortran 或 scipy。")
