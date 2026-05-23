@@ -1,7 +1,13 @@
 # 功能：星表与历表文件读取（GAIA 星表、IMCCE 历表）。
 # 使用：from adias.io.catalog_io import read_catalog, read_ephemeris
+#
+# 错误约定：
+#   - 文件无法打开或全文解析失败：raise DataFormatError，由调用方决定跳过策略
+#   - 单行解析失败：保持静默跳过（与历史行为一致）
 
 import numpy as np
+
+from adias.errors import DataFormatError
 
 
 def read_catalog(catfile, min_mag, max_mag):
@@ -29,26 +35,26 @@ def read_catalog(catfile, min_mag, max_mag):
     try:
         with open(catfile, 'r') as f:
             lines = f.readlines()
-        for line in lines[60:]:
-            if line[:4] in ('    ', '#END'):
-                break
-            if len(line) < 39:
-                continue
-            try:
-                parts = line[39:].split()
-                if len(parts) >= 5:
-                    m = float(parts[4])
-                    if min_mag <= m <= max_mag:
-                        ra.append(float(parts[0]))
-                        de.append(float(parts[1]))
-                        pr.append(float(parts[2]))
-                        pd.append(float(parts[3]))
-                        mag.append(m)
-            except (ValueError, IndexError):
-                continue
-    except Exception as e:
-        print(f"无法读取星表文件：{catfile}，错误：{e}")
-        return 0, None, None, None, None, None
+    except OSError as e:
+        raise DataFormatError(f"无法打开 GAIA 星表 {catfile}: {e}") from e
+
+    for line in lines[60:]:
+        if line[:4] in ('    ', '#END'):
+            break
+        if len(line) < 39:
+            continue
+        try:
+            parts = line[39:].split()
+            if len(parts) >= 5:
+                m = float(parts[4])
+                if min_mag <= m <= max_mag:
+                    ra.append(float(parts[0]))
+                    de.append(float(parts[1]))
+                    pr.append(float(parts[2]))
+                    pd.append(float(parts[3]))
+                    mag.append(m)
+        except (ValueError, IndexError):
+            continue
 
     n = len(ra)
     return n, np.array(ra), np.array(de), np.array(pr), np.array(pd), np.array(mag)
@@ -74,31 +80,34 @@ def read_ephemeris(ephfile):
     try:
         with open(ephfile, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-        print(f"历表文件总行数: {len(lines)}")
-        skipped = parsed = 0
-        for i, line in enumerate(lines[10:], start=10):
-            s = line.strip()
-            if not s or s.startswith('---'):
+    except OSError as e:
+        raise DataFormatError(f"无法打开历表 {ephfile}: {e}") from e
+
+    print(f"历表文件总行数: {len(lines)}")
+    skipped = parsed = 0
+    for i, line in enumerate(lines[10:], start=10):
+        s = line.strip()
+        if not s or s.startswith('---'):
+            skipped += 1
+            continue
+        try:
+            p = s.split()
+            if len(p) >= 8:
+                day = int(p[2])
+                hh, mm, ss = int(p[3]), int(p[4]), float(p[5])
+                T.append(day + (hh * 3600.0 + mm * 60.0 + ss) / 86400.0)
+                ra_list.append(float(p[6]) * 15.0)   # 时角 -> 度
+                de_list.append(float(p[7]))
+                parsed += 1
+            else:
                 skipped += 1
-                continue
-            try:
-                p = s.split()
-                if len(p) >= 8:
-                    day = int(p[2])
-                    hh, mm, ss = int(p[3]), int(p[4]), float(p[5])
-                    T.append(day + (hh * 3600.0 + mm * 60.0 + ss) / 86400.0)
-                    ra_list.append(float(p[6]) * 15.0)   # 时角 -> 度
-                    de_list.append(float(p[7]))
-                    parsed += 1
-                else:
-                    skipped += 1
-            except (ValueError, IndexError) as e:
-                print(f"第 {i+1} 行解析失败：{s}，错误：{e}")
-                skipped += 1
-        print(f"跳过行数：{skipped}，成功解析行数：{parsed}")
-    except Exception as e:
-        print(f"无法读取历表文件：{ephfile}，错误：{e}")
-        return 0, None, None, None
+        except (ValueError, IndexError) as e:
+            print(f"第 {i+1} 行解析失败：{s}，错误：{e}")
+            skipped += 1
+    print(f"跳过行数：{skipped}，成功解析行数：{parsed}")
+
+    if parsed == 0:
+        raise DataFormatError(f"历表 {ephfile} 无可解析行（共 {len(lines)} 行）")
 
     n = len(T)
     return n, np.array(T), np.array(ra_list), np.array(de_list)

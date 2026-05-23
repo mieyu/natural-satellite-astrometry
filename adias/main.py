@@ -9,40 +9,18 @@ import os
 import sys
 import time
 
-from adias import (
-    parse_config,
-    run_comoc,
-    run_detect,
-    run_match,
-    run_pre,
-    run_report,
-)
-from adias.paths import expand_fitspath
+from adias.application.context import build_context
+from adias.application.output import OutputSink
+from adias.application.pipeline import PipelineRunner
+from adias.application.steps import select_steps, selected_step_names
+from adias.config import load_config
+from adias.errors import ConfigError
 
 DEFAULT_CONFIG = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "adias2024.cfg"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "configs",
+    "adias2024.cfg",
 )
-
-
-class _Tee:
-    """同时向 stdout 与文件写出的透明代理。"""
-
-    def __init__(self, file_path):
-        self._stdout = sys.stdout
-        self._file = open(file_path, "w", encoding="utf-8", buffering=1)
-        sys.stdout = self
-
-    def write(self, data):
-        self._stdout.write(data)
-        self._file.write(data)
-
-    def flush(self):
-        self._stdout.flush()
-        self._file.flush()
-
-    def close(self):
-        sys.stdout = self._stdout
-        self._file.close()
 
 
 def main():
@@ -56,41 +34,27 @@ def main():
     parser.add_argument(
         "--config",
         default=DEFAULT_CONFIG,
-        help="配置文件路径（默认: 项目根目录下 adias2024.cfg）",
+        help="配置文件路径（默认: configs/adias2024.cfg）",
     )
     args = parser.parse_args()
 
-    tee = _Tee("控制台输出.txt")
+    output = OutputSink("控制台输出.txt").install()
     t0 = time.time()
 
-    config = parse_config(args.config)
-    if not config["fitspath"]:
-        sys.exit("错误：cfg 中未配置 1fitspath，无法确定观测目录。")
-    fitspath_list = expand_fitspath(config["fitspath"])
-    print(f"共读取到 {len(fitspath_list)} 个观测目录。\n")
+    try:
+        step_names = selected_step_names(args.step)
+        config = load_config(args.config, steps=step_names)
+        ctx = build_context(config, step_names, output=output)
+        print(f"共读取到 {len(ctx.fitspath_list)} 个观测目录。\n")
 
-    if args.step in ("pre", "all"):
-        print("========== 01: 超级背景预处理 ==========")
-        run_pre(config, fitspath_list)
+        runner = PipelineRunner(select_steps(args.step))
+        runner.run(ctx)
 
-    if args.step in ("detect", "all"):
-        print("========== 02: 星象检测 ==========")
-        run_detect(config, fitspath_list)
-
-    if args.step in ("match", "all"):
-        print("========== 03: 星象匹配归算 ==========")
-        run_match(config, fitspath_list)
-
-    if args.step in ("comoc", "all"):
-        print("========== 04: O-C 统计 ==========")
-        run_comoc(config, fitspath_list)
-
-    if args.step in ("report", "all"):
-        print("========== 05: O-C 散点图报告 ==========")
-        run_report(config)
-
-    print(f"\n总耗时: {time.time() - t0:.2f} s")
-    tee.close()
+        print(f"\n总耗时: {time.time() - t0:.2f} s")
+    except ConfigError as e:
+        sys.exit(f"错误：{e}")
+    finally:
+        output.close()
 
 
 if __name__ == "__main__":

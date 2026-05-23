@@ -10,12 +10,36 @@
 import glob
 import os
 import re
+from dataclasses import dataclass
+from pathlib import Path
 
 PRE_DIR = "fits_n"
 DETECT_DIR = "fits_reg"
 REF_DIR = "fits_ref"
 OUT_DIR = "fits_out"
 STAGE_DIRS = (PRE_DIR, DETECT_DIR, REF_DIR, OUT_DIR)
+
+
+@dataclass(frozen=True)
+class ObservationDir:
+    """单个观测日的原始 FITS 目录与阶段产物目录。"""
+
+    raw_fits_dir: Path
+    pre_dir: Path
+    reg_dir: Path
+    ref_dir: Path
+    out_dir: Path
+
+    @classmethod
+    def from_raw_fits_dir(cls, raw_fits_dir):
+        stages = stage_dirs(str(raw_fits_dir))
+        return cls(
+            raw_fits_dir=Path(raw_fits_dir),
+            pre_dir=Path(stages[PRE_DIR]),
+            reg_dir=Path(stages[DETECT_DIR]),
+            ref_dir=Path(stages[REF_DIR]),
+            out_dir=Path(stages[OUT_DIR]),
+        )
 
 
 # ── fitspath 展开与原始 .fit 扫描 ──────────────────────────────────────────

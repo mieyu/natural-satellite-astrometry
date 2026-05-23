@@ -30,6 +30,9 @@ Thumbs.db
 *.log
 控制台输出*.txt
 
+# ===== Pipeline run records =====
+runs/
+
 # ===== Fortran build artifacts =====
 *.o
 *.mod

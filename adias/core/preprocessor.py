@@ -1,10 +1,12 @@
 # 01pre：超级背景预处理。逐幅 .fit 扣除背景后落到同日 fits_n/ 子目录。
 
+import glob
 import os
 
 import cv2
 import numpy as np
 
+from adias.application.pipeline import StepResult
 from adias.io.fits_io import read_fits, write_fits
 from adias.paths import (
     PRE_DIR,
@@ -96,6 +98,7 @@ def run_pre(config, fitspath_list):
 
     superflag: 0=跳过，1=中值滤波，2=同态滤波，3=Retinex
     """
+    result = StepResult("pre")
     n = len(fitspath_list)
     for idx, fitspath in enumerate(fitspath_list, 1):
         print(f"\n{'=' * 20} [ {idx}/{n} ] {'=' * 20}")
@@ -103,16 +106,20 @@ def run_pre(config, fitspath_list):
 
         if not os.path.isdir(fitspath):
             print("警告：目录不存在，跳过。")
+            result.warnings.append(f"pre: 目录不存在 {fitspath}")
+            result.failed_items.append(fitspath)
             continue
 
         science_files = list_fits(fitspath)
         if not science_files:
             print("未找到 .fit 文件，跳过。")
+            result.warnings.append(f"pre: 未发现 .fit {fitspath}")
             continue
         print(f"扫描到原始 .fit 共 {len(science_files)} 个。")
 
         if config["superflag"] == 0:
             print("superflag=0，跳过图像处理。")
+            result.warnings.append(f"pre: superflag=0 跳过 {fitspath}")
             continue
 
         pre_dir = ensure_dir(stage_dirs(fitspath)[PRE_DIR])
@@ -140,5 +147,8 @@ def run_pre(config, fitspath_list):
             elif config["superflag"] == 3:
                 _process_retinex(fitsfile, out_file)
 
+        result.output_files.extend(sorted(glob.glob(os.path.join(pre_dir, "*_n.fit"))))
+
     print(f"\n{'=' * 50}")
     print(f"01pre 完成，共处理 {n} 个观测目录。")
+    return result

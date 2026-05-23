@@ -6,6 +6,8 @@ from astropy.io import fits
 import warnings
 from astropy.utils.exceptions import AstropyWarning
 
+from adias.errors import ProcessingError
+
 warnings.filterwarnings('ignore', category=AstropyWarning)
 
 def read_fits(fitsfile):
@@ -53,7 +55,7 @@ def read_fits_header(fitsfile, tele_label):
     -------
     dict，包含：naxis1, naxis2, bscale, bzero, gain, exptime,
                year, month, day, hh, mm, ss
-    或 None（解析失败时）
+    解析失败时抛 ProcessingError（单图错误，调用方应捕获后跳过此图）。
     """
     try:
         with fits.open(fitsfile) as hdul:
@@ -69,11 +71,9 @@ def read_fits_header(fitsfile, tele_label):
             key = 'DATE-STA' if tele_label == 'ss156_2014' else 'DATE-OBS'
             date_str = h.get(key, '')
             if not date_str:
-                print(f"警告：{fitsfile} 中未找到时间关键字 {key}")
-                return None
+                raise ProcessingError(f"{fitsfile} 中未找到时间关键字 {key}")
             if tele_label not in ('ss156', 'ss156_2014', 'km100', 'lj240', 'km100B'):
-                print(f"未知望远镜标签：{tele_label}")
-                return None
+                raise ProcessingError(f"未知望远镜标签：{tele_label}")
 
             p = date_str.replace('T', ' ').replace('-', ' ').replace(':', ' ').split()
             year, month, day = int(p[0]), int(p[1]), int(p[2])
@@ -97,6 +97,8 @@ def read_fits_header(fitsfile, tele_label):
             return dict(naxis1=naxis1, naxis2=naxis2, bscale=bscale, bzero=bzero,
                         gain=gain, exptime=exptime,
                         year=year, month=month, day=day, hh=hh, mm=mm, ss=ss)
+    except ProcessingError:
+        raise
     except Exception as e:
-        print(f"读取 FITS 头错误：{fitsfile}，{e}")
+        raise ProcessingError(f"读取 FITS 头错误：{fitsfile}: {e}") from e
         return None

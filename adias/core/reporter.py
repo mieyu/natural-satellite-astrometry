@@ -29,6 +29,8 @@ from collections import defaultdict
 import matplotlib
 import numpy as np
 
+from adias.application.pipeline import StepResult
+
 matplotlib.use("Agg")  # 非交互后端，适合服务器/脚本环境
 import matplotlib.pyplot as plt
 
@@ -318,6 +320,7 @@ def run_report(config, outdir=None, per_satellite=True):
     outdir        : str | None，数据目录，默认使用 config['newoutfile0']
     per_satellite : bool，是否额外生成每颗卫星的单独图（默认 True）
     """
+    result = StepResult("report")
     if outdir is None:
         outdir = config["newoutfile0"]
 
@@ -329,7 +332,9 @@ def run_report(config, outdir=None, per_satellite=True):
     if not os.path.isdir(outdir):
         print(f"  [错误] 输出目录不存在：{outdir}")
         print("05report 跳过。")
-        return
+        result.warnings.append(f"report: 输出目录不存在 {outdir}")
+        result.failed_items.append(outdir)
+        return result
 
     # ── 发现数据文件 ──────────────────────────────────────────────────────────
     dat_files = _discover_dat_files(outdir, obj_total)
@@ -337,7 +342,8 @@ def run_report(config, outdir=None, per_satellite=True):
     total_files = sum(len(v) for v in dat_files.values())
     if total_files == 0:
         print(f"  [警告] 在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
-        return
+        result.warnings.append(f"report: 未发现 .dat {outdir}")
+        return result
 
     print(f"  发现 .dat 文件共 {total_files} 个：")
     for obj_idx in range(1, obj_total + 1):
@@ -351,7 +357,8 @@ def run_report(config, outdir=None, per_satellite=True):
 
     if not all_period_data:
         print("  [警告] 所有文件均无有效数据行，跳过绘图。")
-        return
+        result.warnings.append(f"report: 无有效数据行 {outdir}")
+        return result
 
     periods = sorted(all_period_data.keys())  # 按 (year, month) 升序
 
@@ -367,11 +374,15 @@ def run_report(config, outdir=None, per_satellite=True):
         print(f"    {year} {month_str:4s}  —  {count_str}")
 
     # ── 生成汇总图 ────────────────────────────────────────────────────────────
-    _build_summary_figure(all_period_data, periods, obj_total, outdir)
+    summary_path = _build_summary_figure(all_period_data, periods, obj_total, outdir)
+    result.output_files.append(summary_path)
 
     # ── 生成各卫星单独图（可选）──────────────────────────────────────────────
     if per_satellite:
-        _build_per_satellite_figures(all_period_data, periods, obj_total, outdir)
+        result.output_files.extend(
+            _build_per_satellite_figures(all_period_data, periods, obj_total, outdir)
+        )
 
     print(f"\n{'=' * 50}")
     print("05report 完成。")
+    return result

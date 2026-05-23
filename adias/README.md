@@ -44,7 +44,7 @@ python -m adias.main --config /path/to/adias2024.cfg
 | 参数 | 默认值 | 说明 |
 |---|---|---|
 | `--step` | `all` | 运行阶段：`pre` / `detect` / `match` / `comoc` / `report` / `all` |
-| `--config` | `<项目根>/adias2024.cfg` | 配置文件路径 |
+| `--config` | `<项目根>/configs/adias2024.cfg` | 配置文件路径 |
 
 观测目录路径由 cfg 的 `1fitspath` 控制（不再需要单独的 `fitspath.in`）。
 控制台输出会同时写入当前目录下的 `控制台输出.txt`。
@@ -55,8 +55,8 @@ python -m adias.main --config /path/to/adias2024.cfg
 
 ```ini
 # pre
-1fitspath=/data/observation_image_S/202411   # 观测目录（支持 YYYYMMDD/fits 自动展开）
-1fitspath2=/data/another_path                # 多个时可加序号 1fitspath2/1fitspath3 ...
+1fitspath=observation_images/observation_image_S/202411   # 观测目录（支持 YYYYMMDD/fits 自动展开，可写相对工作目录或绝对路径）
+1fitspath2=observation_images/observation_image_S/202412  # 多个时可加序号 1fitspath2/1fitspath3 ...
 1superflag=1          # 0=跳过；1=中值滤波；2=同态滤波；3=Retinex
 1med_length=65        # 中值滤波窗口长
 1med_width=1          # 中值滤波窗口宽（长/宽其一为 1 时走串联单向滤波）
@@ -121,7 +121,7 @@ from adias import (
     run_pre, run_detect, run_match, run_comoc, run_report,
 )
 
-config = parse_config("adias2024.cfg")
+config = parse_config("configs/adias2024.cfg")
 fitspath_list = expand_fitspath(config["fitspath"])
 
 run_pre(config, fitspath_list)
@@ -131,24 +131,14 @@ run_comoc(config, fitspath_list)
 run_report(config)
 ```
 
-## 目录结构
+## 分层
 
-```
-adias/
-├── main.py            # 命令行入口
-├── config.py          # cfg 解析
-├── paths.py           # 产物目录约定 + fitspath 展开 + 清理工具
-├── core/              # 5 步流程实现
-│   ├── preprocessor.py
-│   ├── detector.py
-│   ├── matcher.py
-│   ├── analyzer.py
-│   └── reporter.py
-├── io/                # 文件 IO
-│   ├── fits_io.py
-│   ├── catalog_io.py
-│   └── text_io.py
-└── utils/             # 算法与数学工具
-    ├── image_utils.py
-    └── math_utils.py
-```
+| 层 | 职责 |
+|---|---|
+| `core/` | 5 步流程编排（pre / detect / match / comoc / report） |
+| `domain/` | 领域模型与算法（astrometry、matching、数据模型） |
+| `adapters/` | 文件格式适配（GAIA/历表 / object_out / .reg） |
+| `application/` | 流水线运行器（PipelineRunner / OutputSink / RunManifest） |
+| `io/` | 底层文件 IO |
+| `utils/` | 通用工具（图像、数学） |
+| `errors.py` | 分层异常：ConfigError / DataFormatError / ProcessingError |
