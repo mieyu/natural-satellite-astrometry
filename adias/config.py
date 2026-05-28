@@ -35,6 +35,8 @@ _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
     ("1bkgdmode", "pre", "bkgdmode", int, 2),
     ("1enhance_flag", "pre", "enhance_flag", int, 1),
     ("1median_impl", "pre", "median_impl", str, "auto"),
+    ("1homo_gauss_cutoff", "pre", "homo_gauss_cutoff", float, 50.0),  # 同态滤波(mode2)频域高斯截止频率
+    ("1bssr_gauss_size", "pre", "bssr_gauss_size", int, 9),           # BSSR(mode3)空间高斯窗口(奇数)
     # 02detect
     ("2bkgd_threshold", "detect", "bkgd_threshold", float, 5.0),
     ("2snr_threshold", "detect", "snr_threshold", float, 5.0),
@@ -96,6 +98,8 @@ class PreConfig:
     bkgdmode: int = 2
     enhance_flag: int = 1
     median_impl: str = "auto"
+    homo_gauss_cutoff: float = 50.0  # 同态滤波(mode2)频域高斯截止频率
+    bssr_gauss_size: int = 9         # BSSR(mode3)空间高斯窗口(奇数)
 
 
 @dataclass

@@ -101,7 +101,7 @@ def _process_homomorphic(fitsfile, out_file, gamma_low=0.2, gamma_high=3.5, cuto
     _log.info(f"    已写出 --> {out_file.name}")
 
 
-def _process_retinex(fitsfile, out_file, d=15):
+def _process_retinex(fitsfile, out_file, d=15, gauss_size=9):
     fitsfile = Path(fitsfile)
     out_file = Path(out_file)
     _log.info(f"  处理（Retinex）: {fitsfile.name}")
@@ -109,8 +109,15 @@ def _process_retinex(fitsfile, out_file, d=15):
     bkgd0, sigma0 = calculate_background(data)
     _log.info(f"    预处理前背景/sigma: {bkgd0:.3f} / {sigma0:.3f}")
 
+    # cv2.GaussianBlur 要求核为正奇数；偶数自动 +1，非正回退到 1
+    k = max(1, int(gauss_size))
+    if k % 2 == 0:
+        k += 1
+    if k != gauss_size:
+        _log.info(f"    高斯窗口 {gauss_size} 已修正为奇数 {k}")
+
     reflectance, _illum = bilateral_retinex(data, d)
-    final = cv2.GaussianBlur(reflectance.astype(np.float32), (9, 9), 0).astype(np.float64)
+    final = cv2.GaussianBlur(reflectance.astype(np.float32), (k, k), 0).astype(np.float64)
 
     bkgd, sigma = calculate_background(final)
     _log.info(f"    Retinex 后背景/sigma: {bkgd:.3f} / {sigma:.3f}")
@@ -233,9 +240,15 @@ def run_pre(config, fitspath_list):
                 )
                 tasks.append((1, str(fitsfile), kwargs))
             elif pre.superflag == 2:
-                tasks.append((2, str(fitsfile), dict(out_file=str(out_file))))
+                tasks.append((2, str(fitsfile), dict(
+                    out_file=str(out_file),
+                    cutoff=pre.homo_gauss_cutoff,
+                )))
             elif pre.superflag == 3:
-                tasks.append((3, str(fitsfile), dict(out_file=str(out_file))))
+                tasks.append((3, str(fitsfile), dict(
+                    out_file=str(out_file),
+                    gauss_size=pre.bssr_gauss_size,
+                )))
 
         # 单文件或 n_workers<=1 直接串行，免去进程启动开销
         if n_workers <= 1 or len(tasks) <= 1:
