@@ -33,6 +33,9 @@ Thumbs.db
 # ===== Pipeline run records =====
 outputs/runs/
 
+# ===== UI 生成的临时配置 =====
+inputs/configs/_ui_run.cfg
+
 # ===== Fortran build artifacts =====
 *.o
 *.mod
