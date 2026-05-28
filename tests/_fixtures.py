@@ -7,9 +7,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_OBS_DAY = (
-    REPO_ROOT / "observation_images" / "observation_image_S" / "202411" / "20241103"
+    REPO_ROOT / "inputs" / "images" / "S9" / "2024" / "202411" / "20241103"
 )
-SOURCE_CATALOG = REPO_ROOT / "cats" / "lhycat_S"
+SOURCE_CATALOG = REPO_ROOT / "inputs" / "catalogs" / "S9" / "2024"
 
 
 def require_runtime_deps():
@@ -42,7 +42,7 @@ def build_fixture_tree(tmp):
     catalog_dir.mkdir(parents=True)
     math_dir.mkdir(parents=True)
 
-    os.symlink(SOURCE_OBS_DAY / "FITS", obs_day / "fits")
+    os.symlink(SOURCE_OBS_DAY / "fits", obs_day / "fits")
     for name in ("GAIA3_S9_202410.DAT", "EPH_S9_202411.DAT"):
         os.symlink(SOURCE_CATALOG / name, catalog_dir / name)
 

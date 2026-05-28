@@ -31,7 +31,7 @@ Thumbs.db
 控制台输出*.txt
 
 # ===== Pipeline run records =====
-runs/
+outputs/runs/
 
 # ===== Fortran build artifacts =====
 *.o
@@ -45,8 +45,7 @@ dist/
 *.egg-info/
 
 # ===== Observation FITS images (raw data, too large for repo) =====
-observation_images/
-observation_image_S/
+inputs/images/
 
 # ===== ADIAS pipeline generated files (anywhere in repo) =====
 # 预处理后图像

@@ -20,6 +20,7 @@ from adias.errors import ConfigError
 
 DEFAULT_CONFIG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "inputs",
     "configs",
     "adias2024.cfg",
 )
@@ -36,7 +37,7 @@ def main():
     parser.add_argument(
         "--config",
         default=DEFAULT_CONFIG,
-        help="配置文件路径（默认: configs/adias2024.cfg）",
+        help="配置文件路径（默认: inputs/configs/adias2024.cfg）",
     )
     args = parser.parse_args()
 
