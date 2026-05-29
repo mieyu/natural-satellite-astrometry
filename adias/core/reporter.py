@@ -23,12 +23,14 @@
   col 21+: filename ...
 """
 
+import math
 import re
 from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
 import numpy as np
+from matplotlib.ticker import FuncFormatter
 
 from adias.application.log import get_logger
 from adias.application.pipeline import StepResult
@@ -46,8 +48,44 @@ _MONTH_EN = {
     7: "Jul.", 8: "Aug.", 9: "Sep.", 10: "Oct.", 11: "Nov.", 12: "Dec.",
 }
 
+# Y 轴标题（角秒以双撇号 " 表示，与上游 MATLAB 脚本一致）
+_YLABEL_RA = r'$\Delta\alpha\cos\delta$ (")'
+_YLABEL_DE = r'$\Delta\delta$ (")'
+
 
 # ── 内部工具函数 ──────────────────────────────────────────────────────────
+
+
+def _format_time_axis(ax, x_min, x_max):
+    """整理时间轴刻度：保留“当月第几天”的语义，但把刻度放在整齐的位置，
+    并用满足分辨需要的最少小数位统一标注（单晚数据→2 位左右，多日数据→整数天）。
+    """
+    if not (np.isfinite(x_min) and np.isfinite(x_max)) or x_max <= x_min:
+        return
+    span = x_max - x_min
+
+    # 选能区分出 ≥3 个整齐刻度的最少小数位
+    decimals = 6
+    for d in range(0, 7):
+        base = 10.0 ** (-d)
+        n = math.floor(x_max / base + 1e-9) - math.ceil(x_min / base - 1e-9) + 1
+        if n >= 3:
+            decimals = d
+            break
+
+    # 在该小数位的整数倍上选步长，使刻度数量控制在约 7 个以内
+    base = 10.0 ** (-decimals)
+    step = base
+    for mult in (1, 2, 5, 10, 20, 50, 100):
+        if span / (base * mult) <= 7:
+            step = base * mult
+            break
+
+    start = math.ceil(x_min / step - 1e-9) * step
+    ticks = np.arange(start, x_max + step * 0.5, step)
+    if ticks.size:
+        ax.set_xticks(ticks)
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _pos: f"{v:.{decimals}f}"))
 
 
 def _load_dat(filepath):
@@ -132,6 +170,7 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
     month_str = _MONTH_EN.get(month, str(month))
     xlabel = f"Time in day (UTC) in {month_str} {year}"
     legend_handles = []
+    x_min, x_max = np.inf, -np.inf
 
     for obj_idx in range(1, obj_total + 1):
         seg = period_data.get(obj_idx, {})
@@ -146,15 +185,20 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
         offset = _T_OFFSET[obj_idx - 1]
         label = f"U{obj_idx}"
 
+        x_shifted = t_arr + offset
+        x_min = min(x_min, float(x_shifted.min()))
+        x_max = max(x_max, float(x_shifted.max()))
+
         (h,) = ax_ra.plot(
-            t_arr + offset, ra_arr, ".", color=color, markersize=6, label=label
+            x_shifted, ra_arr, ".", color=color, markersize=6, label=label
         )
-        ax_de.plot(t_arr + offset, de_arr, ".", color=color, markersize=6, label=label)
+        ax_de.plot(x_shifted, de_arr, ".", color=color, markersize=6, label=label)
         legend_handles.append(h)
 
     ax_ra.set_xlabel(xlabel, fontsize=8)
-    ax_ra.set_ylabel(r"$\Delta\alpha\cos\delta$ (\")", fontsize=9)
+    ax_ra.set_ylabel(_YLABEL_RA, fontsize=9)
     ax_ra.grid(True, linewidth=0.5, alpha=0.7)
+    _format_time_axis(ax_ra, x_min, x_max)
     if legend_handles:
         ax_ra.legend(
             handles=legend_handles,
@@ -165,8 +209,9 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
         )
 
     ax_de.set_xlabel(xlabel, fontsize=8)
-    ax_de.set_ylabel(r"$\Delta\delta$ (\")", fontsize=9)
+    ax_de.set_ylabel(_YLABEL_DE, fontsize=9)
     ax_de.grid(True, linewidth=0.5, alpha=0.7)
+    _format_time_axis(ax_de, x_min, x_max)
 
 
 def _build_summary_figure(all_period_data, periods, obj_total, outdir):
@@ -216,13 +261,16 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
             if t_arr.size > 0:
                 ax_ra.plot(t_arr, ra_arr, ".", color=color, markersize=6)
                 ax_de.plot(t_arr, de_arr, ".", color=color, markersize=6)
+                x_min, x_max = float(t_arr.min()), float(t_arr.max())
+                _format_time_axis(ax_ra, x_min, x_max)
+                _format_time_axis(ax_de, x_min, x_max)
 
             ax_ra.set_xlabel(xlabel, fontsize=8)
-            ax_ra.set_ylabel(r"$\Delta\alpha\cos\delta$ (\")", fontsize=9)
+            ax_ra.set_ylabel(_YLABEL_RA, fontsize=9)
             ax_ra.grid(True, linewidth=0.5, alpha=0.7)
 
             ax_de.set_xlabel(xlabel, fontsize=8)
-            ax_de.set_ylabel(r"$\Delta\delta$ (\")", fontsize=9)
+            ax_de.set_ylabel(_YLABEL_DE, fontsize=9)
             ax_de.grid(True, linewidth=0.5, alpha=0.7)
 
         fig.tight_layout()
