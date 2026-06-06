@@ -42,8 +42,16 @@ from adias.utils.image_utils import (
 _log = get_logger("pre")
 
 
-def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_file,
-                 median_impl="scipy", n_threads=1):
+def _process_one(
+    fitsfile,
+    med_length,
+    med_width,
+    bkgdmode,
+    enhance_flag,
+    out_file,
+    median_impl="scipy",
+    n_threads=1,
+):
     """单幅 FITS 的超级背景扣除。
 
     med_length 或 med_width 为 1 时走串联单向中值（先行后列），可去扫描线条纹。
@@ -60,18 +68,39 @@ def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_fi
     _log.info(f"    预处理前背景/sigma: {bkgd0:.3f} / {sigma0:.3f}")
 
     if med_length == 1 or med_width == 1:
-        processed = apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode,
-                                    median_impl=median_impl, n_threads=n_threads)
+        processed = apply_superbkgd(
+            data,
+            bkgd0,
+            med_length,
+            med_width,
+            bkgdmode,
+            median_impl=median_impl,
+            n_threads=n_threads,
+        )
         b, s = calculate_background(processed)
         _log.info(f"    第一次滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
-        processed = apply_superbkgd(processed, bkgd0, med_width, med_length, bkgdmode,
-                                    median_impl=median_impl, n_threads=n_threads)
+        processed = apply_superbkgd(
+            processed,
+            bkgd0,
+            med_width,
+            med_length,
+            bkgdmode,
+            median_impl=median_impl,
+            n_threads=n_threads,
+        )
         b, s = calculate_background(processed)
         _log.info(f"    第二次滤波后背景/sigma: {b:.3f} / {s:.3f}")
     else:
-        processed = apply_superbkgd(data, bkgd0, med_length, med_width, bkgdmode,
-                                    median_impl=median_impl, n_threads=n_threads)
+        processed = apply_superbkgd(
+            data,
+            bkgd0,
+            med_length,
+            med_width,
+            bkgdmode,
+            median_impl=median_impl,
+            n_threads=n_threads,
+        )
         b, s = calculate_background(processed)
         _log.info(f"    滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
@@ -80,11 +109,13 @@ def _process_one(fitsfile, med_length, med_width, bkgdmode, enhance_flag, out_fi
         b, s = calculate_background(processed)
         _log.info(f"    3×3 均值滤波后背景/sigma: {b:.3f} / {s:.3f}")
 
-    write_fits(str(out_file), processed, header)
+    write_fits(str(out_file), processed, header, dtype="uint16")
     _log.info(f"    已写出 --> {out_file.name}")
 
 
-def _process_homomorphic(fitsfile, out_file, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5):
+def _process_homomorphic(
+    fitsfile, out_file, gamma_low=0.2, gamma_high=3.5, cutoff=50, c=0.5
+):
     fitsfile = Path(fitsfile)
     out_file = Path(out_file)
     _log.info(f"  处理（同态滤波）: {fitsfile.name}")
@@ -117,7 +148,9 @@ def _process_retinex(fitsfile, out_file, d=15, gauss_size=9):
         _log.info(f"    高斯窗口 {gauss_size} 已修正为奇数 {k}")
 
     reflectance, _illum = bilateral_retinex(data, d)
-    final = cv2.GaussianBlur(reflectance.astype(np.float32), (k, k), 0).astype(np.float64)
+    final = cv2.GaussianBlur(reflectance.astype(np.float32), (k, k), 0).astype(
+        np.float64
+    )
 
     bkgd, sigma = calculate_background(final)
     _log.info(f"    Retinex 后背景/sigma: {bkgd:.3f} / {sigma:.3f}")
@@ -210,7 +243,9 @@ def run_pre(config, fitspath_list):
         pre_dir = ensure_dir(stage_dirs(fitspath)[PRE_DIR])
         clean_pre_dir(fitspath)
 
-        mode_name = {1: "中值滤波", 2: "同态滤波", 3: "Retinex"}.get(pre.superflag, "未知")
+        mode_name = {1: "中值滤波", 2: "同态滤波", 3: "Retinex"}.get(
+            pre.superflag, "未知"
+        )
         _log.info(f"--- 进入 super 模式（{mode_name}）→ {pre_dir} ---")
 
         banded = (pre.med_length == 1) or (pre.med_width == 1)
@@ -240,15 +275,27 @@ def run_pre(config, fitspath_list):
                 )
                 tasks.append((1, str(fitsfile), kwargs))
             elif pre.superflag == 2:
-                tasks.append((2, str(fitsfile), dict(
-                    out_file=str(out_file),
-                    cutoff=pre.homo_gauss_cutoff,
-                )))
+                tasks.append(
+                    (
+                        2,
+                        str(fitsfile),
+                        dict(
+                            out_file=str(out_file),
+                            cutoff=pre.homo_gauss_cutoff,
+                        ),
+                    )
+                )
             elif pre.superflag == 3:
-                tasks.append((3, str(fitsfile), dict(
-                    out_file=str(out_file),
-                    gauss_size=pre.bssr_gauss_size,
-                )))
+                tasks.append(
+                    (
+                        3,
+                        str(fitsfile),
+                        dict(
+                            out_file=str(out_file),
+                            gauss_size=pre.bssr_gauss_size,
+                        ),
+                    )
+                )
 
         # 单文件或 n_workers<=1 直接串行，免去进程启动开销
         if n_workers <= 1 or len(tasks) <= 1:
@@ -267,7 +314,12 @@ def run_pre(config, fitspath_list):
                     if err is not None:
                         raise err
 
-        result.output_files.extend(str(p) for p in sorted(pre_dir.glob("*_n.fit")))
+        result.output_files.extend(
+            str(p)
+            for p in sorted(
+                list(pre_dir.glob("*_n.fit")) + list(pre_dir.glob("*_n.fits"))
+            )
+        )
 
     _log.info(f"\n{'=' * 50}")
     _log.info(f"01pre 完成，共处理 {n} 个观测目录。")

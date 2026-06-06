@@ -108,5 +108,25 @@ class CalculateBackgroundTests(unittest.TestCase):
         self.assertAlmostEqual(sigma, 5.0, delta=0.5)
 
 
+class FortranConnectivityTests(unittest.TestCase):
+    def setUp(self):
+        _require_numpy()
+
+    def test_python_fortran_connectivity_handles_rectangular_images(self):
+        import numpy as np
+
+        from adias.utils.image_utils import _label_connectivity_fortran_python
+
+        abox = np.zeros((4, 6), dtype=np.float32)
+        abox[1, 4] = 10.0
+        abox[2, 4] = 8.0
+
+        labels = _label_connectivity_fortran_python(abox, 4, 6)
+
+        self.assertEqual(labels.shape, abox.shape)
+        self.assertGreater(labels[1, 4], 0)
+        self.assertEqual(labels[1, 4], labels[2, 4])
+
+
 if __name__ == "__main__":
     unittest.main()

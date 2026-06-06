@@ -44,10 +44,42 @@ python -m adias.main --config /path/to/adias2024.cfg
 | 参数 | 默认值 | 说明 |
 |---|---|---|
 | `--step` | `all` | 运行阶段：`pre` / `detect` / `match` / `comoc` / `report` / `all` |
-| `--config` | `<项目根>/configs/adias2024.cfg` | 配置文件路径 |
+| `--config` | `<项目根>/inputs/configs/adias2024.cfg` | 配置文件路径 |
 
 观测目录路径由 cfg 的 `1fitspath` 控制（不再需要单独的 `fitspath.in`）。
 控制台输出会同时写入当前目录下的 `控制台输出.txt`。
+
+## 项目输入/输出路径约定
+
+当前仓库按 `inputs/` 放输入、`outputs/` 放结果组织数据：
+
+```
+inputs/
+├── configs/                 # cfg 配置文件
+├── images/<目标>/<观测期>/... # 原始观测图目录树
+└── catalogs/<目标>/<观测期>/  # 历表与 GAIA 星表
+
+outputs/
+└── results/<目标>/<观测期>/   # UI 默认生成的跨日汇总输出目录
+```
+
+观测图的最终输入单元仍是某个观测日下的 `fits/*.fit`。`1fitspath` 可以指向：
+
+- 单个观测日的 `fits` 目录；
+- 包含多个 `YYYYMMDD/fits` 子目录的上级目录；
+- 更高一级的目标/观测期目录，只要程序能从中展开到有效观测日。
+
+星表和历表按同一个目标/观测期查找，例如：
+
+```
+inputs/catalogs/S9/2024/EPH_S9_202411.DAT
+inputs/catalogs/S9/2024/GAIA3_S9_202410.DAT
+```
+
+输出目录由 cfg 的 `4specified-output` 决定。当前 UI 生成 cfg 时使用
+`outputs/results/<目标>/<观测期>`，例如选择 `S9` + `2024` 时输出到
+`outputs/results/S9/2024`；即使实际 `1fitspath` 进一步落到 `202411` 或
+`202412`，输出目录仍按目标/观测期这一层确定。
 
 ## 配置文件
 

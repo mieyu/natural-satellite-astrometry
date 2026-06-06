@@ -52,6 +52,7 @@ class ObservationDir:
 
 # ── fitspath 展开与原始 .fit 扫描 ─────────────────────────────────────────
 
+
 def expand_fitspath(cfg_paths) -> list[Path]:
     """根据 cfg 的 fitspath 列表展开为实际观测目录（每日一个）。
 
@@ -76,7 +77,7 @@ def _find_daily_dirs(root_path: Path) -> list[Path]:
         return []
     found: list[Path] = []
     for entry in sorted(p.name for p in root_path.iterdir()):
-        if not re.match(r"^\d{8}$", entry):
+        if not re.match(r"^\d{6,8}$", entry):
             continue
         day_dir = root_path / entry
         for name in ("fits", "FITS"):
@@ -88,14 +89,20 @@ def _find_daily_dirs(root_path: Path) -> list[Path]:
 
 
 def list_fits(fitspath) -> list[Path]:
-    """fitspath 下原始 .fit 排序列表（排除 _n.fit）。"""
+    """fitspath 下原始 .fit / .fits 排序列表（排除 _n.fit / _n.fits）。"""
     path = Path(fitspath)
     if not path.is_dir():
         return []
-    return sorted(p for p in path.glob("*.fit") if not p.name.endswith("_n.fit"))
+    candidates = list(path.glob("*.fit")) + list(path.glob("*.fits"))
+    return sorted(
+        p
+        for p in candidates
+        if not p.name.endswith("_n.fit") and not p.name.endswith("_n.fits")
+    )
 
 
 # ── 产物子目录解析 ────────────────────────────────────────────────────────
+
 
 def stage_dirs(fitspath) -> dict[str, Path]:
     """该观测目录对应的 4 个产物子目录路径（不创建）。"""
@@ -127,6 +134,7 @@ def out_dir(fitspath) -> Path:
 
 
 # ── 清理工具 ──────────────────────────────────────────────────────────────
+
 
 def clean_pre_dir(fitspath):
     """清空 fits_n/ 子目录，确保 pre 阶段每次从干净状态开始。"""

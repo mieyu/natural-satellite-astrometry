@@ -22,7 +22,7 @@ DEFAULT_CONFIG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "inputs",
     "configs",
-    "adias2024.cfg",
+    "adias2023S0.cfg",
 )
 
 

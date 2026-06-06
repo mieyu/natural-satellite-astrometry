@@ -23,9 +23,28 @@ def read_fits(fitsfile):
     return data, header
 
 
-def write_fits(fitsfile, data, header):
-    """将图像写出为 FITS（统一存为 float32 节省空间）。"""
-    fits.writeto(fitsfile, data.astype(np.float32), header, overwrite=True)
+def write_fits(fitsfile, data, header, dtype="float32"):
+    """将处理结果写出为 FITS。
+
+    dtype="float32"（默认）：存 float32，适用于结果本就是浮点的模式
+        （同态滤波 / Retinex）。
+    dtype="uint16"：按原图的无符号 16 位整型写出，并对越界值取模回绕
+        （mod 65536）。这是中值滤波超级背景模式的正确写法：原始观测图为
+        BITPIX=16 / BZERO=32768 的无符号整型，密集饱和区在“扣中值背景”后
+        会产生大负值；若存成 float32 会把这些负值原样保留，破坏饱和亮星，
+        与历史 Fortran 结果产生 65536 量级的灾难性差异。复刻无符号整型的
+        回绕行为可保证与 Fortran 一致。
+    """
+    if dtype == "uint16":
+        arr = (np.rint(data).astype(np.int64) % 65536).astype(np.uint16)
+        hdr = header.copy()
+        # 去掉旧标度，让 astropy 按 uint16 自动写 BITPIX=16 / BZERO=32768
+        for k in ("BSCALE", "BZERO", "BITPIX"):
+            if k in hdr:
+                del hdr[k]
+        fits.writeto(fitsfile, arr, hdr, overwrite=True)
+    else:
+        fits.writeto(fitsfile, data.astype(np.float32), header, overwrite=True)
 
 
 def read_fits_header(fitsfile, tele_label):

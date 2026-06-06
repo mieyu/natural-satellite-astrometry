@@ -185,9 +185,6 @@ def label_connectivity_fortran(abox, naxis2, naxis1, EPS=1e-9):
     与 scipy 标准 8 连通的差异：Pass B 的 nr=250 局部合并属原算法特性，
     在简化合并失败的极少数复杂形状下，scipy 结果反而更稳健。
 
-    注：Pass A 的循环上界用了 naxis1/naxis2 反置（原算法 bug），
-    对方图 naxis1==naxis2 无影响，这里完整保留以匹配原行为。
-
     numba 可用时走 JIT 路径，否则回退到 Python list 兜底。
     """
     if _HAS_NUMBA:
@@ -200,9 +197,9 @@ if _HAS_NUMBA:
     def _pass_ab_numba(abox, naxis2, naxis1, EPS):
         idbox = np.zeros((naxis2, naxis1), dtype=np.int32)
         numobj = 0
-        # Pass A：naxis1/naxis2 反置是原算法 bug，对方图无影响，完整保留
-        for i in range(1, naxis1 - 1):
-            for j in range(1, naxis2 - 1):
+        # Pass A：Python 数组为 [row=NAXIS2, col=NAXIS1]；邻居优先级保留原算法。
+        for i in range(1, naxis2 - 1):
+            for j in range(1, naxis1 - 1):
                 v = abox[i, j]
                 if v > EPS:
                     lty1 = abox[i - 1, j + 1]
@@ -374,12 +371,12 @@ def _label_connectivity_fortran_python(abox, naxis2, naxis1, EPS=1e-9):
     # ── Pass A：4 邻居优先级标号 ──────────────────────────────────────────
     idbox = [[0] * naxis1 for _ in range(naxis2)]
     numobj = 0
-    for i in range(1, naxis1 - 1):
+    for i in range(1, naxis2 - 1):
         row_im1 = abox_l[i - 1]
         row_i = abox_l[i]
         idbox_im1 = idbox[i - 1]
         idbox_i = idbox[i]
-        for j in range(1, naxis2 - 1):
+        for j in range(1, naxis1 - 1):
             v = row_i[j]
             if v > EPS:
                 lty1 = row_im1[j + 1]  # 右上
