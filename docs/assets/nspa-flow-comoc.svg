@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 668" width="1600" height="668" role="img" aria-labelledby="t d">
+<title id="t">NSPA ④ O−C 统计</title><desc id="d">④ O−C 统计：剔除野值，给出每晚、每个目标的残差统计。输入：逐帧 O−C；输出：O−C 数据，统计表。</desc>
+<defs>
+<marker id="ah-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8f7e"/></marker>
+<marker id="ah-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c26a00"/></marker>
+<marker id="ah-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fd6"/></marker>
+<marker id="ah-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a63d8c"/></marker>
+<marker id="ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker>
+</defs>
+<style>text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif;fill:#1f2328}</style>
+<rect width="1600" height="668" fill="#ffffff"/>
+<rect x="0" y="0" width="12" height="668" rx="0" fill="#a63d8c" stroke="none" stroke-width="1.5"/>
+<text x="44" y="62" font-size="34" font-weight="700" fill="#a63d8c" text-anchor="start">④ O−C 统计</text>
+<text x="252.24" y="62" font-size="21" font-weight="400" fill="#57606a" text-anchor="start">剔除野值，给出每晚、每个目标的残差统计</text>
+<rect x="44" y="112" width="300" height="406" rx="14" fill="#f6f8fa" stroke="#8c959f" stroke-width="2"/>
+<text x="68" y="156" font-size="20" font-weight="700" fill="#57606a" text-anchor="start">输入</text>
+<text x="68" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">逐帧 O−C</text>
+<text x="68" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">来自 ③，多帧、多目标</text>
+<rect x="420" y="112" width="780" height="88" rx="14" fill="#f6eaf3" stroke="#a63d8c" stroke-width="2"/>
+<circle cx="466" cy="156.0" r="24" fill="#a63d8c"/>
+<text x="466" y="165.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="510" y="148" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">分组</text>
+<text x="510" y="181" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">按观测日、按目标分别统计</text>
+<rect x="420" y="218" width="780" height="88" rx="14" fill="#f6eaf3" stroke="#a63d8c" stroke-width="2"/>
+<circle cx="466" cy="262.0" r="24" fill="#a63d8c"/>
+<text x="466" y="271.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="510" y="254" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">迭代剔除野值</text>
+<text x="510" y="287" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">|O−C − 均值| &lt; k·σ（示例 k = 2.6），且 |O−C| &lt; 上限（示例 0.2″）</text>
+<line x1="466" y1="199" x2="466" y2="216" stroke="#a63d8c" stroke-width="2.5" marker-end="url(#ah-comoc)"/>
+<rect x="420" y="324" width="780" height="88" rx="14" fill="#f6eaf3" stroke="#a63d8c" stroke-width="2"/>
+<circle cx="466" cy="368.0" r="24" fill="#a63d8c"/>
+<text x="466" y="377.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="510" y="360" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">质量门限</text>
+<text x="510" y="393" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">剔除后 Δα·cosδ 与 Δδ 的标准差都 &lt; 0.3″ 的当晚数据才保留</text>
+<line x1="466" y1="305" x2="466" y2="322" stroke="#a63d8c" stroke-width="2.5" marker-end="url(#ah-comoc)"/>
+<rect x="420" y="430" width="780" height="88" rx="14" fill="#f6eaf3" stroke="#a63d8c" stroke-width="2"/>
+<circle cx="466" cy="474.0" r="24" fill="#a63d8c"/>
+<text x="466" y="483.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="510" y="466" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">汇总</text>
+<text x="510" y="499" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">输出单日与全时段的观测数据、均值与标准差</text>
+<line x1="466" y1="411" x2="466" y2="428" stroke="#a63d8c" stroke-width="2.5" marker-end="url(#ah-comoc)"/>
+<line x1="352" y1="315.0" x2="412" y2="315.0" stroke="#a63d8c" stroke-width="3.5" marker-end="url(#ah-comoc)"/>
+<rect x="1280" y="112" width="276" height="406" rx="14" fill="#ffffff" stroke="#a63d8c" stroke-width="3"/>
+<text x="1304" y="156" font-size="20" font-weight="700" fill="#a63d8c" text-anchor="start">输出</text>
+<text x="1304" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">O−C 数据</text>
+<text x="1304" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">单日 / 全时段</text>
+<text x="1304" y="284" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">统计表</text>
+<text x="1304" y="314" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">均值、σ、保留点数</text>
+<line x1="1208" y1="315.0" x2="1272" y2="315.0" stroke="#a63d8c" stroke-width="3.5" marker-end="url(#ah-comoc)"/>
+<rect x="1040" y="544" width="516" height="64" rx="14" fill="#ffffff" stroke="#a63d8c" stroke-width="1.8" stroke-dasharray="6 5"/>
+<text x="1060" y="583" font-size="19" font-weight="600" fill="#a63d8c" text-anchor="start">report（辅助）：绘制 O−C 残差图</text>
+<line x1="1418.0" y1="522" x2="1418.0" y2="540" stroke="#a63d8c" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah-comoc)"/>
+<text x="44" y="644" font-size="18" font-weight="400" fill="#57606a" text-anchor="start">report 不参与计算，只读取 ④ 的汇总结果绘图。</text>
+</svg>

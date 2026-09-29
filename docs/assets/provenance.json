@@ -1,0 +1,120 @@
+{
+ "sample": {
+  "target": "S9 (Phoebe)",
+  "frame": "20241103S9001I",
+  "night": "2024-11-03",
+  "exposure_mid_utc": "2024-11-03 13:12:57.50",
+  "exptime_s": 45.0,
+  "note": "全部为用户归档产物；本页未重跑 pre/detect；fits_n 为归档 float32 文件，当前 HEAD 的中值分支写出 uint16，故不声称由当前 HEAD 生成。"
+ },
+ "files": {
+  "raw": "inputs/images/S9/2024/202411/20241103/fits/20241103S9001I.fit",
+  "preprocessed": "inputs/images/S9/2024/202411/20241103/fits_n/20241103S9001I_n.fit",
+  "detection_reg": "inputs/images/S9/2024/202411/20241103/fits_reg/20241103S9001I.fit.reg",
+  "reference_reg": "inputs/images/S9/2024/202411/20241103/fits_ref/20241103S9001I.fit1.ref.reg",
+  "object_out": "inputs/images/S9/2024/202411/20241103/fits_out/object_1.out",
+  "config": "inputs/configs/nspa2024.cfg (与归档运行是否完全一致未经证实)",
+  "gaia": "inputs/catalogs/S9/2024/GAIA3_S9_202410.DAT",
+  "ephemeris": "inputs/catalogs/S9/2024/EPH_S9_202411.DAT"
+ },
+ "image": {
+  "shape": [
+   2048,
+   2048
+  ],
+  "raw_dtype": "uint16 (BITPIX=16, BZERO=32768)",
+  "preprocessed_dtype": "float32 (BITPIX=-32)",
+  "ltv": "LTV1/LTV2 absent (0)",
+  "coords": "DS9 physical, 1-based; data[j,i] -> (x,y)=(i+1,j+1)",
+  "display_stretch_adu": [
+   670.0,
+   715.0
+  ],
+  "display_note": "全帧与预处理局部对照：原始/预处理同一线性灰度 670–715 ADU；检测局部放大 12 格共用 675–760 ADU；match 图中 S9 局部 670–755 ADU。均未对单图独立拉伸",
+  "background_sigma_clipped": {
+   "raw": {
+    "median": 687.0,
+    "std": 9.778045008956472
+   },
+   "pre": {
+    "median": 687.0451049804688,
+    "std": 2.2619926817429743
+   }
+  }
+ },
+ "counts": {
+  "detections": 24,
+  "references": 15,
+  "references_used_in_fit": 14,
+  "gaia_in_extraction_box": 152,
+  "gaia_in_frame": 18,
+  "gaia_in_frame_not_ref": 3,
+  "detections_without_gaia": 8
+ },
+ "alignment": {
+  "reg_vs_local_centroid_median_abs_px": [
+   0.135,
+   0.125
+  ],
+  "ref_xy_equal_to_detection_xy": true
+ },
+ "solution": {
+  "file": "docs/assets/nspa-frame-solution.json",
+  "method": "reconstruct_frame.py 调用 nspa.domain.matching.find_obj_base_angle，输入为归档 .reg + cfg + GAIA + 历表；与归档 object_1.out 比对",
+  "plate_sigma_arcsec": 0.0761,
+  "target_oc_arcsec": [
+   -0.0116,
+   0.0408
+  ],
+  "diff_vs_archive_arcsec": [
+   0.0001,
+   -0.0
+  ],
+  "ref_reg_dec_precision": "ref.reg Dec 仅 3 位小数；天区图使用 RA(8 位)+粗 Dec 在历元改正后的 GAIA 中唯一对应得到的完整坐标（15/15 唯一）"
+ },
+ "oc": {
+  "S9_2024": {
+   "rows_in_file": 22,
+   "unique_frames": 11,
+   "mean_ra": 0.0138,
+   "std_ra": 0.0405,
+   "mean_de": 0.0216,
+   "std_de": 0.0491
+  },
+  "U1_2020": {
+   "rows_in_file": 950,
+   "unique": 950,
+   "nights": 6,
+   "std_ra": 0.0372,
+   "std_de": 0.0343
+  },
+  "U2_2020": {
+   "rows_in_file": 959,
+   "unique": 959,
+   "nights": 6,
+   "std_ra": 0.0252,
+   "std_de": 0.0303
+  },
+  "U3_2020": {
+   "rows_in_file": 960,
+   "unique": 960,
+   "nights": 6,
+   "std_ra": 0.0226,
+   "std_de": 0.0262
+  },
+  "U4_2020": {
+   "rows_in_file": 960,
+   "unique": 960,
+   "nights": 6,
+   "std_ra": 0.0243,
+   "std_de": 0.027
+  },
+  "U5_2020": {
+   "rows_in_file": 661,
+   "unique": 661,
+   "nights": 6,
+   "std_ra": 0.0848,
+   "std_de": 0.1041
+  }
+ }
+}

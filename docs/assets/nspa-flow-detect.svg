@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 614" width="1600" height="614" role="img" aria-labelledby="t d">
+<title id="t">NSPA ② 星象检测与定心</title><desc id="d">② 星象检测与定心：在平坦图像上找出星象并测定中心。输入：预处理图像；输出：星象表。</desc>
+<defs>
+<marker id="ah-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8f7e"/></marker>
+<marker id="ah-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c26a00"/></marker>
+<marker id="ah-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fd6"/></marker>
+<marker id="ah-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a63d8c"/></marker>
+<marker id="ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker>
+</defs>
+<style>text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif;fill:#1f2328}</style>
+<rect width="1600" height="614" fill="#ffffff"/>
+<rect x="0" y="0" width="12" height="614" rx="0" fill="#c26a00" stroke="none" stroke-width="1.5"/>
+<text x="44" y="62" font-size="34" font-weight="700" fill="#c26a00" text-anchor="start">② 星象检测与定心</text>
+<text x="346.08000000000004" y="62" font-size="21" font-weight="400" fill="#57606a" text-anchor="start">在平坦图像上找出星象并测定中心</text>
+<rect x="44" y="112" width="300" height="406" rx="14" fill="#f6f8fa" stroke="#8c959f" stroke-width="2"/>
+<text x="68" y="156" font-size="20" font-weight="700" fill="#57606a" text-anchor="start">输入</text>
+<text x="68" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">预处理图像</text>
+<text x="68" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">背景已压平</text>
+<text x="68" y="264" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">（也可直接用原图）</text>
+<rect x="420" y="112" width="780" height="88" rx="14" fill="#fbf0e3" stroke="#c26a00" stroke-width="2"/>
+<circle cx="466" cy="156.0" r="24" fill="#c26a00"/>
+<text x="466" y="165.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="510" y="148" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">阈值分割</text>
+<text x="510" y="181" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">保留高于 “背景 + k·σ” 的像素（示例 k = 5）</text>
+<rect x="420" y="218" width="780" height="88" rx="14" fill="#fbf0e3" stroke="#c26a00" stroke-width="2"/>
+<circle cx="466" cy="262.0" r="24" fill="#c26a00"/>
+<text x="466" y="271.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="510" y="254" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">连通区域</text>
+<text x="510" y="287" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">8 邻域相连的像素归为同一个星象</text>
+<line x1="466" y1="199" x2="466" y2="216" stroke="#c26a00" stroke-width="2.5" marker-end="url(#ah-detect)"/>
+<rect x="420" y="324" width="780" height="88" rx="14" fill="#fbf0e3" stroke="#c26a00" stroke-width="2"/>
+<circle cx="466" cy="368.0" r="24" fill="#c26a00"/>
+<text x="466" y="377.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="510" y="360" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">修正矩定心</text>
+<text x="510" y="393" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">强度加权质心 (x, y)，同时给出流量与信噪比 SNR</text>
+<line x1="466" y1="305" x2="466" y2="322" stroke="#c26a00" stroke-width="2.5" marker-end="url(#ah-detect)"/>
+<rect x="420" y="430" width="780" height="88" rx="14" fill="#fbf0e3" stroke="#c26a00" stroke-width="2"/>
+<circle cx="466" cy="474.0" r="24" fill="#c26a00"/>
+<text x="466" y="483.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="510" y="466" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">筛选</text>
+<text x="510" y="499" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">像素数 10 – 5026；去掉贴边（10 px 边框）与饱和星象；SNR 门限</text>
+<line x1="466" y1="411" x2="466" y2="428" stroke="#c26a00" stroke-width="2.5" marker-end="url(#ah-detect)"/>
+<line x1="352" y1="315.0" x2="412" y2="315.0" stroke="#c26a00" stroke-width="3.5" marker-end="url(#ah-detect)"/>
+<rect x="1280" y="112" width="276" height="406" rx="14" fill="#ffffff" stroke="#c26a00" stroke-width="3"/>
+<text x="1304" y="156" font-size="20" font-weight="700" fill="#c26a00" text-anchor="start">输出</text>
+<text x="1304" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">星象表</text>
+<text x="1304" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">每颗星 x, y, 流量, SNR</text>
+<text x="1304" y="264" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">DS9 region，可直接叠加</text>
+<line x1="1208" y1="315.0" x2="1272" y2="315.0" stroke="#c26a00" stroke-width="3.5" marker-end="url(#ah-detect)"/>
+<text x="44" y="574" font-size="18" font-weight="400" fill="#57606a" text-anchor="start">坐标为 DS9 physical 像素（1-based）；星象表按流量从亮到暗排列。</text>
+</svg>

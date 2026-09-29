@@ -9,10 +9,10 @@
 ![SciPy ≥1.10](https://img.shields.io/badge/SciPy-%E2%89%A51.10-8CAAE6?style=flat-square&logo=scipy&logoColor=white)
 ![Astropy ≥5.3](https://img.shields.io/badge/Astropy-%E2%89%A55.3-FF7E00?style=flat-square)
 
-面向天然卫星 CCD 观测的天体测量数据处理流水线：<br>
-从原始 FITS 图像到目标天球位置、O-C 残差统计与残差图。
+面向天然卫星 CCD 观测的天体测量流水线：<br>
+从原始 FITS 图像到卫星天球位置与 O-C 残差。
 
-[处理流程](#主处理流程四个核心模块) · [安装](#安装) · [快速开始](#快速开始) · [结果展示](#结果展示) · [技术文档](nspa/README.md)
+[总体流程](#总体流程) · [逐步看一帧真实数据](#逐步看一帧真实数据) · [O-C 结果](#o-c-结果) · [安装](#安装) · [快速开始](#快速开始) · [技术文档](nspa/README.md)
 
 </div>
 
@@ -20,74 +20,167 @@
 
 ## 简介
 
-NSPA 是用 Python 编写的天然卫星 CCD 天体测量流水线。它以观测日目录 `YYYYMMDD/fits` 为处理单元，
-依次完成**背景预处理 → 星象检测与定心 → GAIA 参考星匹配与底片常数归算 → O-C 野值剔除与统计**，
-最后由报告模块绘制 O-C 残差图。目标的理论位置来自 IMCCE 格式历表，参考星来自 GAIA 星表
-（位置按星表自行改正到观测历元）。
+NSPA 用 Python 编写，以一个观测夜的图像目录为处理单元，依次完成
+**图像预处理 → 星象检测与定心 → GAIA 参考星匹配与底片归算 → O-C 统计**，
+得到卫星的实测赤经赤纬及其相对历表的残差（O-C），并由报告模块绘制残差图。
+参考星取自 GAIA DR3（按自行改正到观测历元），目标理论位置来自 IMCCE 历表。
 
-- **命令行**：`python -m nspa.main`，可运行全部 5 步，也可用 `--step` 单独运行某一步。
-- **桌面界面**：`python ui/app.py`（Tkinter），根据选择生成 cfg，再以子进程调用同一个命令行入口。
-- **运行记录**：每次运行写出 `outputs/runs/<run_id>/manifest.json`，包含步骤耗时、告警和失败项。
+- **命令行**：`python -m nspa.main`，一次跑完全部步骤，或用 `--step` 单独运行某一步。
+- **桌面界面**：`python ui/app.py`，选择数据与参数后调用同一个命令行入口。
+- **运行记录**：每次运行写出 `outputs/runs/<run_id>/manifest.json`，记录各步耗时、告警与失败项。
 
-### 已实现功能
-
-| 模块 | 已实现 |
-|---|---|
-| `pre` 图像预处理 | 迭代 σ-clipping 背景估计；超级背景中值滤波（带状核串联去条纹 / 矩形核，除法或减法扣背景）；同态滤波；双边 Retinex；可选 3×3 均值平滑；文件级多进程并行 |
-| `detect` 星象检测 | 阈值分割；Fortran 兼容三段式连通域标号（numba 加速）或 scipy 8 连通；像素数、边缘和饱和筛选；1/2/3 阶修正矩定心；SNR 计算与筛选；输出 DS9 region |
-| `match` 匹配归算 | 历表拉格朗日插值；视场内 GAIA 取星与自行改正；以检测星逐一假设目标的盲搜粗匹配（KD-tree 快路径，必要时回退暴力搜索）；6/12/20 项多项式底片常数加权迭代最小二乘；全图再匹配；按历表预报在 3 px 内定位目标；同图多目标复用底片常数 |
-| `comoc` O-C 统计 | 逐日逐目标 k·σ 迭代野值剔除（或均值偏差模式）；单日质量门限；输出单日、全时段汇总文件 |
-| `report` 报告 | 读取 comoc 汇总 `.dat`，绘制 `OC_summary.png` 和逐目标 `OC_U{N}.png` |
-
-### 尚未实现 / 规划中
-
-以下内容出现在早期产品描述或 cfg 注释中，**当前代码未实现**，这里列出以免误解：
-
-- **bias / dark / flat 本底平场改正**：cfg 解析 `1biasflag`、`1darkflag`、`1flatflag`，但处理流程没有使用这些参数；
-  当前的预处理只有上表中的背景滤波算法。
-- **PSF 拟合定心**：定心方法只有修正矩（`2pos_method` 取 1/2/3）。
-- **WCS 解算写回 FITS 头**：底片常数只在内部用于坐标换算，不写出 WCS 关键字。
-- **独立的几何畸变改正**：没有单独的畸变模型。高阶底片常数（12/20 项）可以吸收视场内部分二次、三次项。
-- **JPL 历表**：cfg 中有 `3obj_ephsource` 字段，但读取器只解析 IMCCE 格式的历表文件。
-- **针对卫星相位或光照形态的自适应定心**：未实现。
-
-## 整体架构
+## 总体流程
 
 <p align="center">
-  <img src="docs/assets/nspa-architecture.svg" alt="NSPA 整体架构：入口层、配置/应用层、流程编排层、算法层、文件 I/O 层与 inputs/outputs 数据目录" width="100%">
+  <a href="docs/assets/nspa-flow-overview.svg"><img src="docs/assets/nspa-flow-overview.svg" alt="NSPA 总体数据流：原始 CCD 图像 → ① 图像预处理 → ② 星象检测 → ③ 匹配与归算（输入 GAIA 星表与卫星历表）→ ④ O-C 统计 → 天体测量结果；report 为辅助出图" width="100%"></a>
 </p>
 
-| 层 | 目录 | 职责 |
-|---|---|---|
-| 入口 | `nspa/main.py`、`ui/` | 命令行参数；Tkinter 界面（生成 `_ui_run.cfg`，以子进程调用命令行） |
-| 配置 / 应用 | `nspa/config.py`、`nspa/paths.py`、`nspa/application/` | 表驱动解析 cfg 并按步骤校验；展开观测日目录；`PipelineRunner` 调度与 manifest 记录 |
-| 流程编排 | `nspa/core/` | `pre` / `detect` / `match` / `comoc` / `report` 五个步骤 |
-| 算法 | `nspa/domain/`、`nspa/utils/` | 坐标变换、底片常数、匹配；背景、滤波、连通域、定心；插值与野值剔除 |
-| 文件 I/O | `nspa/io/` | FITS 读写与多台望远镜的头文件时间解析；GAIA 星表、IMCCE 历表；`.reg` 与 `.out` 文件 |
+四个核心模块各自读写文件，可以整条运行，也可以只重跑其中一步。
+`report` 不参与计算，只把 ④ 的汇总结果画成残差图。
 
-## 主处理流程：四个核心模块
+## 逐步看一帧真实数据
 
-`python -m nspa.main --step all` 依次执行 5 个步骤。其中 `pre`、`detect`、`match`、`comoc` 是四个核心处理模块，
-`report` 是第 5 个辅助模块，负责根据 comoc 结果绘图，所以下图把它放在第 4 个面板中一起展示。
+下面四节各配一张模块流程图，再用**同一帧真实观测**展示该模块做了什么：
+
+> **样本**：土卫九 S9（Phoebe），2024-11-03，帧 `20241103S9001I`，I 波段，曝光 45 s，2048×2048 像素（0.209″/px）。
+> 图中的原始 FITS、预处理 FITS、检测 `.reg`、参考星 `.ref.reg`、`object_1.out` 都是这次观测的**归档产物**，
+> 本页没有重跑 pre / detect。归档的预处理图是 float32，而当前代码的中值背景分支写出 uint16，
+> 所以它不是当前版本刚生成的文件；配置按 `inputs/configs/nspa2024.cfg` 解读，但它与归档运行是否完全一致无法确认。
+> 原始 FITS 不入库；每张图的来源、灰度范围和计数见 [`provenance.json`](docs/assets/provenance.json)。
+
+**坐标约定**：所有像素坐标均为 DS9 physical（1-based），即 FITS 数组第 *j* 行第 *i* 列（从 0 数）的像素中心在
+(*x*, *y*) = (*i*+1, *j*+1)。这两个文件头里没有 LTV1/LTV2，因此 physical 坐标与 image 坐标相同。
+24 个检测圈的圈心与预处理图上局部光心相差的中位数约 0.13 px，说明图与 region 是对齐的。
+
+### ① 图像预处理
 
 <p align="center">
-  <img src="docs/assets/nspa-pipeline.svg" alt="NSPA 四个核心模块：pre 图像预处理、detect 星象检测与定心、match 参考星匹配与底片归算、comoc O-C 统计与 report 报告" width="100%">
+  <a href="docs/assets/nspa-flow-pre.svg"><img src="docs/assets/nspa-flow-pre.svg" alt="图像预处理流程：原始 CCD 图像 → 估计背景 → 行、列串联长窗口中值得到超级背景 → 扣除背景并恢复背景水平 → 3×3 平滑 → 平坦背景图像" width="100%"></a>
 </p>
 
-| 步骤 | 实现 | 输入 | 输出 |
-|---|---|---|---|
-| `pre` | `core/preprocessor.py` | `fits/*.fit` | `fits_n/*_n.fit` |
-| `detect` | `core/detector.py` | `fits_n/*_n.fit`（`1superflag=0` 时读原图） | `fits_reg/*.fit.reg` |
-| `match` | `core/matcher.py` | `*.fit.reg` + GAIA 星表 + IMCCE 历表 | `fits_ref/*.ref.reg`、`fits_out/object_N.out` |
-| `comoc` | `core/analyzer.py` | `fits_out/object_N.out` | `fits_out/final_*`、`<输出目录>/*.out`、`<输出目录>/*N.dat` |
-| `report` | `core/reporter.py` | `<输出目录>/*N.dat` | `<输出目录>/OC_summary.png`、`OC_U{N}.png` |
+这一帧的原始图像上有一个直径约 1000 px 的环形暗区和亮晕，亮晕与暗区的背景相差约 25 ADU。
+预处理后，大尺度结构基本被扣除，背景中值保持在 687 ADU 左右。**两幅图使用完全相同的线性灰度 670–715 ADU。**
 
-> PNG 版本：[`nspa-pipeline.png`](docs/assets/nspa-pipeline.png) · [`nspa-architecture.png`](docs/assets/nspa-architecture.png)。
-> 两张图由 [`docs/assets/src/make_diagrams.py`](docs/assets/src/make_diagrams.py) 生成。
+<p align="center">
+  <a href="docs/assets/nspa-pre-fullframe.png"><img src="docs/assets/nspa-pre-fullframe.png" alt="同一帧原始与预处理后的全帧对照，同一线性灰度 670–715 ADU；原始帧有环形暗区与亮晕，预处理后背景平坦" width="100%"></a>
+</p>
+
+局部放大（橙框，经过 S9 所在的暗区边缘）与剖面：原始帧沿 *y* = 871 从亮晕进入暗区，背景下降约 25 ADU；
+预处理后这条剖面是平的，S9 的峰仍然清楚。右下图是全帧逐行、逐列的背景中值。
+
+<p align="center">
+  <a href="docs/assets/nspa-pre-zoom.png"><img src="docs/assets/nspa-pre-zoom.png" alt="局部区域原始与预处理对照（同一灰度），以及经过 S9 的像素剖面和全帧逐行逐列背景中值" width="100%"></a>
+</p>
+
+全帧背景 σ 从 9.78 ADU 降到 2.26 ADU（3σ 迭代裁剪统计）。这个降幅同时来自背景扣除和 3×3 平滑，不能全部算作扣背景的效果。
+预处理图上还能看到弱的斜向纹理，它会被带入下一步。
+
+### ② 星象检测与定心
+
+<p align="center">
+  <a href="docs/assets/nspa-flow-detect.svg"><img src="docs/assets/nspa-flow-detect.svg" alt="星象检测流程：预处理图像 → 背景 + k·σ 阈值分割 → 8 连通区域 → 修正矩定心 → 像素数、边缘、饱和、SNR 筛选 → 星象表（DS9 region）" width="100%"></a>
+</p>
+
+检测结果是一个 DS9 region 文件。下图把归档 `.reg` 的 **24 个绿圈**按原坐标画回原始帧，编号即文件行序（从亮到暗）。
+检测本身在预处理图上完成；两幅图像素网格相同，所以圈可以直接叠在原图上。
+
+<p align="center">
+  <a href="docs/assets/nspa-detect-overlay.png"><img src="docs/assets/nspa-detect-overlay.png" alt="归档检测 region 的 24 个绿圈按 DS9 physical 坐标回标到原始帧" width="82%"></a>
+</p>
+
+上排是原始帧，下排是预处理图，12 格共用同一灰度。前四列是入表星象，从最亮的 #1（SNR 526）到表中最暗的 #24（SNR 3.1）；
+后两列是按同一阈值复查时找到、但**没有**写入 `.reg` 的两个源，用来说明筛选规则如何工作：
+一个是单像素热点（3×3 平滑后只占 9 px，少于最少像素数 10），一个是落在 10 px 边框内的贴边源。
+
+<p align="center">
+  <a href="docs/assets/nspa-detect-zoom.png"><img src="docs/assets/nspa-detect-zoom.png" alt="六个局部：四颗入表星象与两个未入表源，原始帧与预处理图对照" width="100%"></a>
+</p>
+
+这类叠图用来核对漏检和伪检，不能拿来验证定位精度。以上图件都是按 region 坐标用 matplotlib 渲染的，不是 DS9 截图。
+要在 DS9 中亲自检查（需自备原始 FITS）：
+
+```bash
+ds9 fits/20241103S9001I.fit -zscale \
+    -regions load fits_reg/20241103S9001I.fit.reg \
+    -regions load fits_ref/20241103S9001I.fit1.ref.reg
+```
+
+两个 region 文件都声明了 `physical` 坐标系，DS9 会按 1-based 像素加载：绿圈为检测星，红圈为参考星。
+
+### ③ 参考星匹配与底片归算
+
+<p align="center">
+  <a href="docs/assets/nspa-flow-match.svg"><img src="docs/assets/nspa-flow-match.svg" alt="匹配与归算流程：星象表、GAIA DR3、卫星历表 → 预报与取星 → 自动匹配 → 底片常数最小二乘 → 历表反算像素并在 3 px 内定位目标 → 目标 RA/Dec、参考星表、底片 σ" width="100%"></a>
+</p>
+
+归档 `.ref.reg` 记录了 **15 颗参考星**（红圈，R1–R15 为文件行序），它们都是检测星中与 GAIA 恒星对上的那部分。
+S9 就是第 11 颗检测星。其余 8 个检测源在所附 GAIA 星表中 30″ 内没有任何对应，可能是星表未收录的暗源、宇宙线或热点，它们不参与底片拟合。
+右图放大 S9：由历表位置反算回来的像素点与实测质心相差约 0.2 px。
+
+<p align="center">
+  <a href="docs/assets/nspa-match-overlay.png"><img src="docs/assets/nspa-match-overlay.png" alt="原始帧上的检测星（绿圈）与参考星（红圈），S9 局部放大显示实测质心与历表反算位置" width="100%"></a>
+</p>
+
+同一批参考星画在天球上：左图是 RA/Dec 分布（东在左），视场四角由底片常数换算得到；
+右上是 15 颗参考星的底片拟合残差，其中 R15 超出 2.6σ，在迭代中被剔除，实际参与拟合的是 14 颗；
+右下是本帧 S9 的实测位置相对历表位置的偏移。
+
+<p align="center">
+  <a href="docs/assets/nspa-match-sky.png"><img src="docs/assets/nspa-match-sky.png" alt="参考星在 RA/Dec 天区中的分布、底片拟合残差与本帧 S9 的 O-C" width="100%"></a>
+</p>
+
+本帧结果：6 参数底片模型，拟合 σ = 0.076″；S9 的 O-C = (−0.012″, +0.041″)。
+
+<details>
+<summary>这些天球坐标是怎么得到的</summary>
+
+- 程序不输出 WCS。图中的底片常数、视场四角和历表反算像素，是用仓库自己的匹配函数重建出来的：
+  [`reconstruct_frame.py`](docs/assets/src/reconstruct_frame.py) 读取归档检测 `.reg`、FITS 头中的曝光时刻、
+  `nspa2024.cfg`、GAIA 星表和历表，按 `match` 步骤对第一个目标的同样流程运行一次。
+- 与归档产物逐项核对：15 颗参考星的像素坐标与 `.ref.reg` 完全一致；目标实测 RA/Dec、历表位置与 `object_1.out` 的差 ≤ 0.0001″（即文件的舍入位）；
+  底片 σ 同为 0.0761″。结果写在 [`nspa-frame-solution.json`](docs/assets/nspa-frame-solution.json)。
+- `.ref.reg` 里的 Dec 只保留 3 位小数（约 3.6″），不能直接用于精密计算。天区图用 8 位小数的 RA 加粗 Dec，
+  在已改正到观测历元的 GAIA 星中逐颗查找对应，15 颗均唯一，并与重建结果中的完整坐标一致。
+- 视场内 18 颗 G ≤ 18.5 的 GAIA 星中，有 15 颗成为参考星，另外 3 颗（G 17.2–18.4）未被检测到。
+
+</details>
+
+### ④ O-C 统计
+
+<p align="center">
+  <a href="docs/assets/nspa-flow-comoc.svg"><img src="docs/assets/nspa-flow-comoc.svg" alt="O-C 统计流程：逐帧 O-C → 按日按目标分组 → k·σ 迭代剔除与绝对值上限 → 标准差小于 0.3″ 的质量门限 → 汇总；report 辅助绘制残差图" width="100%"></a>
+</p>
+
+## O-C 结果
+
+**S9，2024-11-03**：本页示例帧所在的整晚，comoc 保留了 11 帧，示例帧 001 已圈出。
+
+<p align="center">
+  <a href="docs/assets/nspa-oc-s9-2024.png"><img src="docs/assets/nspa-oc-s9-2024.png" alt="S9 2024-11-03 单帧 O-C 随时间分布，示例帧 001 已标出" width="100%"></a>
+</p>
+
+**U/2020 汇总**：天王星五颗卫星 U1–U5，2020 年 11 月 6 个观测夜。下图是 `report` 模块直接输出的
+[`OC_summary.png`](outputs/results/U/2020/OC_summary.png)。
+
+<p align="center">
+  <a href="outputs/results/U/2020/OC_summary.png"><img src="outputs/results/U/2020/OC_summary.png" alt="U/2020 五颗卫星 O-C 残差（Δα·cosδ 与 Δδ）随时间分布" width="100%"></a>
+</p>
+
+| 数据集 | 目标 | 保留点数 | σ(Δα·cosδ) | σ(Δδ) |
+|---|---|---:|---:|---:|
+| S9/2024 | S9 | 11 | 0.040″ | 0.049″ |
+| U/2020 | U1 | 950 | 0.037″ | 0.034″ |
+| U/2020 | U2 | 959 | 0.025″ | 0.030″ |
+| U/2020 | U3 | 960 | 0.023″ | 0.026″ |
+| U/2020 | U4 | 960 | 0.024″ | 0.027″ |
+| U/2020 | U5 | 661 | 0.085″ | 0.104″ |
+
+表中数值是**剔除野值后**的内部离散度，反映残差相对历表的分布，不等于绝对精度；它们还受观测条件、目标亮度、参数和历表误差影响，
+不同数据集之间不宜直接比较。归档的 `S9/2024/fits1.dat` 中每帧各出现两次（22 行），上表与上图已去重，按 11 帧计。
 
 ## 安装
 
-需要 **Python ≥ 3.10**（代码使用了 `X | None` 类型注解和带括号的多上下文 `with` 语句）。
+需要 **Python ≥ 3.10**。
 
 ```bash
 git clone https://github.com/mieyu/natural-satellite-astrometry.git
@@ -97,56 +190,34 @@ pip install -r requirements.txt
 ```
 
 依赖：`numpy`、`scipy`、`astropy`、`opencv-python`、`matplotlib`、`bottleneck`、`numba`。
-桌面界面还需要 Python 自带的 Tkinter（部分 Linux 发行版需要单独安装 `python3-tk`）。
+桌面界面还需要 Tkinter（部分 Linux 发行版需另装 `python3-tk`）。
 
 ## 数据准备
 
-仓库**不包含原始观测 FITS 图像**（已在 `.gitignore` 中排除）。运行前需要自备以下三类数据：
+仓库**不包含原始观测 FITS**。运行前准备三类数据：
 
 | 数据 | 放置位置 | 说明 |
 |---|---|---|
-| 原始观测图像 | `inputs/images/<目标>/<观测期>/<YYYYMMDD>/fits/*.fit` | 当前支持的望远镜头格式：`ss156`、`ss156_2014`、`km100`、`km100B`、`lj240`（`3tele_label`） |
-| GAIA 参考星表 | `inputs/catalogs/<目标>/<观测期>/GAIA3_*.DAT` | 跳过前 60 行表头；每行跳过前 39 个字符后依次读取 RA(°)、Dec(°)、pmRA、pmDE(mas/yr)、G 星等 |
-| 目标历表 | `inputs/catalogs/<目标>/<观测期>/EPH_*.DAT` | IMCCE 格式，跳过前 10 行；每行为 年 月 日 时 分 秒 RA(h) Dec(°) … |
+| 原始观测图像 | `inputs/images/<目标>/<观测期>/<YYYYMMDD>/fits/*.fit` | 支持的望远镜头格式：`ss156`、`ss156_2014`、`km100`、`km100B`、`lj240` |
+| GAIA 参考星表 | `inputs/catalogs/<目标>/<观测期>/GAIA3_*.DAT` | VizieR 文本导出：RA、Dec（度）、pmRA、pmDE（mas/yr）、G 星等 |
+| 目标历表 | `inputs/catalogs/<目标>/<观测期>/EPH_*.DAT` | IMCCE 格式：年 月 日 时 分 秒 RA(h) Dec(°) |
 
-仓库中已有 U（2020）、J（2023）、S9（2024/2025）的星表与历表样例，位于 `inputs/catalogs/`。
-
-```text
-inputs/
-├── configs/                      # cfg 参数文件
-├── catalogs/<目标>/<观测期>/       # GAIA3_*.DAT、EPH_*.DAT
-└── images/<目标>/<观测期>/          # 用户自备，不入库
-    └── <YYYYMMDD>/fits/*.fit
-```
-
-`1fitspath` 可以指向单个 `fits` 目录，也可以指向包含多个 `YYYYMMDD/fits` 的上级目录，程序会自动展开成每个观测日。
+仓库已附 U（2020）、J（2023）、S9（2024/2025）的星表与历表样例。`1fitspath` 可以指向单个 `fits` 目录，
+也可以指向包含多个 `YYYYMMDD/fits` 的上级目录。
 
 ## 快速开始
 
-必须**在仓库根目录**运行，因为 cfg 中的相对路径以当前目录为起点。
-
-> **请显式传入 `--config`。** `nspa/main.py` 中的默认配置是 `inputs/configs/nspa2023S0.cfg`，这个文件不在仓库里。
-> 已跟踪的配置中，只有 [`inputs/configs/nspa2024.cfg`](inputs/configs/nspa2024.cfg) 使用仓库内的相对路径。
-> 其他 cfg（`nspa.cfg`、`nspa202011.cfg`、`nspa(1).cfg`）保留了原作者本机的绝对路径，使用前需要修改。
+请**在仓库根目录**运行，并**显式传入 `--config`**（cfg 中的相对路径以当前目录为起点；
+代码里的默认配置文件不在仓库中）。已跟踪的配置中，[`nspa2024.cfg`](inputs/configs/nspa2024.cfg) 使用仓库内相对路径，
+其余 cfg 含原作者本机的绝对路径，使用前需修改。
 
 ```bash
-# 以 nspa2024.cfg 为例：先把 S9 2024 年 11 月的观测图放到 inputs/images/S9/2024/202411/<YYYYMMDD>/fits/
-python -m nspa.main --config inputs/configs/nspa2024.cfg              # 运行全部 5 步
-
+# 先把 S9 2024 年 11 月的观测图放到 inputs/images/S9/2024/202411/<YYYYMMDD>/fits/
+python -m nspa.main --config inputs/configs/nspa2024.cfg              # 全部步骤
 python -m nspa.main --config inputs/configs/nspa2024.cfg --step pre   # 单步：pre / detect / match / comoc / report
-python -m nspa.main --config inputs/configs/nspa2024.cfg --step report
 ```
 
-桌面界面：
-
-```bash
-python ui/app.py
-```
-
-在界面里选择“目标 / 观测期”，程序会自动匹配 `inputs/catalogs/` 中的星表和历表，调整参数后点击“运行”。
-详见 [ui/README.md](ui/README.md)。
-
-也可以作为库调用，这与命令行执行的是同一条流水线：
+桌面界面：`python ui/app.py`，详见 [ui/README.md](ui/README.md)。作为库调用：
 
 ```python
 from nspa.application.context import build_context
@@ -161,103 +232,57 @@ PipelineRunner(select_steps("all")).run(build_context(config, steps))
 
 ### 常用参数
 
-cfg 使用 `key=value` 格式，数字前缀表示所属步骤。完整说明见 [nspa/README.md](nspa/README.md)。
+cfg 为 `key=value` 格式，数字前缀表示所属步骤。完整说明见 [nspa/README.md](nspa/README.md)。
 
 | 参数 | 示例（nspa2024.cfg） | 含义 |
 |---|---|---|
 | `1superflag` | `1` | 0 跳过；1 中值超级背景；2 同态滤波；3 双边 Retinex |
-| `1med_length` / `1med_width` | `65` / `1` | 中值核尺寸；其中一个为 1 时按“行 → 列”串联带状滤波 |
-| `2bkgd_threshold` | `5.0` | 检测阈值 = bkgd + k·σ |
+| `1med_length` / `1med_width` | `65` / `1` | 中值窗口；其一为 1 时按“行 → 列”串联 |
+| `2bkgd_threshold` | `5.0` | 检测阈值 = 背景 + k·σ |
 | `2pos_method` | `1` | 修正矩阶数（1/2/3） |
 | `3tele_label` / `3tele_focal` / `3ccd_scale` | `km100B` / `13300.0` / `0.0135` | 望远镜头格式、焦距 (mm)、像元尺寸 (mm) |
 | `3modeltype` | `6` | 底片常数项数（6/12/20） |
 | `3match_limit` | `5.0` | 匹配距离阈值（角秒） |
 | `4std_limit` / `4eps` | `2.6` / `0.2` | 野值剔除 σ 倍数 / O-C 绝对值上限（角秒） |
-| `4specified-output` | `outputs/results/S9/2024` | 跨日汇总与图件输出目录 |
+| `4specified-output` | `outputs/results/S9/2024` | 汇总与图件输出目录 |
 
 ### 输出
 
 ```text
 <YYYYMMDD>/
 ├── fits/        # 原始图像（输入，不修改）
-├── fits_n/      # pre：*_n.fit
-├── fits_reg/    # detect：*.fit.reg
-├── fits_ref/    # match：*.ref.reg（参考星）
-└── fits_out/    # match / comoc：object_N.out、final_object_N.out、final_oc_N.out
+├── fits_n/      # ① 预处理图像 *_n.fit
+├── fits_reg/    # ② 检测星 *.fit.reg（绿圈）
+├── fits_ref/    # ③ 参考星 *.ref.reg（红圈）
+└── fits_out/    # ③④ object_N.out、final_object_N.out、final_oc_N.out
 
-<4specified-output>/   # comoc / report：*N.dat、00oc_N.out、*_all_*.out、*_obsdata_*.out、OC_*.png
+<4specified-output>/   # ④ 与 report：*N.dat、00oc_N.out、*_all_*.out、*_obsdata_*.out、OC_*.png
 outputs/runs/<run_id>/manifest.json
 ```
 
-## 结果展示
+## 技术边界
 
-以下内容全部来自仓库中已提交的结果文件，没有为 README 重新运行处理流程。
-
-### O-C 残差结果
-
-`comoc` 只保留野值剔除后、单日标准差小于 0.3″ 的观测，`report` 再把这些结果画成残差图。
-下面是 `U/2020` 数据集（U1–U5 五个目标，2020 年 11 月，6 个 UTC 观测日）的 O-C 汇总图：
-
-<p align="center">
-  <img src="outputs/results/U/2020/OC_summary.png" alt="U/2020 五颗卫星 O-C 残差（Δα·cosδ 与 Δδ）随时间分布" width="100%">
-</p>
-
-单目标、单夜的结果（S9，2025 年 11 月，53 个观测点；图例中的 “U1” 是 report 模块固定使用的目标编号前缀）：
-
-<p align="center">
-  <img src="outputs/results/S9/2025/OC_summary.png" alt="S9/2025 O-C 残差" width="100%">
-</p>
-
-下图根据仓库中全部非空的 `outputs/results/**/*N.dat` 计算各目标 O-C 的标准差
-（数值表：[`nspa-oc-stats.csv`](docs/assets/nspa-oc-stats.csv)，
-脚本：[`plot_oc_dispersion.py`](docs/assets/src/plot_oc_dispersion.py)）：
-
-<p align="center">
-  <img src="docs/assets/nspa-oc-dispersion.png" alt="各数据集、各目标剔除野值后的 O-C 标准差" width="88%">
-</p>
-
-| 数据集 | 目标 | 观测点数 | σ(Δα·cosδ) | σ(Δδ) |
-|---|---|---:|---:|---:|
-| U/2020 | U1–U4 | 950–960 / 目标 | 0.023″ – 0.037″ | 0.026″ – 0.034″ |
-| U/2020 | U5 | 661 | 0.085″ | 0.104″ |
-| S/2023 | S1、S2、S4–S7 | 36–219 / 目标 | 0.060″ – 0.092″ | 0.044″ – 0.179″ |
-| S9/2024 | S9 | 22 | 0.039″ | 0.048″ |
-| S9/2025 | S9 | 53 | 0.030″ | 0.036″ |
-
-**解读注意事项**
-
-- 这些数值是**剔除野值后**的内部离散度，反映的是相对于历表的残差分布，不是绝对精度；它们同时受观测条件、
-  目标亮度、参数设置和历表误差影响。
-- 各数据集的观测设备、日期、cfg 参数都不同，**不宜横向比较**哪一组更好。
-  `U/2020` 与 `U/2020_rix` 是同一观测期的两套归档结果；缺少与各次运行一一对应的配置记录，
-  因此不能仅凭目录名将两者差异归因于某种预处理方法或参数。
-- `S/2006`、`S/2014` 的 `.dat` 以及 `S/2023` 的 S3、S8 为空文件，没有有效结果。
-- `S/2023` 的 `OC_S*.png` 图例使用 S 前缀，而当前 `report` 固定使用 U 前缀并最多支持 5 个目标，
-  因此这组归档图与当前已提交的报告代码不一致；具体生成版本尚未确认。
+- 背景处理只有上文的超级背景 / 同态滤波 / 双边 Retinex；cfg 中的 bias、dark、flat 开关目前不生效。
+- 定心只有修正矩，没有 PSF 拟合。
+- 底片常数只在内部使用，不写回 FITS 头，不生成 WCS；没有独立的几何畸变模型，12/20 项底片常数可吸收部分高阶项。
+- 历表读取只支持 IMCCE 格式。
 
 ## 仓库结构
 
 ```text
 natural-satellite-astrometry/
-├── nspa/                  # 核心包
-│   ├── main.py            # 命令行入口
-│   ├── config.py          # cfg 解析与校验
-│   ├── paths.py           # 观测日展开与产物目录
-│   ├── application/       # PipelineRunner、上下文、日志、manifest
-│   ├── core/              # pre / detect / match / comoc / report
-│   ├── domain/            # 天体测量与匹配算法、数据模型
-│   ├── io/                # FITS、星表/历表、文本产物读写
-│   ├── utils/             # 图像处理与数学工具
-│   └── README.md          # 详细技术文档
+├── nspa/                  # 核心包：命令行入口、配置、流程编排、算法、文件读写
 ├── ui/                    # Tkinter 桌面界面
 ├── inputs/                # configs/、catalogs/（images/ 需自备）
-├── outputs/               # results/：天然卫星归算结果
-├── docs/assets/           # README 图件及其生成脚本
+├── outputs/results/       # 归档的天然卫星归算结果
+├── docs/assets/           # README 图件、provenance.json 与生成脚本（src/）
 └── requirements.txt
 ```
+
+README 图件均可复现：`docs/assets/src/make_flow_diagrams.py` 生成流程图；
+`reconstruct_frame.py` 与 `make_frame_figures.py` 在给定归档目录（`--materials <含 inputs/images/... 的目录>`）时生成单帧证据图与 O-C 图。
 
 ## 文档
 
 - [nspa/README.md](nspa/README.md)：处理流程、cfg 全部参数、产物约定、库调用方式
 - [ui/README.md](ui/README.md)：桌面界面使用说明
-- [nspa/docs/figures/match_pipeline.svg](nspa/docs/figures/match_pipeline.svg)：match 模块示意图
