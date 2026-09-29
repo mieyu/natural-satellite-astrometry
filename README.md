@@ -1,29 +1,27 @@
 <div align="center">
 
-# NSPA · 天然卫星精密天体测量软件
+# 天然卫星精密天体测量软件
 
-**Natural Satellite Precision Astrometry Software**
+### Natural Satellite Precision Astrometry Software · NSPA
 
-![Python ≥3.10](https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?style=flat-square&logo=python&logoColor=white)
-![NumPy ≥1.24](https://img.shields.io/badge/NumPy-%E2%89%A51.24-4DABCF?style=flat-square&logo=numpy&logoColor=white)
-![SciPy ≥1.10](https://img.shields.io/badge/SciPy-%E2%89%A51.10-8CAAE6?style=flat-square&logo=scipy&logoColor=white)
-![Astropy ≥5.3](https://img.shields.io/badge/Astropy-%E2%89%A55.3-FF7E00?style=flat-square)
+**面向天然卫星观测的图像处理、天体测量与残差分析软件**
 
-面向天然卫星 CCD 观测的天体测量流水线：<br>
-从原始 FITS 图像到卫星天球位置与 O-C 残差。
+![Python ≥3.10](https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?style=flat&logo=python&logoColor=white)
+![NumPy ≥1.24](https://img.shields.io/badge/NumPy-%E2%89%A51.24-4DABCF?style=flat&logo=numpy&logoColor=white)
+![SciPy ≥1.10](https://img.shields.io/badge/SciPy-%E2%89%A51.10-8CAAE6?style=flat&logo=scipy&logoColor=white)
+![Astropy ≥5.3](https://img.shields.io/badge/Astropy-%E2%89%A55.3-FF7E00?style=flat)
 
-[总体流程](#总体流程) · [逐步看一帧真实数据](#逐步看一帧真实数据) · [O-C 结果](#o-c-结果) · [安装](#安装) · [快速开始](#快速开始) · [技术文档](nspa/README.md)
+[项目简介](#项目简介) · [总体流程](#总体流程) · [处理效果](#处理效果) · [O-C 结果](#o-c-结果) · [安装](#安装) · [快速开始](#快速开始) · [技术文档](nspa/README.md)
 
 </div>
 
 ---
 
-## 简介
+## 项目简介
 
-NSPA 用 Python 编写，以一个观测夜的图像目录为处理单元，依次完成
-**图像预处理 → 星象检测与定心 → GAIA 参考星匹配与底片归算 → O-C 统计**，
-得到卫星的实测赤经赤纬及其相对历表的残差（O-C），并由报告模块绘制残差图。
-参考星取自 GAIA DR3（按自行改正到观测历元），目标理论位置来自 IMCCE 历表。
+NSPA 用于天然卫星 CCD 观测数据的天体测量归算，包含图像预处理、星象检测与定心、参考星匹配、底片常数求解和 O-C 残差分析。
+软件采用 GAIA DR3 恒星作为位置参考，以 IMCCE 历表提供的卫星理论位置进行目标识别和残差计算，输出实测赤经赤纬、DS9 区域文件及统计图表。
+观测数据按夜组织，支持多帧处理与跨日汇总。
 
 - **命令行**：`python -m nspa.main`，一次跑完全部步骤，或用 `--step` 单独运行某一步。
 - **桌面界面**：`python ui/app.py`，选择数据与参数后调用同一个命令行入口。
@@ -38,7 +36,7 @@ NSPA 用 Python 编写，以一个观测夜的图像目录为处理单元，依�
 四个核心模块各自读写文件，可以整条运行，也可以只重跑其中一步。
 `report` 不参与计算，只把 ④ 的汇总结果画成残差图。
 
-## 逐步看一帧真实数据
+## 处理效果
 
 下面四节各配一张模块流程图，再用**同一帧真实观测**展示该模块做了什么：
 
