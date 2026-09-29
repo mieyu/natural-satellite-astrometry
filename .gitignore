@@ -86,6 +86,8 @@ inputs/images/
 # 归算中间数据
 **/observation_image_*.dat
 
-# 测试样例与金标准必须可被 Git 跟踪
-!tests/fixtures/**
-!tests/golden/expected/**
+# 本地测试代码和基准数据
+/tests/
+
+# 本地算法笔记
+/同态滤波和BSSR.txt
