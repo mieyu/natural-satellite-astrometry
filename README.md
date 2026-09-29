@@ -85,8 +85,8 @@ NSPA 是用 Python 编写的天然卫星 CCD 天体测量流水线。它以观�
 需要 **Python ≥ 3.10**（代码使用了 `X | None` 类型注解和带括号的多上下文 `with` 语句）。
 
 ```bash
-git clone https://github.com/mieyu/NSPA.git
-cd NSPA
+git clone https://github.com/mieyu/natural-satellite-astrometry.git
+cd natural-satellite-astrometry
 python -m venv .venv && source .venv/bin/activate   # 可选
 pip install -r requirements.txt
 ```
@@ -270,7 +270,7 @@ outputs/runs/<run_id>/manifest.json
 ## 仓库结构
 
 ```text
-NSPA/
+natural-satellite-astrometry/
 ├── nspa/                  # 核心包
 │   ├── main.py            # 命令行入口
 │   ├── config.py          # cfg 解析与校验
