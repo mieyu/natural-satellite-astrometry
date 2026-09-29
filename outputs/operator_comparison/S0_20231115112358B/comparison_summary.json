@@ -1,0 +1,92 @@
+{
+  "input": "/Users/liuhongyu/PythonProject/AstroPyFITS/inputs/images/S/2023/20231115/fits/S0_YAO100_100cm_20231115112358B.fit",
+  "execution": "standalone operator calls; ADIAS pipeline was not started",
+  "adias_parameters_from": "inputs/configs/adias2023S0.cfg",
+  "adias_parameters": {
+    "median_passes": [
+      [
+        1,
+        45
+      ],
+      [
+        45,
+        1
+      ]
+    ],
+    "background_mode": 2,
+    "smooth": "3x3 mean",
+    "background_sigma_clip": 2.6,
+    "detection_threshold_sigma": 3.5,
+    "position_method": "first-order corrected moments",
+    "connectivity": "fortran",
+    "minimum_component_pixels": 10,
+    "maximum_component_pixels": 5026,
+    "output_snr_threshold": 1.0
+  },
+  "adias_stage_statistics": {
+    "raw": {
+      "background": 577.684814453125,
+      "sigma": 3.6198344230651855
+    },
+    "horizontal_median_pass": {
+      "background": 577.6868896484375,
+      "sigma": 2.930224657058716
+    },
+    "vertical_median_pass": {
+      "background": 577.6871948242188,
+      "sigma": 2.913398027420044
+    },
+    "smooth_float": {
+      "background": 577.69580078125,
+      "sigma": 0.9795670509338379
+    },
+    "detector_uint16": {
+      "background": 577.6719970703125,
+      "sigma": 1.0421631336212158
+    },
+    "detector_returned": {
+      "background": 577.6719970703125,
+      "sigma": 1.0421631336212158
+    }
+  },
+  "counts": {
+    "adias_detected": 16,
+    "adias_selected": 15,
+    "drizzlepac_candidates": 136,
+    "drizzlepac_selected": 2,
+    "adias_selected_matching_drizzlepac_candidates": 7,
+    "selected_catalog_matches": 1
+  },
+  "selected_catalog_matches": [
+    {
+      "adias_index": 10,
+      "drizzlepac_index": 0,
+      "dx": -0.020629723767115138,
+      "dy": 0.034020557440214816,
+      "distance": 0.039786729335928465
+    }
+  ],
+  "drizzlepac_selected_under_adias_threshold": [
+    {
+      "id": 1,
+      "x": 459.013092,
+      "y": 116.162155,
+      "adias_threshold_component_pixels": 15
+    },
+    {
+      "id": 2,
+      "x": 365.982941,
+      "y": 1170.983154,
+      "adias_threshold_component_pixels": 9
+    }
+  ],
+  "outputs": {
+    "preprocessed_fits": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_preprocessed_uint16.fits",
+    "adias_all_csv": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_detected_all.csv",
+    "adias_selected_csv": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_selected.csv",
+    "adias_regions": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_selected.reg",
+    "matches_csv": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_vs_drizzlepac_selected_matches.csv",
+    "overview_png": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/adias_vs_drizzlepac_overview.png",
+    "report_md": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/operator_comparison/S0_20231115112358B/comparison_report.md"
+  }
+}

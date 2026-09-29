@@ -1,0 +1,72 @@
+{
+  "input": "/Users/liuhongyu/PythonProject/AstroPyFITS/inputs/images/S/2023/20231115/fits/S0_YAO100_100cm_20231115112358B.fit",
+  "image_extension": 0,
+  "shape_yx": [
+    2048,
+    2048
+  ],
+  "invalid_pixels_replaced": 0,
+  "methods": {
+    "background": "stsci.imagestats.ImageStats (as used by DrizzlePac ImageCatalog)",
+    "detection_and_centroid": "drizzlepac.tweakutils.ndfind -> drizzlepac.findobj.findstars/xy_round",
+    "selection": "DrizzlePac peak/flux/sharpness/roundness limits"
+  },
+  "background": {
+    "mode": 577.9906348884106,
+    "stddev": 3.7446796894073486,
+    "mean": 577.6761474609375,
+    "median": 578.0,
+    "min": 567.0,
+    "max": 589.0
+  },
+  "drizzlepac_parameters": {
+    "fwhm": 3.5,
+    "threshold_multiplier": 4.0,
+    "automatic_detection_sigma": 33.99972455442575,
+    "hmin": 135.998898217703,
+    "skymode": 1155.9812697768211,
+    "nsigma": 1.5,
+    "ratio": 1.0,
+    "theta": 0.0,
+    "candidate_sharp_limits": [
+      -10.0,
+      10.0
+    ],
+    "candidate_round_limits": [
+      -10.0,
+      10.0
+    ],
+    "selection_peak_max": 2500.0,
+    "selection_flux_max": 50000.0,
+    "selection_sharp_limits": [
+      0.2,
+      1.5
+    ],
+    "selection_round_limits": [
+      -1.0,
+      1.0
+    ]
+  },
+  "candidate_count": 136,
+  "selected_count": 2,
+  "selected_centroids_0based": [
+    {
+      "id": 1,
+      "x": 459.0130920410156,
+      "y": 116.16215515136719
+    },
+    {
+      "id": 2,
+      "x": 365.9829406738281,
+      "y": 1170.983154296875
+    }
+  ],
+  "outputs": {
+    "preprocessed_fits": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/preprocessed_background_subtracted.fits",
+    "candidates_csv": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/drizzlepac_candidates.csv",
+    "selected_csv": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/drizzlepac_selected_stars.csv",
+    "ds9_regions": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/drizzlepac_selected_stars.reg",
+    "overview_png": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/drizzlepac_overview.png",
+    "centroid_cutouts_png": "/Users/liuhongyu/PythonProject/AstroPyFITS/outputs/drizzlepac_demo/S0_20231115112358B/drizzlepac_centroid_cutouts.png"
+  }
+}

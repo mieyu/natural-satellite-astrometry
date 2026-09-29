@@ -31,7 +31,13 @@ Thumbs.db
 控制台输出*.txt
 
 # ===== Generated results / local temporary files =====
-/outputs/
+/outputs/*
+!/outputs/results/
+!/outputs/drizzlepac_demo/
+!/outputs/operator_comparison/
+# 演示结果保留图表、目录和汇总，忽略 FITS 中间图像
+/outputs/**/*.fit
+/outputs/**/*.fits
 /output/
 /tmp/
 /控制台输出结果对比/
