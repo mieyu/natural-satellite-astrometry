@@ -8,8 +8,6 @@
 ![NumPy ≥1.24](https://img.shields.io/badge/NumPy-%E2%89%A51.24-4DABCF?style=flat-square&logo=numpy&logoColor=white)
 ![SciPy ≥1.10](https://img.shields.io/badge/SciPy-%E2%89%A51.10-8CAAE6?style=flat-square&logo=scipy&logoColor=white)
 ![Astropy ≥5.3](https://img.shields.io/badge/Astropy-%E2%89%A55.3-FF7E00?style=flat-square)
-![OpenCV ≥4.7](https://img.shields.io/badge/OpenCV-%E2%89%A54.7-5C3EE8?style=flat-square&logo=opencv&logoColor=white)
-![Numba ≥0.58](https://img.shields.io/badge/Numba-%E2%89%A50.58-00A3E0?style=flat-square&logo=numba&logoColor=white)
 
 面向天然卫星 CCD 观测的天体测量数据处理流水线：<br>
 从原始 FITS 图像到目标天球位置、O-C 残差统计与残差图。
