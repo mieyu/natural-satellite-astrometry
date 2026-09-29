@@ -1,0 +1,208 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 960" width="1600" height="960" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">NSPA 整体架构</title>
+  <desc id="desc">入口层、配置与应用层、流程编排层、领域算法与工具层、文件 I/O 层，以及 inputs 与 outputs 数据目录。</desc>
+  <style>
+    text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif}
+    .mono{font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace}
+    .b{font-weight:700}
+    .bg{fill:#ffffff}
+    .panel{fill:#f6f8fa;stroke:#d0d7de}
+    .box{fill:#ffffff;stroke:#d0d7de}
+    .chip{fill:#eef1f4;stroke:#d0d7de}
+    .t{fill:#1f2328}
+    .m{fill:#59636e}
+    .ar{stroke:#8c959f;fill:none}
+    .arf{fill:#8c959f}
+    .bgs{stroke:#ffffff}
+    .pre-f{fill:#0e8f7e}
+    .pre-s{stroke:#0e8f7e;fill:none}
+    .pre-t{fill:#0e8f7e;fill-opacity:0.1}
+    .pre-x{fill:#0e8f7e}
+    .det-f{fill:#c26a00}
+    .det-s{stroke:#c26a00;fill:none}
+    .det-t{fill:#c26a00;fill-opacity:0.1}
+    .det-x{fill:#c26a00}
+    .mat-f{fill:#2f6fd6}
+    .mat-s{stroke:#2f6fd6;fill:none}
+    .mat-t{fill:#2f6fd6;fill-opacity:0.1}
+    .mat-x{fill:#2f6fd6}
+    .com-f{fill:#a63d8c}
+    .com-s{stroke:#a63d8c;fill:none}
+    .com-t{fill:#a63d8c;fill-opacity:0.1}
+    .com-x{fill:#a63d8c}
+    .app-f{fill:#57606a}
+    .app-s{stroke:#57606a;fill:none}
+    .app-t{fill:#57606a;fill-opacity:0.1}
+    .app-x{fill:#57606a}
+    @media (prefers-color-scheme: dark) {
+    .bg{fill:#0d1117}
+    .panel{fill:#161b22;stroke:#30363d}
+    .box{fill:#0d1117;stroke:#30363d}
+    .chip{fill:#21262d;stroke:#30363d}
+    .t{fill:#e6edf3}
+    .m{fill:#9da7b3}
+    .ar{stroke:#6e7681;fill:none}
+    .arf{fill:#6e7681}
+    .bgs{stroke:#0d1117}
+    .pre-f{fill:#2cc3ad}
+    .pre-s{stroke:#2cc3ad;fill:none}
+    .pre-t{fill:#2cc3ad;fill-opacity:0.16}
+    .pre-x{fill:#2cc3ad}
+    .det-f{fill:#f0a33a}
+    .det-s{stroke:#f0a33a;fill:none}
+    .det-t{fill:#f0a33a;fill-opacity:0.16}
+    .det-x{fill:#f0a33a}
+    .mat-f{fill:#6aa5f5}
+    .mat-s{stroke:#6aa5f5;fill:none}
+    .mat-t{fill:#6aa5f5;fill-opacity:0.16}
+    .mat-x{fill:#6aa5f5}
+    .com-f{fill:#e27cc6}
+    .com-s{stroke:#e27cc6;fill:none}
+    .com-t{fill:#e27cc6;fill-opacity:0.16}
+    .com-x{fill:#e27cc6}
+    .app-f{fill:#9da7b3}
+    .app-s{stroke:#9da7b3;fill:none}
+    .app-t{fill:#9da7b3;fill-opacity:0.16}
+    .app-x{fill:#9da7b3}
+    }
+  </style>
+  <rect x="0" y="0" width="1600" height="960" rx="20" class="bg" stroke-width="1"/>
+  <text x="40" y="62" font-size="30" class="b t" text-anchor="start">NSPA 整体架构</text>
+  <text x="40" y="96" font-size="16" class="m" text-anchor="start">分层组织：入口只负责参数与调度，算法集中在 domain / utils，文件格式集中在 io。</text>
+  <rect x="40" y="130" width="230" height="790" rx="14" class="panel" stroke-width="1"/>
+  <text x="60" y="166" font-size="20" class="b mono t" text-anchor="start">inputs/</text>
+  <text x="60" y="190" font-size="13.5" class="m" text-anchor="start">运行输入（用户自备）</text>
+  <rect x="56" y="214" width="198" height="76" rx="9" class="box" stroke-width="1"/>
+  <text x="70" y="239" font-size="14" class="b mono t" text-anchor="start">images/</text>
+  <text x="70" y="260" font-size="13.5" class="t" text-anchor="start">原始 FITS 观测图</text>
+  <text x="70" y="279" font-size="12" class="m mono" text-anchor="start">不入库 · YYYYMMDD/fits</text>
+  <rect x="56" y="306" width="198" height="76" rx="9" class="box" stroke-width="1"/>
+  <text x="70" y="331" font-size="14" class="b mono t" text-anchor="start">catalogs/</text>
+  <text x="70" y="352" font-size="13.5" class="t" text-anchor="start">GAIA 参考星表</text>
+  <text x="70" y="371" font-size="12" class="m mono" text-anchor="start">GAIA3_*.DAT</text>
+  <rect x="56" y="398" width="198" height="76" rx="9" class="box" stroke-width="1"/>
+  <text x="70" y="423" font-size="14" class="b mono t" text-anchor="start">catalogs/</text>
+  <text x="70" y="444" font-size="13.5" class="t" text-anchor="start">目标历表（IMCCE 格式）</text>
+  <text x="70" y="463" font-size="12" class="m mono" text-anchor="start">EPH_*.DAT</text>
+  <rect x="56" y="490" width="198" height="76" rx="9" class="box" stroke-width="1"/>
+  <text x="70" y="515" font-size="14" class="b mono t" text-anchor="start">configs/</text>
+  <text x="70" y="536" font-size="13.5" class="t" text-anchor="start">cfg 参数文件</text>
+  <text x="70" y="555" font-size="12" class="m mono" text-anchor="start">nspa2024.cfg 等</text>
+  <rect x="1330" y="130" width="230" height="790" rx="14" class="panel" stroke-width="1"/>
+  <text x="1350" y="166" font-size="20" class="b t" text-anchor="start">输出</text>
+  <text x="1350" y="190" font-size="13.5" class="m" text-anchor="start">观测日目录与 outputs/</text>
+  <rect x="1346" y="214" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="238" font-size="13" class="b mono t" text-anchor="start">&lt;观测日&gt;/fits_n/</text>
+  <text x="1360" y="258" font-size="13" class="t" text-anchor="start">预处理图 *_n.fit</text>
+  <text x="1360" y="276" font-size="12" class="m mono" text-anchor="start">pre</text>
+  <rect x="1346" y="298" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="322" font-size="13" class="b mono t" text-anchor="start">&lt;观测日&gt;/fits_reg/</text>
+  <text x="1360" y="342" font-size="13" class="t" text-anchor="start">检测星 *.fit.reg</text>
+  <text x="1360" y="360" font-size="12" class="m mono" text-anchor="start">detect</text>
+  <rect x="1346" y="382" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="406" font-size="13" class="b mono t" text-anchor="start">&lt;观测日&gt;/fits_ref/</text>
+  <text x="1360" y="426" font-size="13" class="t" text-anchor="start">参考星 *.ref.reg</text>
+  <text x="1360" y="444" font-size="12" class="m mono" text-anchor="start">match</text>
+  <rect x="1346" y="466" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="490" font-size="13" class="b mono t" text-anchor="start">&lt;观测日&gt;/fits_out/</text>
+  <text x="1360" y="510" font-size="13" class="t" text-anchor="start">object_N.out / final_*</text>
+  <text x="1360" y="528" font-size="12" class="m mono" text-anchor="start">match · comoc</text>
+  <rect x="1346" y="550" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="574" font-size="13" class="b mono t" text-anchor="start">outputs/results/</text>
+  <text x="1360" y="594" font-size="13" class="t" text-anchor="start">.dat · 00oc · OC_*.png</text>
+  <text x="1360" y="612" font-size="12" class="m mono" text-anchor="start">comoc · report</text>
+  <rect x="1346" y="634" width="198" height="72" rx="9" class="box" stroke-width="1"/>
+  <text x="1360" y="658" font-size="13" class="b mono t" text-anchor="start">outputs/runs/</text>
+  <text x="1360" y="678" font-size="13" class="t" text-anchor="start">manifest.json 运行记录</text>
+  <text x="1360" y="696" font-size="12" class="m mono" text-anchor="start">application</text>
+  <rect x="330" y="130" width="940" height="104" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="180.0" font-size="16" class="b t" text-anchor="start">入口层</text>
+  <text x="350" y="200.0" font-size="12.5" class="m mono" text-anchor="start">main.py · ui/</text>
+  <rect x="530" y="146" width="350.0" height="72" rx="10" class="app-t" stroke-width="1.2"/>
+  <rect x="530" y="146" width="350.0" height="72" rx="10" class="app-s" stroke-width="1.4"/>
+  <text x="705.0" y="179.0" font-size="15.5" class="b mono app-x" text-anchor="middle">python -m nspa.main</text>
+  <text x="705.0" y="199.0" font-size="12.5" class="m" text-anchor="middle">命令行：--step  --config</text>
+  <rect x="900.0" y="146" width="350.0" height="72" rx="10" class="app-t" stroke-width="1.2" style="stroke-dasharray:5 4"/>
+  <rect x="900.0" y="146" width="350.0" height="72" rx="10" class="app-s" stroke-width="1.4" style="stroke-dasharray:5 4"/>
+  <text x="1075.0" y="179.0" font-size="15.5" class="b mono app-x" text-anchor="middle">python ui/app.py</text>
+  <text x="1075.0" y="199.0" font-size="12.5" class="m" text-anchor="middle">Tkinter 界面：生成 _ui_run.cfg → 子进程调用 CLI</text>
+  <rect x="330" y="262" width="940" height="104" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="312.0" font-size="16" class="b t" text-anchor="start">配置 / 应用层</text>
+  <text x="350" y="332.0" font-size="12.5" class="m mono" text-anchor="start">config · application</text>
+  <rect x="530.0" y="278" width="226.66666666666666" height="72" rx="10" class="app-t" stroke-width="1.2"/>
+  <rect x="530.0" y="278" width="226.66666666666666" height="72" rx="10" class="app-s" stroke-width="1.4"/>
+  <text x="643.3333333333334" y="311.0" font-size="15.5" class="b mono app-x" text-anchor="middle">config.py</text>
+  <text x="643.3333333333334" y="331.0" font-size="12.5" class="m" text-anchor="middle">表驱动解析 + 按步骤校验</text>
+  <rect x="776.6666666666666" y="278" width="226.66666666666666" height="72" rx="10" class="app-t" stroke-width="1.2"/>
+  <rect x="776.6666666666666" y="278" width="226.66666666666666" height="72" rx="10" class="app-s" stroke-width="1.4"/>
+  <text x="890.0" y="311.0" font-size="15.5" class="b mono app-x" text-anchor="middle">paths.py</text>
+  <text x="890.0" y="331.0" font-size="12.5" class="m" text-anchor="middle">观测日展开与产物目录</text>
+  <rect x="1023.3333333333333" y="278" width="226.66666666666666" height="72" rx="10" class="app-t" stroke-width="1.2"/>
+  <rect x="1023.3333333333333" y="278" width="226.66666666666666" height="72" rx="10" class="app-s" stroke-width="1.4"/>
+  <text x="1136.6666666666665" y="311.0" font-size="15.5" class="b mono app-x" text-anchor="middle">application/</text>
+  <text x="1136.6666666666665" y="331.0" font-size="12.5" class="m" text-anchor="middle">PipelineRunner · manifest</text>
+  <rect x="330" y="394" width="940" height="124" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="454.0" font-size="16" class="b t" text-anchor="start">流程编排层</text>
+  <text x="350" y="474.0" font-size="12.5" class="m mono" text-anchor="start">nspa/core/</text>
+  <rect x="530.0" y="416" width="132.8" height="80" rx="10" class="pre-t" stroke-width="1.2"/>
+  <rect x="530.0" y="416" width="132.8" height="80" rx="10" class="pre-s" stroke-width="1.4"/>
+  <text x="596.4" y="453.0" font-size="15.5" class="b mono pre-x" text-anchor="middle">pre</text>
+  <text x="596.4" y="473.0" font-size="12.5" class="m" text-anchor="middle">preprocessor.py</text>
+  <path d="M663.8,456 h8" class="ar" stroke-width="1.6"/><path d="M675.8,456 l-5,-4 v8 Z" class="arf"/>
+  <rect x="676.8" y="416" width="132.8" height="80" rx="10" class="det-t" stroke-width="1.2"/>
+  <rect x="676.8" y="416" width="132.8" height="80" rx="10" class="det-s" stroke-width="1.4"/>
+  <text x="743.1999999999999" y="453.0" font-size="15.5" class="b mono det-x" text-anchor="middle">detect</text>
+  <text x="743.1999999999999" y="473.0" font-size="12.5" class="m" text-anchor="middle">detector.py</text>
+  <path d="M810.5999999999999,456 h8" class="ar" stroke-width="1.6"/><path d="M822.5999999999999,456 l-5,-4 v8 Z" class="arf"/>
+  <rect x="823.6" y="416" width="132.8" height="80" rx="10" class="mat-t" stroke-width="1.2"/>
+  <rect x="823.6" y="416" width="132.8" height="80" rx="10" class="mat-s" stroke-width="1.4"/>
+  <text x="890.0" y="453.0" font-size="15.5" class="b mono mat-x" text-anchor="middle">match</text>
+  <text x="890.0" y="473.0" font-size="12.5" class="m" text-anchor="middle">matcher.py</text>
+  <path d="M957.4000000000001,456 h8" class="ar" stroke-width="1.6"/><path d="M969.4000000000001,456 l-5,-4 v8 Z" class="arf"/>
+  <rect x="970.4000000000001" y="416" width="132.8" height="80" rx="10" class="com-t" stroke-width="1.2"/>
+  <rect x="970.4000000000001" y="416" width="132.8" height="80" rx="10" class="com-s" stroke-width="1.4"/>
+  <text x="1036.8000000000002" y="453.0" font-size="15.5" class="b mono com-x" text-anchor="middle">comoc</text>
+  <text x="1036.8000000000002" y="473.0" font-size="12.5" class="m" text-anchor="middle">analyzer.py</text>
+  <path d="M1104.2,456 h8" class="ar" stroke-width="1.6"/><path d="M1116.2,456 l-5,-4 v8 Z" class="arf"/>
+  <rect x="1117.2" y="416" width="132.8" height="80" rx="10" class="com-t" stroke-width="1.2" style="stroke-dasharray:5 4"/>
+  <rect x="1117.2" y="416" width="132.8" height="80" rx="10" class="com-s" stroke-width="1.4" style="stroke-dasharray:5 4"/>
+  <text x="1183.6000000000001" y="453.0" font-size="15.5" class="b mono com-x" text-anchor="middle">report</text>
+  <text x="1183.6000000000001" y="473.0" font-size="12.5" class="m" text-anchor="middle">reporter.py</text>
+  <rect x="330" y="546" width="940" height="150" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="619.0" font-size="16" class="b t" text-anchor="start">算法层</text>
+  <text x="350" y="639.0" font-size="12.5" class="m mono" text-anchor="start">domain · utils</text>
+  <rect x="530.0" y="560" width="353.0" height="58" rx="10" class="box" stroke-width="1.2"/>
+  <text x="544.0" y="584" font-size="13.5" class="b mono t" text-anchor="start">domain/astrometry.py</text>
+  <text x="544.0" y="605" font-size="12.5" class="m" text-anchor="start">坐标变换 · 视场取星与自行改正 · 底片常数解算</text>
+  <rect x="897.0" y="560" width="353.0" height="58" rx="10" class="box" stroke-width="1.2"/>
+  <text x="911.0" y="584" font-size="13.5" class="b mono t" text-anchor="start">domain/matching.py</text>
+  <text x="911.0" y="605" font-size="12.5" class="m" text-anchor="start">盲搜粗匹配（KD-tree） · 精化 · 再匹配 · prepar</text>
+  <rect x="530.0" y="626" width="353.0" height="58" rx="10" class="box" stroke-width="1.2"/>
+  <text x="544.0" y="650" font-size="13.5" class="b mono t" text-anchor="start">utils/image_utils.py</text>
+  <text x="544.0" y="671" font-size="12.5" class="m" text-anchor="start">背景估计 · 中值/同态/Retinex · 连通域 · 修正矩</text>
+  <rect x="897.0" y="626" width="353.0" height="58" rx="10" class="box" stroke-width="1.2"/>
+  <text x="911.0" y="650" font-size="13.5" class="b mono t" text-anchor="start">utils/math_utils.py</text>
+  <text x="911.0" y="671" font-size="12.5" class="m" text-anchor="start">拉格朗日插值 · O-C 迭代野值剔除</text>
+  <rect x="330" y="724" width="940" height="104" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="774.0" font-size="16" class="b t" text-anchor="start">文件 I/O 层</text>
+  <text x="350" y="794.0" font-size="12.5" class="m mono" text-anchor="start">nspa/io/</text>
+  <rect x="530.0" y="740" width="226.66666666666666" height="72" rx="10" class="box" stroke-width="1.2"/>
+  <text x="643.3333333333334" y="773.0" font-size="15.5" class="b mono t" text-anchor="middle">fits_io.py</text>
+  <text x="643.3333333333334" y="793.0" font-size="12.5" class="m" text-anchor="middle">FITS 读写 · 多望远镜头时间解析</text>
+  <rect x="776.6666666666666" y="740" width="226.66666666666666" height="72" rx="10" class="box" stroke-width="1.2"/>
+  <text x="890.0" y="773.0" font-size="15.5" class="b mono t" text-anchor="middle">catalog_io.py</text>
+  <text x="890.0" y="793.0" font-size="12.5" class="m" text-anchor="middle">GAIA 星表 · IMCCE 历表</text>
+  <rect x="1023.3333333333333" y="740" width="226.66666666666666" height="72" rx="10" class="box" stroke-width="1.2"/>
+  <text x="1136.6666666666665" y="773.0" font-size="15.5" class="b mono t" text-anchor="middle">text_io.py</text>
+  <text x="1136.6666666666665" y="793.0" font-size="12.5" class="m" text-anchor="middle">.reg · object_N.out · 统计文件</text>
+  <rect x="330" y="856" width="940" height="64" rx="14" class="panel" stroke-width="1"/>
+  <text x="350" y="886.0" font-size="16" class="b t" text-anchor="start">数据模型</text>
+  <text x="350" y="906.0" font-size="12.5" class="m mono" text-anchor="start">domain/models.py</text>
+  <text x="530" y="894" font-size="13" class="t" text-anchor="start">DetectedStar · GaiaCatalog · Ephemeris · PlateConstants · MatchResult · ObjectObservation · OCStats</text>
+  <line x1="890.0" y1="234" x2="890.0" y2="256" class="ar" stroke-width="2"/><path d="M885.0,255 L895.0,255 L890.0,262 Z" class="arf"/>
+  <line x1="890.0" y1="366" x2="890.0" y2="388" class="ar" stroke-width="2"/><path d="M885.0,387 L895.0,387 L890.0,394 Z" class="arf"/>
+  <line x1="890.0" y1="518" x2="890.0" y2="540" class="ar" stroke-width="2"/><path d="M885.0,539 L895.0,539 L890.0,546 Z" class="arf"/>
+  <line x1="890.0" y1="696" x2="890.0" y2="718" class="ar" stroke-width="2"/><path d="M885.0,717 L895.0,717 L890.0,724 Z" class="arf"/>
+  <path d="M270,456 H324" class="ar" stroke-width="2.4"/><path d="M330,456 l-11,-7 v14 Z" class="arf"/>
+  <path d="M1270,456 H1324" class="ar" stroke-width="2.4"/><path d="M1330,456 l-11,-7 v14 Z" class="arf"/>
+  </svg>

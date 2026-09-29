@@ -1,0 +1,301 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1440" width="1600" height="1440" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">NSPA 主处理流程：四个核心模块</title>
+  <desc id="desc">pre 图像预处理、detect 星象检测与定心、match 参考星匹配与底片归算、comoc O-C 统计（含 report 绘图输出）四个模块的内部逻辑与数据衔接。</desc>
+  <style>
+    text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif}
+    .mono{font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace}
+    .b{font-weight:700}
+    .bg{fill:#ffffff}
+    .panel{fill:#f6f8fa;stroke:#d0d7de}
+    .box{fill:#ffffff;stroke:#d0d7de}
+    .chip{fill:#eef1f4;stroke:#d0d7de}
+    .t{fill:#1f2328}
+    .m{fill:#59636e}
+    .ar{stroke:#8c959f;fill:none}
+    .arf{fill:#8c959f}
+    .bgs{stroke:#ffffff}
+    .pre-f{fill:#0e8f7e}
+    .pre-s{stroke:#0e8f7e;fill:none}
+    .pre-t{fill:#0e8f7e;fill-opacity:0.1}
+    .pre-x{fill:#0e8f7e}
+    .det-f{fill:#c26a00}
+    .det-s{stroke:#c26a00;fill:none}
+    .det-t{fill:#c26a00;fill-opacity:0.1}
+    .det-x{fill:#c26a00}
+    .mat-f{fill:#2f6fd6}
+    .mat-s{stroke:#2f6fd6;fill:none}
+    .mat-t{fill:#2f6fd6;fill-opacity:0.1}
+    .mat-x{fill:#2f6fd6}
+    .com-f{fill:#a63d8c}
+    .com-s{stroke:#a63d8c;fill:none}
+    .com-t{fill:#a63d8c;fill-opacity:0.1}
+    .com-x{fill:#a63d8c}
+    .app-f{fill:#57606a}
+    .app-s{stroke:#57606a;fill:none}
+    .app-t{fill:#57606a;fill-opacity:0.1}
+    .app-x{fill:#57606a}
+    @media (prefers-color-scheme: dark) {
+    .bg{fill:#0d1117}
+    .panel{fill:#161b22;stroke:#30363d}
+    .box{fill:#0d1117;stroke:#30363d}
+    .chip{fill:#21262d;stroke:#30363d}
+    .t{fill:#e6edf3}
+    .m{fill:#9da7b3}
+    .ar{stroke:#6e7681;fill:none}
+    .arf{fill:#6e7681}
+    .bgs{stroke:#0d1117}
+    .pre-f{fill:#2cc3ad}
+    .pre-s{stroke:#2cc3ad;fill:none}
+    .pre-t{fill:#2cc3ad;fill-opacity:0.16}
+    .pre-x{fill:#2cc3ad}
+    .det-f{fill:#f0a33a}
+    .det-s{stroke:#f0a33a;fill:none}
+    .det-t{fill:#f0a33a;fill-opacity:0.16}
+    .det-x{fill:#f0a33a}
+    .mat-f{fill:#6aa5f5}
+    .mat-s{stroke:#6aa5f5;fill:none}
+    .mat-t{fill:#6aa5f5;fill-opacity:0.16}
+    .mat-x{fill:#6aa5f5}
+    .com-f{fill:#e27cc6}
+    .com-s{stroke:#e27cc6;fill:none}
+    .com-t{fill:#e27cc6;fill-opacity:0.16}
+    .com-x{fill:#e27cc6}
+    .app-f{fill:#9da7b3}
+    .app-s{stroke:#9da7b3;fill:none}
+    .app-t{fill:#9da7b3;fill-opacity:0.16}
+    .app-x{fill:#9da7b3}
+    }
+  </style>
+  <rect x="0" y="0" width="1600" height="1440" rx="20" class="bg" stroke-width="1"/>
+  <text x="40" y="62" font-size="30" class="b t" text-anchor="start">NSPA 主处理流程 · 四个核心模块</text>
+  <text x="40" y="96" font-size="16" class="m" text-anchor="start">每个观测日目录 YYYYMMDD/fits 依次流经 pre → detect → match → comoc；report 作为第 5 步读取汇总结果绘制 O-C 图。</text>
+  <rect x="40" y="112" width="53" height="24" rx="12" class="pre-t pre-s" stroke-width="1.2"/>
+  <text x="66.5" y="129" font-size="13" class="b mono pre-x" text-anchor="middle">pre</text>
+  <path d="M99,124 h14" class="ar" stroke-width="1.6"/><path d="M119,124 l-7,-4.5 v9 Z" class="arf"/>
+  <rect x="125" y="112" width="86" height="24" rx="12" class="det-t det-s" stroke-width="1.2"/>
+  <text x="168.0" y="129" font-size="13" class="b mono det-x" text-anchor="middle">detect</text>
+  <path d="M217,124 h14" class="ar" stroke-width="1.6"/><path d="M237,124 l-7,-4.5 v9 Z" class="arf"/>
+  <rect x="243" y="112" width="75" height="24" rx="12" class="mat-t mat-s" stroke-width="1.2"/>
+  <text x="280.5" y="129" font-size="13" class="b mono mat-x" text-anchor="middle">match</text>
+  <path d="M324,124 h14" class="ar" stroke-width="1.6"/><path d="M344,124 l-7,-4.5 v9 Z" class="arf"/>
+  <rect x="350" y="112" width="75" height="24" rx="12" class="com-t com-s" stroke-width="1.2"/>
+  <text x="387.5" y="129" font-size="13" class="b mono com-x" text-anchor="middle">comoc</text>
+  <path d="M431,124 h14" class="ar" stroke-width="1.6"/><path d="M451,124 l-7,-4.5 v9 Z" class="arf"/>
+  <rect x="457" y="112" width="86" height="24" rx="12" class="com-t com-s" stroke-width="1.2" style="stroke-dasharray:4 3"/>
+  <text x="500.0" y="129" font-size="13" class="b mono com-x" text-anchor="middle">report</text>
+  <text x="557" y="129" font-size="13" class="m mono" text-anchor="start">python -m nspa.main --step all | pre | detect | match | comoc | report</text>
+  <g id="panel-pre">
+  <rect x="40" y="150" width="730" height="590" rx="16" class="panel" stroke-width="1"/>
+  <path d="M40,166 a16,16 0 0 1 16,-16 h698 a16,16 0 0 1 16,16 v52 h-730 Z" class="pre-t"/>
+  <rect x="40" y="166" width="5" height="558" class="pre-f"/>
+  <circle cx="80" cy="184" r="17" class="pre-f"/>
+  <text x="80" y="190" font-size="18" class="b" text-anchor="middle" fill="#ffffff">1</text>
+  <text x="108" y="192" font-size="22" class="b mono pre-x" text-anchor="start">pre</text>
+  <text x="162.5" y="192" font-size="21" class="b t" text-anchor="start">图像预处理</text>
+  <text x="748" y="238" font-size="12.5" class="m mono" text-anchor="end">nspa/core/preprocessor.py · utils/image_utils.py</text>
+  <rect x="64" y="252" width="682" height="34" rx="8" class="chip" stroke-width="1"/>
+  <rect x="64" y="252" width="52" height="34" rx="8" class="pre-f" stroke-width="1"/>
+  <text x="90" y="274" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输入</text>
+  <text x="130" y="274" font-size="14" class="t" text-anchor="start">fits/*.fit　原始 CCD 观测图像（每个观测日一个目录）</text>
+  <line x1="405.0" y1="286" x2="405.0" y2="296" class="ar" stroke-width="1.6"/><path d="M400.0,295 L410.0,295 L405.0,302 Z" class="arf"/>
+  <rect x="64" y="302" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="329.0" r="11" class="pre-t"/>
+  <text x="86" y="334.0" font-size="13" class="b pre-x" text-anchor="middle">1</text>
+  <text x="108" y="325" font-size="15" class="b t" text-anchor="start">迭代 σ-clipping 背景估计</text>
+  <text x="108" y="345" font-size="13" class="m" text-anchor="start">2.6σ 截断迭代收敛，得到背景均值 bkgd 与噪声 σ</text>
+  <line x1="405.0" y1="356" x2="405.0" y2="366" class="ar" stroke-width="1.6"/><path d="M400.0,365 L410.0,365 L405.0,372 Z" class="arf"/>
+  <rect x="64" y="372" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="399.0" r="11" class="pre-t"/>
+  <text x="86" y="404.0" font-size="13" class="b pre-x" text-anchor="middle">2</text>
+  <text x="108" y="394" font-size="15" class="b t" text-anchor="start">按 superflag 选择背景处理算法</text>
+  <rect x="108" y="402" width="60.8" height="19" rx="9.5" class="pre-t" stroke-width="1"/>
+  <text x="138.4" y="416" font-size="12" class="pre-x" text-anchor="middle">0 跳过</text>
+  <rect x="176.8" y="402" width="109.60000000000001" height="19" rx="9.5" class="pre-f" stroke-width="1"/>
+  <text x="231.60000000000002" y="416" font-size="12" class="b" text-anchor="middle" fill="#ffffff">1 中值超级背景</text>
+  <rect x="294.40000000000003" y="402" width="85.2" height="19" rx="9.5" class="pre-t" stroke-width="1"/>
+  <text x="337.00000000000006" y="416" font-size="12" class="pre-x" text-anchor="middle">2 同态滤波</text>
+  <rect x="387.6" y="402" width="118.40000000000002" height="19" rx="9.5" class="pre-t" stroke-width="1"/>
+  <text x="446.8" y="416" font-size="12" class="pre-x" text-anchor="middle">3 双边 Retinex</text>
+  <line x1="405.0" y1="426" x2="405.0" y2="436" class="ar" stroke-width="1.6"/><path d="M400.0,435 L410.0,435 L405.0,442 Z" class="arf"/>
+  <rect x="64" y="442" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="469.0" r="11" class="pre-t"/>
+  <text x="86" y="474.0" font-size="13" class="b pre-x" text-anchor="middle">3</text>
+  <text x="108" y="465" font-size="15" class="b t" text-anchor="start">超级背景中值滤波（superflag=1）</text>
+  <text x="108" y="485" font-size="13" class="m" text-anchor="start">带状核 L×1 → 1×L 串联去条纹，或二维矩形核；bkgdmode 1 除法 / 2 减法</text>
+  <line x1="405.0" y1="496" x2="405.0" y2="506" class="ar" stroke-width="1.6"/><path d="M400.0,505 L410.0,505 L405.0,512 Z" class="arf"/>
+  <rect x="64" y="512" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="539.0" r="11" class="pre-t"/>
+  <text x="86" y="544.0" font-size="13" class="b pre-x" text-anchor="middle">4</text>
+  <text x="108" y="535" font-size="15" class="b t" text-anchor="start">可选 3×3 均值平滑（enhance_flag=1）</text>
+  <text x="108" y="555" font-size="13" class="m" text-anchor="start">仅作用于中值模式；各模式结果均写为 fits_n/&lt;原名&gt;_n.fit</text>
+  <line x1="405.0" y1="566" x2="405.0" y2="576" class="ar" stroke-width="1.6"/><path d="M400.0,575 L410.0,575 L405.0,582 Z" class="arf"/>
+  <rect x="64" y="582" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="609.0" r="11" class="pre-t"/>
+  <text x="86" y="614.0" font-size="13" class="b pre-x" text-anchor="middle">5</text>
+  <text x="108" y="605" font-size="15" class="b t" text-anchor="start">文件级多进程并行</text>
+  <text x="108" y="625" font-size="13" class="m" text-anchor="start">ProcessPoolExecutor，中值实现 auto：bottleneck / scipy 多线程</text>
+  <line x1="405.0" y1="636" x2="405.0" y2="646" class="ar" stroke-width="1.6"/><path d="M400.0,645 L410.0,645 L405.0,652 Z" class="arf"/>
+  <rect x="64" y="652" width="682" height="34" rx="8" class="chip" stroke-width="1.5" style="stroke-dasharray:0"/>
+  <rect x="64" y="652" width="52" height="34" rx="8" class="pre-f" stroke-width="1"/>
+  <text x="90" y="674" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输出</text>
+  <text x="130" y="674" font-size="14" class="b t" text-anchor="start">fits_n/*_n.fit　背景扣除后的图像</text>
+  <text x="64" y="716" font-size="12.5" class="m mono" text-anchor="start">关键参数  1superflag · 1med_length · 1med_width · 1bkgdmode · 1enhance_flag</text>
+  </g>
+  <g id="panel-detect">
+  <rect x="830" y="150" width="730" height="590" rx="16" class="panel" stroke-width="1"/>
+  <path d="M830,166 a16,16 0 0 1 16,-16 h698 a16,16 0 0 1 16,16 v52 h-730 Z" class="det-t"/>
+  <rect x="830" y="166" width="5" height="558" class="det-f"/>
+  <circle cx="870" cy="184" r="17" class="det-f"/>
+  <text x="870" y="190" font-size="18" class="b" text-anchor="middle" fill="#ffffff">2</text>
+  <text x="898" y="192" font-size="22" class="b mono det-x" text-anchor="start">detect</text>
+  <text x="993.0" y="192" font-size="21" class="b t" text-anchor="start">星象检测与定心</text>
+  <text x="1538" y="238" font-size="12.5" class="m mono" text-anchor="end">nspa/core/detector.py · utils/image_utils.py</text>
+  <rect x="854" y="252" width="682" height="34" rx="8" class="chip" stroke-width="1"/>
+  <rect x="854" y="252" width="52" height="34" rx="8" class="det-f" stroke-width="1"/>
+  <text x="880" y="274" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输入</text>
+  <text x="920" y="274" font-size="14" class="t" text-anchor="start">fits_n/*_n.fit（superflag=0 时直接读取原图）</text>
+  <line x1="1195.0" y1="286" x2="1195.0" y2="296" class="ar" stroke-width="1.6"/><path d="M1190.0,295 L1200.0,295 L1195.0,302 Z" class="arf"/>
+  <rect x="854" y="302" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="329.0" r="11" class="det-t"/>
+  <text x="876" y="334.0" font-size="13" class="b det-x" text-anchor="middle">1</text>
+  <text x="898" y="325" font-size="15" class="b t" text-anchor="start">阈值分割</text>
+  <text x="898" y="345" font-size="13" class="m" text-anchor="start">保留像素 &gt; bkgd + k·σ（k = 2bkgd_threshold），最外一圈清零</text>
+  <line x1="1195.0" y1="356" x2="1195.0" y2="366" class="ar" stroke-width="1.6"/><path d="M1190.0,365 L1200.0,365 L1195.0,372 Z" class="arf"/>
+  <rect x="854" y="372" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="399.0" r="11" class="det-t"/>
+  <text x="876" y="404.0" font-size="13" class="b det-x" text-anchor="middle">2</text>
+  <text x="898" y="395" font-size="15" class="b t" text-anchor="start">连通域标号</text>
+  <text x="898" y="415" font-size="13" class="m" text-anchor="start">fortran 三段式（numba 加速，含子区域合并）或 scipy 8 连通</text>
+  <line x1="1195.0" y1="426" x2="1195.0" y2="436" class="ar" stroke-width="1.6"/><path d="M1190.0,435 L1200.0,435 L1195.0,442 Z" class="arf"/>
+  <rect x="854" y="442" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="469.0" r="11" class="det-t"/>
+  <text x="876" y="474.0" font-size="13" class="b det-x" text-anchor="middle">3</text>
+  <text x="898" y="465" font-size="15" class="b t" text-anchor="start">星象筛选</text>
+  <text x="898" y="485" font-size="13" class="m" text-anchor="start">10 ≤ 像素数 ≤ π·40²，排除 10 px 边缘，标记饱和星象</text>
+  <line x1="1195.0" y1="496" x2="1195.0" y2="506" class="ar" stroke-width="1.6"/><path d="M1190.0,505 L1200.0,505 L1195.0,512 Z" class="arf"/>
+  <rect x="854" y="512" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="539.0" r="11" class="det-t"/>
+  <text x="876" y="544.0" font-size="13" class="b det-x" text-anchor="middle">4</text>
+  <text x="898" y="535" font-size="15" class="b t" text-anchor="start">修正矩定心</text>
+  <text x="898" y="555" font-size="13" class="m" text-anchor="start">以 I^p 加权求形心，p = 2pos_method（1 / 2 / 3 阶）</text>
+  <line x1="1195.0" y1="566" x2="1195.0" y2="576" class="ar" stroke-width="1.6"/><path d="M1190.0,575 L1200.0,575 L1195.0,582 Z" class="arf"/>
+  <rect x="854" y="582" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="609.0" r="11" class="det-t"/>
+  <text x="876" y="614.0" font-size="13" class="b det-x" text-anchor="middle">5</text>
+  <text x="898" y="605" font-size="15" class="b t" text-anchor="start">信噪比与排序</text>
+  <text x="898" y="625" font-size="13" class="m" text-anchor="start">SNR = ΣI / √(ΣI + N·σ²)，按流量降序，SNR 阈值后输出</text>
+  <line x1="1195.0" y1="636" x2="1195.0" y2="646" class="ar" stroke-width="1.6"/><path d="M1190.0,645 L1200.0,645 L1195.0,652 Z" class="arf"/>
+  <rect x="854" y="652" width="682" height="34" rx="8" class="chip" stroke-width="1.5" style="stroke-dasharray:0"/>
+  <rect x="854" y="652" width="52" height="34" rx="8" class="det-f" stroke-width="1"/>
+  <text x="880" y="674" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输出</text>
+  <text x="920" y="674" font-size="14" class="b t" text-anchor="start">fits_reg/*.fit.reg　DS9 区域文件（x, y, 流量, SNR）</text>
+  <text x="854" y="716" font-size="12.5" class="m mono" text-anchor="start">关键参数  2bkgd_threshold · 2snr_threshold · 2pos_method · 2connectivity</text>
+  </g>
+  <g id="panel-match">
+  <rect x="830" y="796" width="730" height="590" rx="16" class="panel" stroke-width="1"/>
+  <path d="M830,812 a16,16 0 0 1 16,-16 h698 a16,16 0 0 1 16,16 v52 h-730 Z" class="mat-t"/>
+  <rect x="830" y="812" width="5" height="558" class="mat-f"/>
+  <circle cx="870" cy="830" r="17" class="mat-f"/>
+  <text x="870" y="836" font-size="18" class="b" text-anchor="middle" fill="#ffffff">3</text>
+  <text x="898" y="838" font-size="22" class="b mono mat-x" text-anchor="start">match</text>
+  <text x="979.5" y="838" font-size="21" class="b t" text-anchor="start">参考星匹配与底片归算</text>
+  <text x="1538" y="884" font-size="12.5" class="m mono" text-anchor="end">nspa/core/matcher.py · domain/matching.py · astrometry.py</text>
+  <rect x="854" y="898" width="682" height="34" rx="8" class="chip" stroke-width="1"/>
+  <rect x="854" y="898" width="52" height="34" rx="8" class="mat-f" stroke-width="1"/>
+  <text x="880" y="920" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输入</text>
+  <text x="920" y="920" font-size="14" class="t" text-anchor="start">*.fit.reg　+ GAIA 星表　+ IMCCE 格式历表　+ FITS 头观测时刻</text>
+  <line x1="1195.0" y1="932" x2="1195.0" y2="942" class="ar" stroke-width="1.6"/><path d="M1190.0,941 L1200.0,941 L1195.0,948 Z" class="arf"/>
+  <rect x="854" y="948" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="975.0" r="11" class="mat-t"/>
+  <text x="876" y="980.0" font-size="13" class="b mat-x" text-anchor="middle">1</text>
+  <text x="898" y="971" font-size="15" class="b t" text-anchor="start">历表插值与视场取星</text>
+  <text x="898" y="991" font-size="13" class="m" text-anchor="start">拉格朗日插值得到目标预报位置；截取视场内 GAIA 星并做自行改正</text>
+  <line x1="1195.0" y1="1002" x2="1195.0" y2="1012" class="ar" stroke-width="1.6"/><path d="M1190.0,1011 L1200.0,1011 L1195.0,1018 Z" class="arf"/>
+  <rect x="854" y="1018" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="1045.0" r="11" class="mat-t"/>
+  <text x="876" y="1050.0" font-size="13" class="b mat-x" text-anchor="middle">2</text>
+  <text x="898" y="1041" font-size="15" class="b t" text-anchor="start">盲搜粗匹配</text>
+  <text x="898" y="1061" font-size="13" class="m" text-anchor="start">逐颗检测星假设为目标，KD-tree 与 GAIA 交叉匹配，匹配数最多者胜出</text>
+  <line x1="1195.0" y1="1072" x2="1195.0" y2="1082" class="ar" stroke-width="1.6"/><path d="M1190.0,1081 L1200.0,1081 L1195.0,1088 Z" class="arf"/>
+  <rect x="854" y="1088" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="1115.0" r="11" class="mat-t"/>
+  <text x="876" y="1120.0" font-size="13" class="b mat-x" text-anchor="middle">3</text>
+  <text x="898" y="1111" font-size="15" class="b t" text-anchor="start">底片常数解算</text>
+  <text x="898" y="1131" font-size="13" class="m" text-anchor="start">6 / 12 / 20 项多项式底片模型，迭代最小二乘，2.6σ 剔除参考星</text>
+  <line x1="1195.0" y1="1142" x2="1195.0" y2="1152" class="ar" stroke-width="1.6"/><path d="M1190.0,1151 L1200.0,1151 L1195.0,1158 Z" class="arf"/>
+  <rect x="854" y="1158" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="1185.0" r="11" class="mat-t"/>
+  <text x="876" y="1190.0" font-size="13" class="b mat-x" text-anchor="middle">4</text>
+  <text x="898" y="1181" font-size="15" class="b t" text-anchor="start">全图再匹配与目标定位</text>
+  <text x="898" y="1201" font-size="13" class="m" text-anchor="start">历表位置反演到像素，3 px 内取检测星 → 观测 (α, δ)</text>
+  <line x1="1195.0" y1="1212" x2="1195.0" y2="1222" class="ar" stroke-width="1.6"/><path d="M1190.0,1221 L1200.0,1221 L1195.0,1228 Z" class="arf"/>
+  <rect x="854" y="1228" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="876" cy="1255.0" r="11" class="mat-t"/>
+  <text x="876" y="1260.0" font-size="13" class="b mat-x" text-anchor="middle">5</text>
+  <text x="898" y="1251" font-size="15" class="b t" text-anchor="start">同图多目标复用（prepar）</text>
+  <text x="898" y="1271" font-size="13" class="m" text-anchor="start">底片常数残差与匹配星数达标时，后续目标直接复用</text>
+  <line x1="1195.0" y1="1282" x2="1195.0" y2="1292" class="ar" stroke-width="1.6"/><path d="M1190.0,1291 L1200.0,1291 L1195.0,1298 Z" class="arf"/>
+  <rect x="854" y="1298" width="682" height="34" rx="8" class="chip" stroke-width="1.5" style="stroke-dasharray:0"/>
+  <rect x="854" y="1298" width="52" height="34" rx="8" class="mat-f" stroke-width="1"/>
+  <text x="880" y="1320" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输出</text>
+  <text x="920" y="1320" font-size="14" class="b t" text-anchor="start">fits_ref/*.ref.reg　+　fits_out/object_N.out（O、C、σ₀）</text>
+  <text x="854" y="1362" font-size="12.5" class="m mono" text-anchor="start">关键参数  3tele_label · 3modeltype · 3plate_angle · 3match_limit · 3gaia_*mag</text>
+  </g>
+  <g id="panel-comoc">
+  <rect x="40" y="796" width="730" height="590" rx="16" class="panel" stroke-width="1"/>
+  <path d="M40,812 a16,16 0 0 1 16,-16 h698 a16,16 0 0 1 16,16 v52 h-730 Z" class="com-t"/>
+  <rect x="40" y="812" width="5" height="558" class="com-f"/>
+  <circle cx="80" cy="830" r="17" class="com-f"/>
+  <text x="80" y="836" font-size="18" class="b" text-anchor="middle" fill="#ffffff">4</text>
+  <text x="108" y="838" font-size="22" class="b mono com-x" text-anchor="start">comoc + report</text>
+  <text x="311.0" y="838" font-size="21" class="b t" text-anchor="start">O-C 统计与报告</text>
+  <text x="748" y="884" font-size="12.5" class="m mono" text-anchor="end">nspa/core/analyzer.py · core/reporter.py</text>
+  <rect x="64" y="898" width="682" height="34" rx="8" class="chip" stroke-width="1"/>
+  <rect x="64" y="898" width="52" height="34" rx="8" class="com-f" stroke-width="1"/>
+  <text x="90" y="920" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输入</text>
+  <text x="130" y="920" font-size="14" class="t" text-anchor="start">fits_out/object_N.out　逐图观测位置与历表位置</text>
+  <line x1="405.0" y1="932" x2="405.0" y2="942" class="ar" stroke-width="1.6"/><path d="M400.0,941 L410.0,941 L405.0,948 Z" class="arf"/>
+  <rect x="64" y="948" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="975.0" r="11" class="com-t"/>
+  <text x="86" y="980.0" font-size="13" class="b com-x" text-anchor="middle">1</text>
+  <text x="108" y="971" font-size="15" class="b t" text-anchor="start">逐日逐目标读取 O-C</text>
+  <text x="108" y="991" font-size="13" class="m" text-anchor="start">Δα·cosδ 与 Δδ（角秒）</text>
+  <line x1="405.0" y1="1002" x2="405.0" y2="1012" class="ar" stroke-width="1.6"/><path d="M400.0,1011 L410.0,1011 L405.0,1018 Z" class="arf"/>
+  <rect x="64" y="1018" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="1045.0" r="11" class="com-t"/>
+  <text x="86" y="1050.0" font-size="13" class="b com-x" text-anchor="middle">2</text>
+  <text x="108" y="1041" font-size="15" class="b t" text-anchor="start">迭代野值剔除</text>
+  <text x="108" y="1061" font-size="13" class="m" text-anchor="start">|x − x̄| &lt; k·σ 且 |O-C| &lt; eps，直到样本数不再减少</text>
+  <line x1="405.0" y1="1072" x2="405.0" y2="1082" class="ar" stroke-width="1.6"/><path d="M400.0,1081 L410.0,1081 L405.0,1088 Z" class="arf"/>
+  <rect x="64" y="1088" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="1115.0" r="11" class="com-t"/>
+  <text x="86" y="1120.0" font-size="13" class="b com-x" text-anchor="middle">3</text>
+  <text x="108" y="1111" font-size="15" class="b t" text-anchor="start">单日质量门限</text>
+  <text x="108" y="1131" font-size="13" class="m" text-anchor="start">剔除后 σ &lt; 0.3″ 且样本数 &gt; 1 才保留该日数据</text>
+  <line x1="405.0" y1="1142" x2="405.0" y2="1152" class="ar" stroke-width="1.6"/><path d="M400.0,1151 L410.0,1151 L405.0,1158 Z" class="arf"/>
+  <rect x="64" y="1158" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="1185.0" r="11" class="com-t"/>
+  <text x="86" y="1190.0" font-size="13" class="b com-x" text-anchor="middle">4</text>
+  <text x="108" y="1181" font-size="15" class="b t" text-anchor="start">汇总输出</text>
+  <text x="108" y="1201" font-size="13" class="m" text-anchor="start">final_oc / final_object、00oc_N.out、跨日 &lt;目录名&gt;N.dat</text>
+  <line x1="405.0" y1="1212" x2="405.0" y2="1222" class="ar" stroke-width="1.6"/><path d="M400.0,1221 L410.0,1221 L405.0,1228 Z" class="arf"/>
+  <rect x="64" y="1228" width="682" height="54" rx="9" class="box" stroke-width="1"/>
+  <circle cx="86" cy="1255.0" r="11" class="com-t"/>
+  <text x="86" y="1260.0" font-size="13" class="b com-x" text-anchor="middle">5</text>
+  <text x="108" y="1251" font-size="15" class="b t" text-anchor="start">report：O-C 散点图（第 5 步辅助模块）</text>
+  <text x="108" y="1271" font-size="13" class="m" text-anchor="start">扫描 *N.dat → OC_summary.png + 每目标 OC_U{N}.png</text>
+  <line x1="405.0" y1="1282" x2="405.0" y2="1292" class="ar" stroke-width="1.6"/><path d="M400.0,1291 L410.0,1291 L405.0,1298 Z" class="arf"/>
+  <rect x="64" y="1298" width="682" height="34" rx="8" class="chip" stroke-width="1.5" style="stroke-dasharray:0"/>
+  <rect x="64" y="1298" width="52" height="34" rx="8" class="com-f" stroke-width="1"/>
+  <text x="90" y="1320" font-size="13.5" class="b" text-anchor="middle" fill="#ffffff">输出</text>
+  <text x="130" y="1320" font-size="14" class="b t" text-anchor="start">4specified-output/　.dat · .out · OC_*.png</text>
+  <text x="64" y="1362" font-size="12.5" class="m mono" text-anchor="start">关键参数  4eps · 4std_limit · 4mean_limit · 4specified-output · 4del_flag</text>
+  </g>
+  <line x1="778" y1="275" x2="820" y2="275" class="ar" stroke-width="3" stroke-linecap="round"/>
+  <path d="M822,275 l-12,-8 v16 Z" class="arf"/>
+  <line x1="1195.0" y1="748" x2="1195.0" y2="786" class="ar" stroke-width="3" stroke-linecap="round"/>
+  <path d="M1195.0,788 l-8,-12 h16 Z" class="arf"/>
+  <line x1="822" y1="921" x2="780" y2="921" class="ar" stroke-width="3" stroke-linecap="round"/>
+  <path d="M778,921 l12,-8 v16 Z" class="arf"/>
+  <text x="40" y="1416" font-size="13.5" class="m" text-anchor="start">应用层 nspa/application：PipelineRunner 依次执行所选步骤，逐步记录耗时、告警与失败项，写入 outputs/runs/&lt;run_id&gt;/manifest.json。</text>
+  </svg>
