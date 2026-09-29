@@ -193,44 +193,7 @@ outputs/runs/<run_id>/manifest.json
 
 以下内容全部来自仓库中已提交的结果文件，没有为 README 重新运行处理流程。
 
-### 1. 星象检测算子与 DrizzlePac 对照
-
-> 图中的 **ADIAS** 是本项目更名为 NSPA 之前的实验名称，指 NSPA 的 `pre` + `detect` 算子。
-
-实验在 2023-11 的两帧 2048×2048 观测图上分别调用 NSPA 的预处理/检测算子和 DrizzlePac 的检测/定心算子，
-**没有运行完整的 NSPA 流水线**。完整数据见 [`outputs/operator_comparison/`](outputs/operator_comparison/)
-和 [`outputs/drizzlepac_demo/`](outputs/drizzlepac_demo/)。
-
-| 帧 | 方法 | 初始检测 | 最终输出 | 两边最终星表 3 px 内重合 | 共同星的质心差 |
-|---|---|---:|---:|---:|---|
-| `S0_20231114114611B` | NSPA（ADIAS）算子 | 38 | 38 | 5 | 0.050 – 0.286 px（5 颗） |
-|  | DrizzlePac | 16 | 7 | | |
-| `S0_20231115112358B` | NSPA（ADIAS）算子 | 16 | 15 | 1 | 0.040 px（1 颗） |
-|  | DrizzlePac | 136 | 2 | | |
-
-<table>
-  <tr>
-    <td width="50%"><img src="outputs/operator_comparison/S0_20231114114611B/adias_vs_drizzlepac_overview.png" alt="S0_20231114114611B：NSPA（ADIAS）算子与 DrizzlePac 检测结果对照"></td>
-    <td width="50%"><img src="outputs/operator_comparison/S0_20231115112358B/adias_vs_drizzlepac_overview.png" alt="S0_20231115112358B：NSPA（ADIAS）算子与 DrizzlePac 检测结果对照"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>S0_20231114114611B（绿圈：NSPA/ADIAS；方框：DrizzlePac）</sub></td>
-    <td align="center"><sub>S0_20231115112358B</sub></td>
-  </tr>
-</table>
-
-**比较条件与局限**
-
-- 两种方法的参数不同：NSPA 算子使用 45×1 与 1×45 两次中值背景扣除、3×3 均值平滑、3.5σ 阈值、
-  Fortran 连通域和一阶修正矩（参数来自 `adias2023S0.cfg`，该文件未提交到仓库）；DrizzlePac 使用 FWHM = 3.5 px 的高斯卷积、
-  DAOFIND 风格的质心，以及 sharpness/roundness 筛选。
-- **检测数量不代表精度。** 两种方法筛选目标的标准不同，数量多少不能说明哪种方法更准确，两帧的数量对比方向也正好相反。
-- 质心差只基于 5 颗和 1 颗共同星，只能说明两种定心方法在这些星上结果接近，**不是**对真值的精度评估。
-- 预处理后背景 σ 从 8.47 降到 1.51 ADU（第 1 帧），从 3.62 降到 1.04 ADU（第 2 帧）。这个降幅主要来自中值扣背景和 3×3 平滑，
-  不等同于定位精度的提升。
-- 生成这组对照结果的脚本不在仓库中。
-
-### 2. O-C 残差结果
+### O-C 残差结果
 
 `comoc` 只保留野值剔除后、单日标准差小于 0.3″ 的观测，`report` 再把这些结果画成残差图。
 下面是 `U/2020` 数据集（U1–U5 五个目标，2020 年 11 月，6 个 UTC 观测日）的 O-C 汇总图：
@@ -288,7 +251,7 @@ natural-satellite-astrometry/
 │   └── README.md          # 详细技术文档
 ├── ui/                    # Tkinter 桌面界面
 ├── inputs/                # configs/、catalogs/（images/ 需自备）
-├── outputs/               # results/、operator_comparison/、drizzlepac_demo/
+├── outputs/               # results/：天然卫星归算结果
 ├── docs/assets/           # README 图件及其生成脚本
 └── requirements.txt
 ```

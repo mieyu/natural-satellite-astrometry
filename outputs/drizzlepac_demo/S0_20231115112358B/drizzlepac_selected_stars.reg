@@ -1,5 +1,0 @@
-# Region file format: DS9 version 4.1
-global color=cyan width=2 font='helvetica 10 normal'
-image
-circle(460.013092,117.162155,10) # text={star 1}
-circle(366.982941,1171.983154,10) # text={star 2}

@@ -33,9 +33,7 @@ Thumbs.db
 # ===== Generated results / local temporary files =====
 /outputs/*
 !/outputs/results/
-!/outputs/drizzlepac_demo/
-!/outputs/operator_comparison/
-# 演示结果保留图表、目录和汇总，忽略 FITS 中间图像
+# 忽略 FITS 中间图像
 /outputs/**/*.fit
 /outputs/**/*.fits
 /output/
