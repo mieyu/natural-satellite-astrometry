@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adias.paths import expand_fitspath, stage_dirs
+from nspa.paths import expand_fitspath, stage_dirs
 
 
 class ExpandFitspathTests(unittest.TestCase):

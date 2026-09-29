@@ -11,13 +11,13 @@ class UiConfigFileTests(unittest.TestCase):
             root = Path(tmp)
             cfg_dir = root / "inputs" / "configs"
             cfg_dir.mkdir(parents=True)
-            (cfg_dir / "adias2024.cfg").write_text("", encoding="utf-8")
-            (cfg_dir / "adias202011.cfg").write_text("", encoding="utf-8")
+            (cfg_dir / "nspa2024.cfg").write_text("", encoding="utf-8")
+            (cfg_dir / "nspa202011.cfg").write_text("", encoding="utf-8")
             (cfg_dir / "_ui_run.cfg").write_text("", encoding="utf-8")
 
             self.assertEqual(
                 params_panel.list_config_files(root),
-                ["adias202011.cfg", "adias2024.cfg"],
+                ["nspa202011.cfg", "nspa2024.cfg"],
             )
 
     def test_load_cfg_form_values_skips_path_owned_fields(self):

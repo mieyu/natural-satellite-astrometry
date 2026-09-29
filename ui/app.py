@@ -1,9 +1,9 @@
-"""ADIAS 桌面 UI 主程序（Tkinter）。
+"""NSPA 桌面 UI 主程序（Tkinter）。
 
 启动：在仓库根执行  python ui/app.py
 （cwd 必须是仓库根，cfg 用相对路径，运行时据此解析 inputs/outputs。）
 
-纯附加层：不修改 adias/ 任何代码，经 subprocess 调用 `python -m adias.main`。
+纯附加层：不修改 nspa/ 任何代码，经 subprocess 调用 `python -m nspa.main`。
 CLI 与 UI 可并存。
 """
 
@@ -16,7 +16,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-# 让 `import adias` 可用（从仓库根启动时本就可用，这里兜底）
+# 让 `import nspa` 可用（从仓库根启动时本就可用，这里兜底）
 sys.path.insert(0, str(REPO_ROOT))
 
 from ui import cfg_writer, inputs_panel, params_panel  # noqa: E402
@@ -24,7 +24,7 @@ from ui.runner import PipelineRunner  # noqa: E402
 
 GEN_CFG = REPO_ROOT / "inputs" / "configs" / "_ui_run.cfg"
 CFG_DIR = REPO_ROOT / "inputs" / "configs"
-DEFAULT_CFG_NAME = "adias2024.cfg"
+DEFAULT_CFG_NAME = "nspa2024.cfg"
 STEPS = ["all", "pre", "detect", "match", "comoc", "report"]
 
 
@@ -60,7 +60,7 @@ class App(ttk.Frame):
         ttk.Button(bar, text="打开输出目录", command=self._open_output).pack(side="left")
 
         # 参数表单（横向和纵向可滚）
-        pbox = ttk.LabelFrame(self, text="参数（默认值来自 adias.config，可改）")
+        pbox = ttk.LabelFrame(self, text="参数（默认值来自 nspa.config，可改）")
         pbox.pack(fill="x", pady=(0, 6))
         canvas = tk.Canvas(pbox, height=245, highlightthickness=0)
         vbar = ttk.Scrollbar(pbox, orient="vertical", command=canvas.yview)
@@ -225,7 +225,7 @@ class App(ttk.Frame):
 
 def main():
     root = tk.Tk()
-    root.title("ADIAS 流水线 UI")
+    root.title("NSPA 流水线 UI")
     root.geometry("1180x820")
     App(root)
     root.mainloop()

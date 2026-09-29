@@ -3,7 +3,7 @@
 设计要点
 --------
 输入树深度不统一（S9/2024 下是月目录、U/2020 下直接是日目录、有的平铺），
-所以不写死层数：选完 目标/观测期 后，用 adias.paths.expand_fitspath 试解析候选路径，
+所以不写死层数：选完 目标/观测期 后，用 nspa.paths.expand_fitspath 试解析候选路径，
 解析不出观测日就再露出一级子目录下拉，直到解析成功。
 
 本模块上半部是纯函数（可无 GUI 测试），下半部是 Tk 控件。
@@ -12,7 +12,7 @@
 import re
 from pathlib import Path
 
-from adias.paths import expand_fitspath, list_fits
+from nspa.paths import expand_fitspath, list_fits
 
 _EPH_RE = re.compile(r"EPH_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
 _AUTO_EPH_CHOICE = "自动匹配观测月"

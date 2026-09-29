@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adias.config import load_config
-from adias.errors import ConfigError
+from nspa.config import load_config
+from nspa.errors import ConfigError
 
 
 def _write_cfg(root, **overrides):
@@ -40,7 +40,7 @@ def _write_cfg(root, **overrides):
     }
     defaults.update(overrides)
     lines = [f"{k}={v}" for k, v in defaults.items() if v is not None]
-    cfg = root / "adias.cfg"
+    cfg = root / "nspa.cfg"
     cfg.write_text("\n".join(lines), encoding="utf-8")
     return cfg
 

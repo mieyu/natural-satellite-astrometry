@@ -1,12 +1,12 @@
-"""参数表单：把 adias.config._SCALAR_FIELDS 按 section 分组渲染为可编辑表单。
+"""参数表单：把 nspa.config._SCALAR_FIELDS 按 section 分组渲染为可编辑表单。
 
-字段定义、默认值、类型全部来自 adias.config，UI 不重复维护字段表。
+字段定义、默认值、类型全部来自 nspa.config，UI 不重复维护字段表。
 路径/列表类输入（fitspath、历表、星表）由 inputs_panel 负责，不在此面板。
 """
 
 from pathlib import Path
 
-from adias.config import _SCALAR_FIELDS, parse_config
+from nspa.config import _SCALAR_FIELDS, parse_config
 
 _GENERATED_CFG_NAMES = {"_ui_run.cfg"}
 _INPUT_OWNED_SCALAR_KEYS = {

@@ -1,6 +1,6 @@
-"""子进程运行器：调用现有入口 `python -m adias.main`，流式回传 stdout。
+"""子进程运行器：调用现有入口 `python -m nspa.main`，流式回传 stdout。
 
-不 import adias 进程内跑——完全不碰现有代码，且崩溃不拖垮 UI。
+不 import nspa 进程内跑——完全不碰现有代码，且崩溃不拖垮 UI。
 后台线程读 stdout 入队，主线程（Tk）轮询取行刷新日志。
 """
 
@@ -23,10 +23,10 @@ class PipelineRunner:
         return self._thread is not None and self._thread.is_alive()
 
     def start(self, cfg_path, step, cwd):
-        """启动子进程：python -m adias.main --config <cfg> --step <step>。"""
+        """启动子进程：python -m nspa.main --config <cfg> --step <step>。"""
         self._done = False
         self.returncode = None
-        cmd = [sys.executable, "-m", "adias.main",
+        cmd = [sys.executable, "-m", "nspa.main",
                "--config", str(cfg_path), "--step", str(step)]
         self.queue.put(f"$ {' '.join(cmd)}  (cwd={cwd})")
         self.proc = subprocess.Popen(

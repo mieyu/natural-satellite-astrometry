@@ -13,7 +13,7 @@ class InterpolateTests(unittest.TestCase):
         _require_numpy()
 
     def test_recovers_node_value(self):
-        from adias.utils.math_utils import interpolate
+        from nspa.utils.math_utils import interpolate
 
         x = [0.0, 1.0, 2.0, 3.0]
         y = [0.0, 2.0, 4.0, 6.0]
@@ -21,7 +21,7 @@ class InterpolateTests(unittest.TestCase):
         self.assertAlmostEqual(interpolate(x, y, 4, 3.0), 6.0, places=6)
 
     def test_linear_data_interpolates_linearly(self):
-        from adias.utils.math_utils import interpolate
+        from nspa.utils.math_utils import interpolate
 
         x = [0.0, 1.0, 2.0, 3.0]
         y = [0.0, 2.0, 4.0, 6.0]
@@ -34,7 +34,7 @@ class SigmaClipOcTests(unittest.TestCase):
         _require_numpy()
 
     def test_clips_outliers_by_sigma_mode(self):
-        from adias.utils.math_utils import sigma_clip_oc
+        from nspa.utils.math_utils import sigma_clip_oc
 
         # 5 个近 0 的样本 + 1 个明显外点
         res_ra = [0.01, -0.02, 0.0, 0.03, -0.01, 5.0]
@@ -52,7 +52,7 @@ class SigmaClipOcTests(unittest.TestCase):
         self.assertGreaterEqual(iloop, 1)
 
     def test_mean_limit_mode_when_oc_limit_zero(self):
-        from adias.utils.math_utils import sigma_clip_oc
+        from nspa.utils.math_utils import sigma_clip_oc
 
         # 5 个集中样本 + 1 个明显外点；用 mean_limit 模式（oc_limit=0）
         # 初始均值约 0.42（被外点拉偏），mean_limit=0.6 仍允许内点过关，外点被剔除
@@ -68,7 +68,7 @@ class SigmaClipOcTests(unittest.TestCase):
         self.assertNotIn("outlier", kept_lines)
 
     def test_eps_excludes_extreme_residuals_in_sigma_mode(self):
-        from adias.utils.math_utils import sigma_clip_oc
+        from nspa.utils.math_utils import sigma_clip_oc
 
         # 即便外点能通过 sigma 检查，|data| < eps 会兜底排除
         res_ra = [0.0, 0.0, 0.0, 50.0]
@@ -89,7 +89,7 @@ class CalculateBackgroundTests(unittest.TestCase):
     def test_flat_image_returns_constant_background(self):
         import numpy as np
 
-        from adias.utils.image_utils import calculate_background
+        from nspa.utils.image_utils import calculate_background
 
         data = np.full((50, 50), 100.0)
         bkgd, sigma = calculate_background(data)
@@ -99,7 +99,7 @@ class CalculateBackgroundTests(unittest.TestCase):
     def test_noisy_image_recovers_mean_approximately(self):
         import numpy as np
 
-        from adias.utils.image_utils import calculate_background
+        from nspa.utils.image_utils import calculate_background
 
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=200.0, scale=5.0, size=(200, 200))
@@ -115,7 +115,7 @@ class FortranConnectivityTests(unittest.TestCase):
     def test_python_fortran_connectivity_handles_rectangular_images(self):
         import numpy as np
 
-        from adias.utils.image_utils import _label_connectivity_fortran_python
+        from nspa.utils.image_utils import _label_connectivity_fortran_python
 
         abox = np.zeros((4, 6), dtype=np.float32)
         abox[1, 4] = 10.0

@@ -30,8 +30,23 @@ Thumbs.db
 *.log
 控制台输出*.txt
 
-# ===== Pipeline run records =====
-outputs/runs/
+# ===== Generated results / local temporary files =====
+/outputs/
+/output/
+/tmp/
+/控制台输出结果对比/
+
+# ===== Experiment data (keep scripts, configs and documentation) =====
+/cross_exp/**/outputs/
+/cross_exp/**/*.fit
+/cross_exp/**/*.fits
+/cross_exp/**/*.reg
+/cross_exp/**/*.out
+/cross_exp/fort8_ref/run_*/summary.txt
+/cross_exp/fort8_ref/run_*/fitspath.in
+/fortran_tie_sandbox_test/summary*.csv
+/time_align_check/*.csv
+/time_align_check/*.png
 
 # ===== UI 生成的临时配置 =====
 inputs/configs/_ui_run.cfg
@@ -50,12 +65,13 @@ dist/
 # ===== Observation FITS images (raw data, too large for repo) =====
 inputs/images/
 
-# ===== ADIAS pipeline generated files (anywhere in repo) =====
+# ===== NSPA pipeline generated files (anywhere in repo) =====
 # 预处理后图像
 **/*_n.fit
+**/*_n.fits
 # 检测区域文件
-**/*.reg
-**/*.ref.reg
+**/fits_reg/*.reg
+**/fits_ref/*.reg
 # 图像列表
 **/fits.lst
 # 逐帧归算输出
@@ -69,3 +85,7 @@ inputs/images/
 **/final_oc_*.out
 # 归算中间数据
 **/observation_image_*.dat
+
+# 测试样例与金标准必须可被 Git 跟踪
+!tests/fixtures/**
+!tests/golden/expected/**

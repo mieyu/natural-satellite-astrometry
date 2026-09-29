@@ -2,9 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adias.application.context import build_context
-from adias.config import load_config
-from adias.errors import ConfigError
+from nspa.application.context import build_context
+from nspa.config import load_config
+from nspa.errors import ConfigError
 
 
 class ConfigApplicationTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class ConfigApplicationTests(unittest.TestCase):
         lines.extend(
             f"3obj_ephfile{idx}={eph}" for idx, eph in enumerate(eph_files, 1)
         )
-        cfg = root / "adias.cfg"
+        cfg = root / "nspa.cfg"
         cfg.write_text("\n".join(lines), encoding="utf-8")
         return cfg
 

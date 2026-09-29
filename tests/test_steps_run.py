@@ -17,10 +17,10 @@ from tests._fixtures import (
 
 
 def _build_config(tmp):
-    """搭一棵 tmp 工作树，返回 (AdiasConfig, fitspath_list)。"""
-    from adias.config import load_config
+    """搭一棵 tmp 工作树，返回 (NspaConfig, fitspath_list)。"""
+    from nspa.config import load_config
 
-    cfg, obs_day, _, _ = write_cfg(tmp, name="adias_steps.cfg")
+    cfg, obs_day, _, _ = write_cfg(tmp, name="nspa_steps.cfg")
     config = load_config(str(cfg), steps=["all"])
     fitspath_list = [obs_day / "fits"]
     return config, fitspath_list
@@ -34,11 +34,11 @@ class StepSequentialRegressionTests(unittest.TestCase):
         require_source_fixture()
 
     def test_each_step_returns_populated_step_result(self):
-        from adias.core.analyzer import run_comoc
-        from adias.core.detector import run_detect
-        from adias.core.matcher import run_match
-        from adias.core.preprocessor import run_pre
-        from adias.core.reporter import run_report
+        from nspa.core.analyzer import run_comoc
+        from nspa.core.detector import run_detect
+        from nspa.core.matcher import run_match
+        from nspa.core.preprocessor import run_pre
+        from nspa.core.reporter import run_report
 
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
@@ -88,8 +88,8 @@ class PreSuperflagZeroTests(unittest.TestCase):
         require_source_fixture()
 
     def test_superflag_zero_produces_no_pre_outputs(self):
-        from adias.config import AdiasConfig, PreConfig
-        from adias.core.preprocessor import run_pre
+        from nspa.config import NspaConfig, PreConfig
+        from nspa.core.preprocessor import run_pre
 
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
@@ -98,7 +98,7 @@ class PreSuperflagZeroTests(unittest.TestCase):
             os.symlink(SOURCE_OBS_DAY / "FITS", obs_day / "fits")
 
             fitspath = obs_day / "fits"
-            config = AdiasConfig(
+            config = NspaConfig(
                 config_path="<test>",
                 pre=PreConfig(
                     superflag=0, med_length=65, med_width=1,
@@ -127,10 +127,10 @@ class EmptyFitspathListSmokeTests(unittest.TestCase):
         require_runtime_deps()
 
     def test_run_pre_empty_list(self):
-        from adias.config import AdiasConfig, PreConfig
-        from adias.core.preprocessor import run_pre
+        from nspa.config import NspaConfig, PreConfig
+        from nspa.core.preprocessor import run_pre
 
-        config = AdiasConfig(
+        config = NspaConfig(
             config_path="<test>",
             pre=PreConfig(superflag=1, med_length=65, med_width=1,
                           bkgdmode=2, enhance_flag=1),
@@ -140,10 +140,10 @@ class EmptyFitspathListSmokeTests(unittest.TestCase):
         self.assertEqual(result.output_files, [])
 
     def test_run_detect_empty_list(self):
-        from adias.config import AdiasConfig, DetectConfig, PreConfig
-        from adias.core.detector import run_detect
+        from nspa.config import NspaConfig, DetectConfig, PreConfig
+        from nspa.core.detector import run_detect
 
-        config = AdiasConfig(
+        config = NspaConfig(
             config_path="<test>",
             pre=PreConfig(superflag=1),
             detect=DetectConfig(

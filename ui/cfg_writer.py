@@ -1,16 +1,16 @@
-"""把 UI 表单值拼成 adias cfg 文本。
+"""把 UI 表单值拼成 nspa cfg 文本。
 
 沿用现有 cfg key 格式（参考 tests/_fixtures.py:cfg_lines）：
-  - 标量键：直接 `<cfg_key>=<value>`，键集合取自 adias.config._SCALAR_FIELDS。
+  - 标量键：直接 `<cfg_key>=<value>`，键集合取自 nspa.config._SCALAR_FIELDS。
   - 列表键：fitspath / eph 文件按下标展开（1fitspath, 1fitspath2 ...；3obj_ephfile1 ...）。
   - gaia 星表上游会折叠取首个，这里写成 3gaia_catfile1。
 
-只新增、不改动 adias/。仅把 adias.config 当作字段表的唯一来源，避免重复维护。
+只新增、不改动 nspa/。仅把 nspa.config 当作字段表的唯一来源，避免重复维护。
 """
 
 from pathlib import Path
 
-from adias.config import _SCALAR_FIELDS
+from nspa.config import _SCALAR_FIELDS
 
 # inputs_panel 负责的列表/路径键，不由通用标量表单写出
 _INPUT_OWNED_LIST_KEYS = ("1fitspath", "3obj_ephfile", "3gaia_catfile")
@@ -33,7 +33,7 @@ def build_cfg_text(scalars, fitspaths, eph_files, gaia_catfile, header=True):
     """
     lines = []
     if header:
-        lines.append("; ==== 由 ADIAS UI 自动生成，请勿手工长期维护 ====")
+        lines.append("; ==== 由 NSPA UI 自动生成，请勿手工长期维护 ====")
 
     for i, fp in enumerate(fitspaths, 1):
         if not fp:

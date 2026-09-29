@@ -17,23 +17,23 @@ class CatalogIoErrorTests(unittest.TestCase):
         _require_numpy()
 
     def test_read_catalog_missing_file_raises(self):
-        from adias.errors import DataFormatError
-        from adias.io.catalog_io import read_catalog
+        from nspa.errors import DataFormatError
+        from nspa.io.catalog_io import read_catalog
 
         with self.assertRaisesRegex(DataFormatError, "GAIA"):
             read_catalog("/nonexistent/path/gaia.dat", 5.0, 18.5)
 
     def test_read_ephemeris_missing_file_raises(self):
-        from adias.errors import DataFormatError
-        from adias.io.catalog_io import read_ephemeris
+        from nspa.errors import DataFormatError
+        from nspa.io.catalog_io import read_ephemeris
 
         with self.assertRaisesRegex(DataFormatError, "历表"):
             read_ephemeris("/nonexistent/path/eph.dat")
 
     def test_read_ephemeris_empty_parsed_raises(self):
         """文件可打开但无可解析行（只有头部）应抛 DataFormatError。"""
-        from adias.errors import DataFormatError
-        from adias.io.catalog_io import read_ephemeris
+        from nspa.errors import DataFormatError
+        from nspa.io.catalog_io import read_ephemeris
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "empty_eph.dat"
@@ -45,7 +45,7 @@ class CatalogIoErrorTests(unittest.TestCase):
 
     def test_read_catalog_empty_mag_range_returns_zero_not_raises(self):
         """文件可读但 min/max_mag 把所有星过滤掉：返回 0，不抛错。"""
-        from adias.io.catalog_io import read_catalog
+        from nspa.io.catalog_io import read_catalog
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "gaia.dat"
@@ -68,8 +68,8 @@ class FitsHeaderErrorTests(unittest.TestCase):
             raise unittest.SkipTest(f"requires astropy: {exc}")
 
     def test_read_fits_header_missing_file_raises_processing_error(self):
-        from adias.errors import ProcessingError
-        from adias.io.fits_io import read_fits_header
+        from nspa.errors import ProcessingError
+        from nspa.io.fits_io import read_fits_header
 
         with self.assertRaisesRegex(ProcessingError, "读取 FITS 头错误"):
             read_fits_header("/nonexistent/foo.fit", "km100B")
@@ -80,8 +80,8 @@ class FitsHeaderErrorTests(unittest.TestCase):
 
         import numpy as np
 
-        from adias.errors import ProcessingError
-        from adias.io.fits_io import read_fits_header
+        from nspa.errors import ProcessingError
+        from nspa.io.fits_io import read_fits_header
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "fake.fit"
@@ -103,14 +103,14 @@ class MatcherCatchesDataFormatErrorTests(unittest.TestCase):
 
     def test_run_match_records_eph_format_error(self):
         """直接构造场景：给一个不存在的 GAIA，验证 step_result 抓到 DataFormatError。"""
-        from adias.config import AdiasConfig, MatchConfig
-        from adias.core.matcher import run_match
+        from nspa.config import NspaConfig, MatchConfig
+        from nspa.core.matcher import run_match
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             obs = tmp_path / "obs" / "20240101" / "fits"
             obs.mkdir(parents=True)
-            config = AdiasConfig(
+            config = NspaConfig(
                 config_path="<test>",
                 match=MatchConfig(
                     tele_label="km100B",

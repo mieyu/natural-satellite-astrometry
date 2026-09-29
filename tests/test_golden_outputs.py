@@ -68,7 +68,7 @@ class GoldenOutputTests(unittest.TestCase):
 
     def _prepare_input_tree(self, tmp):
         _obs_day, catalog_dir, math_dir = build_fixture_tree(tmp)
-        cfg = tmp / "input" / "adias_golden.cfg"
+        cfg = tmp / "input" / "nspa_golden.cfg"
         cfg.write_text(
             "\n".join(cfg_lines(tmp, catalog_dir, math_dir)),
             encoding="utf-8",
@@ -91,7 +91,7 @@ class GoldenOutputTests(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "adias.main",
+                "nspa.main",
                 "--config",
                 str(cfg),
                 "--step",

@@ -15,7 +15,7 @@ class RegFileRoundTripTests(unittest.TestCase):
         _require_numpy()
 
     def test_write_then_read_preserves_geometry_and_flux(self):
-        from adias.io.text_io import read_reg_file, write_reg_file
+        from nspa.io.text_io import read_reg_file, write_reg_file
 
         stars = [
             {
@@ -51,7 +51,7 @@ class RegFileRoundTripTests(unittest.TestCase):
             self.assertAlmostEqual(float(det_snr[0]), 9.87, places=2)
 
     def test_filters_low_snr_small_pixels_overflag(self):
-        from adias.io.text_io import read_reg_file, write_reg_file
+        from nspa.io.text_io import read_reg_file, write_reg_file
 
         stars = [
             # 通过：snr>1, pix>5, overflag=0
@@ -83,8 +83,8 @@ class ObjectOutRoundTripTests(unittest.TestCase):
         _require_numpy()
 
     def test_write_then_read_residuals(self):
-        from adias.domain.models import ObjectObservation
-        from adias.io.text_io import read_object_out, write_object_result
+        from nspa.domain.models import ObjectObservation
+        from nspa.io.text_io import read_object_out, write_object_result
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "object_1.out"
@@ -116,8 +116,8 @@ class ObjectOutRoundTripTests(unittest.TestCase):
 
     def test_large_residual_dropped(self):
         """|残差| ≥ 10″ 时 write_object_result 应丢弃该行。"""
-        from adias.domain.models import ObjectObservation
-        from adias.io.text_io import read_object_out, write_object_result
+        from nspa.domain.models import ObjectObservation
+        from nspa.io.text_io import read_object_out, write_object_result
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "object_1.out"

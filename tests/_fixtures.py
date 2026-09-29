@@ -20,7 +20,7 @@ def require_runtime_deps():
         import numpy  # noqa: F401
         import scipy  # noqa: F401
     except ModuleNotFoundError as exc:
-        raise unittest.SkipTest(f"requires ADIAS runtime deps: {exc}")
+        raise unittest.SkipTest(f"requires NSPA runtime deps: {exc}")
 
 
 def require_source_fixture():
@@ -50,7 +50,7 @@ def build_fixture_tree(tmp):
 
 
 def cfg_lines(tmp, catalog_dir, math_dir):
-    """金标准 cfg 行列表，与原 adias2024.cfg 等价。"""
+    """金标准 cfg 行列表，与原 nspa2024.cfg 等价。"""
     return [
         f"1fitspath={tmp / 'input' / 'observation'}",
         "1biasflag=0",
@@ -86,7 +86,7 @@ def cfg_lines(tmp, catalog_dir, math_dir):
     ]
 
 
-def write_cfg(tmp, name="adias_test.cfg"):
+def write_cfg(tmp, name="nspa_test.cfg"):
     """完整搭建：tree + cfg 文件。返回 (cfg_path, obs_day, catalog_dir, math_dir)。"""
     obs_day, catalog_dir, math_dir = build_fixture_tree(tmp)
     cfg = tmp / "input" / name
