@@ -1,4 +1,6 @@
-# NSPA
+# NSPA — Natural Satellite Precision Astrometry Software
+
+天然卫星精密天体测量软件。
 
 CCD 天文图像处理流水线，5 步将原始 FITS 观测数据归算为天体的 O-C 残差图。
 
