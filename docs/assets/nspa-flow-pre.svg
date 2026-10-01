@@ -2,66 +2,60 @@
 <title id="title">NSPA 图像预处理</title>
 <desc id="desc">图像预处理。输入：原始 CCD 图像。处理顺序：估计背景 → 沿行处理 → 沿列处理 → 轻度平滑。输出：平坦背景 FITS。示例采用行、列串联中值与减法扣背景；每次扣背景均加回原始背景均值。 以上为中值背景分支；也支持同态滤波、双边 Retinex。参数来自 nspa2024.cfg。</desc>
 <defs>
-<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0b7b72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#a66212" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#3269b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#7955a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#526579" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
 </defs>
 <g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC','Hiragino Sans GB','Source Han Sans SC',sans-serif">
-<rect width="1040" height="720" rx="20" fill="#ffffff"/>
-<rect x="1" y="1" width="1038" height="718" rx="20" fill="none" stroke="#dce4ec"/>
-<rect x="32" y="30" width="56" height="56" rx="16" fill="#edf7f5" stroke="none" stroke-width="1.4"/>
-<g transform="translate(44 42)" fill="none" stroke="#0b7b72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="28" height="28" rx="5"/><path d="M 7 22 Q 12 12 17 19 T 27 12 M 7 10 H 15"/></g>
-<text x="104" y="66" font-size="32" font-weight="700" fill="#162638" text-anchor="start">图像预处理</text>
-<text x="104" y="103" font-size="21" font-weight="400" fill="#526579" text-anchor="start">压平天空背景与大尺度结构，为星象检测准备图像</text>
-<text x="1008" y="65" font-size="23" font-weight="600" fill="#0b7b72" text-anchor="end">01</text>
-<rect x="32" y="140" width="976" height="96" rx="14" fill="#f5f8fb" stroke="#dce4ec" stroke-width="1.4"/>
-<text x="52" y="170" font-size="18" font-weight="600" fill="#526579" text-anchor="start">输入</text>
-<text x="132.0" y="178" font-size="23" font-weight="600" fill="#162638" text-anchor="start">原始 CCD 图像</text>
-<text x="132.0" y="211" font-size="20" font-weight="400" fill="#526579" text-anchor="start">逐帧读取 FITS · 背景可能包含渐变、光晕与条纹</text>
-<path d="M 145 236 L 145 270" fill="none" stroke="#0b7b72" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
-<rect x="32" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="52" y="298" width="46" height="30" rx="8" fill="#edf7f5" stroke="none" stroke-width="1.4"/>
-<text x="75" y="320" font-size="18" font-weight="600" fill="#0b7b72" text-anchor="middle">01</text>
-<text x="52" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">估计背景</text>
-<path d="M 52 384 L 238 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="52" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">迭代 σ 裁剪</text>
-<text x="52" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">估计背景均值</text>
-<text x="52" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">与噪声 σ</text>
-<path d="M 261 391 L 277 391" fill="none" stroke="#0b7b72" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
-<rect x="282" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="302" y="298" width="46" height="30" rx="8" fill="#edf7f5" stroke="none" stroke-width="1.4"/>
-<text x="325" y="320" font-size="18" font-weight="600" fill="#0b7b72" text-anchor="middle">02</text>
-<text x="302" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">沿行处理</text>
-<path d="M 302 384 L 488 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="302" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">65 px 中值窗口</text>
-<text x="302" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">估计并扣除背景</text>
-<text x="302" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">加回背景均值</text>
-<path d="M 511 391 L 527 391" fill="none" stroke="#0b7b72" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
-<rect x="532" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="552" y="298" width="46" height="30" rx="8" fill="#edf7f5" stroke="none" stroke-width="1.4"/>
-<text x="575" y="320" font-size="18" font-weight="600" fill="#0b7b72" text-anchor="middle">03</text>
-<text x="552" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">沿列处理</text>
-<path d="M 552 384 L 738 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="552" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">交换窗口方向</text>
-<text x="552" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">再次扣除背景</text>
-<text x="552" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">压低残留结构</text>
-<path d="M 761 391 L 777 391" fill="none" stroke="#0b7b72" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
-<rect x="782" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="802" y="298" width="46" height="30" rx="8" fill="#edf7f5" stroke="none" stroke-width="1.4"/>
-<text x="825" y="320" font-size="18" font-weight="600" fill="#0b7b72" text-anchor="middle">04</text>
-<text x="802" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">轻度平滑</text>
-<path d="M 802 384 L 988 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="802" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">可选 3×3 均值</text>
-<text x="802" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">降低像素噪声</text>
-<text x="802" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">保持像素网格</text>
-<path d="M 895 504 L 895 538" fill="none" stroke="#0b7b72" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
-<rect x="32" y="546" width="976" height="90" rx="14" fill="#162638" stroke="none" stroke-width="1.4"/>
-<text x="52" y="578" font-size="18" font-weight="600" fill="#c6d5e6" text-anchor="start">输出</text>
-<text x="132.0" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">平坦背景 FITS</text>
-<text x="132.0" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">与原图同尺寸 · 像素坐标保持不变</text>
-<text x="32" y="672" font-size="20" font-weight="400" fill="#526579" text-anchor="start">示例采用行、列串联中值与减法扣背景；每次扣背景均加回原始背景均值。</text>
-<text x="32" y="701" font-size="20" font-weight="400" fill="#526579" text-anchor="start">以上为中值背景分支；也支持同态滤波、双边 Retinex。参数来自 nspa2024.cfg。</text>
+<rect width="1040" height="720" fill="#ffffff"/>
+<text x="32" y="65" font-size="28" font-weight="500" fill="#222222" text-anchor="start">(1)</text>
+<text x="104" y="66" font-size="30" font-weight="600" fill="#222222" text-anchor="start">图像预处理</text>
+<text x="104" y="103" font-size="21" font-weight="400" fill="#555555" text-anchor="start">压平天空背景与大尺度结构，为星象检测准备图像</text>
+<path d="M 32 118 L 1008 118" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<rect x="32" y="140" width="976" height="96" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="170" font-size="18" font-weight="600" fill="#555555" text-anchor="start">输入</text>
+<text x="132.0" y="178" font-size="23" font-weight="600" fill="#222222" text-anchor="start">原始 CCD 图像</text>
+<text x="132.0" y="211" font-size="20" font-weight="400" fill="#555555" text-anchor="start">逐帧读取 FITS · 背景可能包含渐变、光晕与条纹</text>
+<path d="M 145 236 L 145 270" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
+<rect x="32" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">01</text>
+<text x="52" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">估计背景</text>
+<path d="M 52 384 L 238 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="52" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">迭代 σ 裁剪</text>
+<text x="52" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">估计背景均值</text>
+<text x="52" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">与噪声 σ</text>
+<path d="M 261 391 L 277 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
+<rect x="282" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="302" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">02</text>
+<text x="302" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">沿行处理</text>
+<path d="M 302 384 L 488 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="302" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">65 px 中值窗口</text>
+<text x="302" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">估计并扣除背景</text>
+<text x="302" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">加回背景均值</text>
+<path d="M 511 391 L 527 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
+<rect x="532" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="552" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">03</text>
+<text x="552" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">沿列处理</text>
+<path d="M 552 384 L 738 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="552" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">交换窗口方向</text>
+<text x="552" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">再次扣除背景</text>
+<text x="552" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">压低残留结构</text>
+<path d="M 761 391 L 777 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
+<rect x="782" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="802" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">04</text>
+<text x="802" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">轻度平滑</text>
+<path d="M 802 384 L 988 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="802" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">可选 3×3 均值</text>
+<text x="802" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">降低像素噪声</text>
+<text x="802" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">保持像素网格</text>
+<path d="M 895 504 L 895 538" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-pre)"/>
+<rect x="32" y="546" width="976" height="90" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="578" font-size="18" font-weight="600" fill="#555555" text-anchor="start">输出</text>
+<text x="132.0" y="579" font-size="23" font-weight="600" fill="#222222" text-anchor="start">平坦背景 FITS</text>
+<text x="132.0" y="611" font-size="20" font-weight="400" fill="#555555" text-anchor="start">与原图同尺寸 · 像素坐标保持不变</text>
+<text x="32" y="672" font-size="20" font-weight="400" fill="#555555" text-anchor="start">示例采用行、列串联中值与减法扣背景；每次扣背景均加回原始背景均值。</text>
+<text x="32" y="701" font-size="20" font-weight="400" fill="#555555" text-anchor="start">以上为中值背景分支；也支持同态滤波、双边 Retinex。参数来自 nspa2024.cfg。</text>
 </g>
 </svg>

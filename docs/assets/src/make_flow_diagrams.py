@@ -6,6 +6,8 @@ Run from any directory with Python's standard library only::
 
 The 1040 px canvas is designed for GitHub's README column. Main arrows show
 execution order; dashed arrows show external inputs or auxiliary plotting.
+Use monochrome, square-cornered boxes and numbered stages for a scientific
+figure style that also remains legible in grayscale printing.
 Module parameters describe the example in inputs/configs/nspa2024.cfg.
 """
 
@@ -15,12 +17,9 @@ from xml.sax.saxutils import escape
 ASSETS = Path(__file__).resolve().parents[1]
 FONT = ("'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',"
         "'Hiragino Sans GB','Source Han Sans SC',sans-serif")
-INK, MUTED, LINE = "#162638", "#526579", "#dce4ec"
-PAPER, SOFT, NAVY = "#ffffff", "#f5f8fb", "#162638"
-ACCENT = {"pre": "#0b7b72", "detect": "#a66212",
-          "match": "#3269b0", "comoc": "#7955a3"}
-TINT = {"pre": "#edf7f5", "detect": "#fdf5e9",
-        "match": "#eef4fc", "comoc": "#f5f0fa"}
+INK, MUTED, LINE = "#222222", "#555555", "#999999"
+PAPER, SOFT = "#ffffff", "#f7f7f7"
+ARROW_KEYS = ('pre', 'detect', 'match', 'comoc', 'main')
 
 
 def text_width(value, size):
@@ -38,22 +37,20 @@ class Svg:
             '<defs>',
             *(f'<marker id="arrow-{key}" viewBox="0 0 10 10" refX="9" refY="5" '
               f'markerWidth="6" markerHeight="6" orient="auto">'
-              f'<path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="{color}" '
+              f'<path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="{INK}" '
               f'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>'
-              for key, color in {**ACCENT, "main": MUTED}.items()),
+              for key in ARROW_KEYS),
             '</defs>',
             # A CSS "text { fill: ... }" rule would override text fill attributes.
             f'<g font-family="{FONT}">',
-            f'<rect width="1040" height="{height}" rx="20" fill="{PAPER}"/>',
-            f'<rect x="1" y="1" width="1038" height="{height - 2}" rx="20" '
-            f'fill="none" stroke="{LINE}"/>',
+            f'<rect width="1040" height="{height}" fill="{PAPER}"/>',
         ]
 
-    def rect(self, x, y, width, height, fill=PAPER, stroke=LINE, radius=14, dash=None):
+    def rect(self, x, y, width, height, fill=PAPER, stroke=LINE, dash=None):
         dashed = f' stroke-dasharray="{dash}"' if dash else ''
         self.parts.append(
-            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{radius}" '
-            f'fill="{fill}" stroke="{stroke}" stroke-width="1.4"{dashed}/>')
+            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"{dashed}/>')
 
     def text(self, x, y, value, size=21, color=INK, weight=400, max_width=None,
              anchor="start"):
@@ -72,47 +69,20 @@ class Svg:
     def arrow(self, points, key="main", dashed=False):
         path = 'M ' + ' L '.join(f'{x} {y}' for x, y in points)
         dash = ' stroke-dasharray="5 5"' if dashed else ''
-        color = ACCENT.get(key, MUTED)
         self.parts.append(
-            f'<path d="{path}" fill="none" stroke="{color}" stroke-width="2" '
+            f'<path d="{path}" fill="none" stroke="{INK}" stroke-width="1.6" '
             f'stroke-linejoin="round" stroke-linecap="round"{dash} '
             f'marker-end="url(#arrow-{key})"/>')
 
-    def icon(self, x, y, key, color=None):
-        """Small line illustrations, using only portable SVG primitives."""
-        color = color or ACCENT[key]
-        shapes = {
-            "pre": '<rect x="2" y="2" width="28" height="28" rx="5"/>'
-                   '<path d="M 7 22 Q 12 12 17 19 T 27 12 M 7 10 H 15"/>',
-            "detect": '<circle cx="16" cy="16" r="10"/>'
-                      '<path d="M 16 0 V 8 M 16 24 V 32 M 0 16 H 8 M 24 16 H 32"/>'
-                      '<circle cx="16" cy="16" r="2"/>',
-            "match": '<path d="M 3 27 V 5 M 3 27 H 28 M 7 22 L 15 15 L 25 6"/>'
-                     '<circle cx="7" cy="22" r="2"/><circle cx="15" cy="15" r="2"/>'
-                     '<circle cx="25" cy="6" r="2"/>',
-            "comoc": '<path d="M 3 4 V 28 H 30 M 4 17 H 29"/>'
-                     '<circle cx="10" cy="12" r="2"/><circle cx="18" cy="21" r="2"/>'
-                     '<circle cx="26" cy="14" r="2"/>',
-        }
-        self.parts.append(f'<g transform="translate({x} {y})" fill="none" '
-                          f'stroke="{color}" stroke-width="1.8" '
-                          f'stroke-linecap="round" stroke-linejoin="round">{shapes[key]}</g>')
-
     def header(self, title, subtitle, key=None, number=None):
         if key:
-            self.rect(32, 30, 56, 56, TINT[key], "none", 16)
-            self.icon(44, 42, key)
-            self.text(104, 66, title, 32, weight=700, max_width=760)
+            self.text(32, 65, f'({int(number)})', 28, INK, 500)
+            self.text(104, 66, title, 30, weight=600, max_width=760)
             self.text(104, 103, subtitle, 21, MUTED, max_width=890)
-            self.text(1008, 65, number, 23, ACCENT[key], 600, anchor="end")
         else:
-            self.text(32, 60, title, 34, weight=700)
+            self.text(32, 60, title, 30, weight=600)
             self.text(32, 98, subtitle, 21, MUTED, max_width=970)
-            self.parts.append('<g transform="translate(957 57)" fill="none" '
-                              'stroke="#3269b0" stroke-width="1.5">'
-                              '<circle r="12"/><ellipse rx="32" ry="14" '
-                              'transform="rotate(-32)"/><circle cx="25" cy="-13" '
-                              'r="4" fill="#3269b0"/></g>')
+        self.line(32, 118, 1008, 118, '#cccccc')
 
     def save(self, name):
         (ASSETS / name).write_text('\n'.join(self.parts + ['</g>', '</svg>']) + '\n',
@@ -124,7 +94,7 @@ def overview():
     s = Svg(800, 'NSPA 总体数据流',
             '原始 CCD FITS 按顺序经过 pre、detect、match、comoc。'
             'GAIA DR3 星表与 IMCCE 卫星历表进入 match；comoc 汇总数据由 report 辅助绘图。')
-    s.header('从 CCD 图像到天体测量结果', '四个核心模块 · 按观测夜组织 · 支持整条运行与单步重跑')
+    s.header('NSPA 天体测量处理流程', '按观测夜组织数据；四个核心模块可依次运行，也可单步重跑。')
 
     s.rect(128, 128, 624, 52, SOFT)
     s.text(152, 162, '输入', 18, MUTED, 600)
@@ -140,31 +110,28 @@ def overview():
     ]
     for i, (key, title, method, output) in enumerate(stages):
         y = 206 + 104 * i
-        color = ACCENT[key]
-        s.rect(48, y + 20, 56, 44, TINT[key], "none", 12)
-        s.text(76, y + 49, f'{i + 1:02}', 23, color, 600, anchor="middle")
-        s.rect(128, y, 624, 84, TINT[key], "none")
-        s.icon(152, y + 25, key)
-        s.text(204, y + 34, title, 24, weight=700, max_width=390)
-        s.text(728, y + 33, key, 19, color, 600, anchor="end")
-        s.text(204, y + 64, method, 20, MUTED, max_width=305)
-        s.text(728, y + 64, output, 19, color, 500, anchor="end")
+        s.text(76, y + 49, f'({i + 1})', 23, INK, 500, anchor="middle")
+        s.rect(128, y, 624, 84)
+        s.text(152, y + 34, title, 24, weight=600, max_width=390)
+        s.text(728, y + 33, key, 19, MUTED, 400, anchor="end")
+        s.text(152, y + 64, method, 20, MUTED, max_width=350)
+        s.text(728, y + 64, output, 19, INK, 500, anchor="end")
         if i < 3:
             s.arrow([(440, y + 84), (440, y + 98)])
 
-    s.rect(790, 376, 218, 120, SOFT, LINE, 14, '5 5')
+    s.rect(790, 376, 218, 120, SOFT, LINE, '5 5')
     s.text(810, 407, '外部参考数据', 18, MUTED, 600)
-    s.text(810, 443, 'GAIA DR3 星表', 22, ACCENT['match'], 600)
-    s.text(810, 475, 'IMCCE 卫星历表', 21, ACCENT['match'])
+    s.text(810, 443, 'GAIA DR3 星表', 22, INK, 500)
+    s.text(810, 475, 'IMCCE 卫星历表', 21, INK)
     s.arrow([(790, 458), (760, 458)], 'match', True)
 
     s.arrow([(440, 602), (440, 642)])
-    s.rect(128, 650, 624, 88, NAVY, "none")
-    s.text(152, 683, '归算产物', 18, '#c6d5e6', 600)
-    s.text(152, 717, '目标天球位置 · O−C 数据 · 单日与全时段统计', 22, '#ffffff', 600,
+    s.rect(128, 650, 624, 88, SOFT)
+    s.text(152, 683, '归算产物', 18, MUTED, 600)
+    s.text(152, 717, '目标天球位置 · O−C 数据 · 单日与全时段统计', 22, INK, 600,
            max_width=576)
-    s.rect(790, 650, 218, 88, SOFT, LINE, 14, '5 5')
-    s.text(810, 682, 'report · 辅助', 21, ACCENT['comoc'], 600)
+    s.rect(790, 650, 218, 88, SOFT, LINE, '5 5')
+    s.text(810, 682, 'report · 辅助', 21, INK, 500)
     s.text(810, 716, 'O−C 残差图', 22, weight=600)
     s.arrow([(752, 560), (899, 560), (899, 644)], 'comoc', True)
     s.text(804, 597, '读取汇总结果', 18, MUTED)
@@ -188,7 +155,6 @@ def module(key, number, title, subtitle, inputs, steps, outputs, notes,
             '。处理顺序：' + ' → '.join(item[0] for item in steps) +
             '。输出：' + '；'.join(item[0] for item in outputs) + '。' + ' '.join(notes))
     s.header(title, subtitle, key, number)
-    color = ACCENT[key]
 
     s.rect(32, 140, 976, 96, SOFT)
     s.text(52, 170, '输入', 18, MUTED, 600)
@@ -206,38 +172,37 @@ def module(key, number, title, subtitle, inputs, steps, outputs, notes,
         s.arrow([(145, 236), (145, 270)], key)
     else:
         for cx in centers:
-            s.line(cx, 236, cx, 254, color)
-        s.line(145, 254, centers[-1], 254, color)
+            s.line(cx, 236, cx, 254, INK)
+        s.line(145, 254, centers[-1], 254, INK)
         s.arrow([(145, 254), (145, 270)], key)
 
     for i, (head, lines) in enumerate(steps):
         x = 32 + i * 250
         s.rect(x, 278, 226, 226)
-        s.rect(x + 20, 298, 46, 30, TINT[key], "none", 8)
-        s.text(x + 43, 320, f'{i + 1:02}', 18, color, 600, anchor="middle")
-        s.text(x + 20, 365, head, 23, weight=700, max_width=186)
-        s.line(x + 20, 384, x + 206, 384)
+        s.text(x + 20, 320, f'{i + 1:02}', 18, MUTED, 500)
+        s.text(x + 20, 365, head, 23, weight=600, max_width=186)
+        s.line(x + 20, 384, x + 206, 384, '#cccccc')
         for j, value in enumerate(lines):
             s.text(x + 20, 418 + 29 * j, value, 21, MUTED, max_width=186)
         if i < 3:
             s.arrow([(x + 229, 391), (x + 245, 391)], key)
 
     s.arrow([(895, 504), (895, 538)], key)
-    s.rect(32, 546, 976, 90, NAVY, "none")
-    s.text(52, 578, '输出', 18, '#c6d5e6', 600)
+    s.rect(32, 546, 976, 90, SOFT)
+    s.text(52, 578, '输出', 18, MUTED, 600)
     column_width = 856 / len(outputs)
     for i, (head, detail) in enumerate(outputs):
         x = 132 + i * column_width
         if i:
-            s.line(x - 20, 564, x - 20, 618, '#435365')
-        s.text(x, 579, head, 23, '#ffffff', 600, max_width=column_width - 28)
-        s.text(x, 611, detail, 20, '#c6d5e6', max_width=column_width - 28)
+            s.line(x - 20, 564, x - 20, 618, '#cccccc')
+        s.text(x, 579, head, 23, INK, 600, max_width=column_width - 28)
+        s.text(x, 611, detail, 20, MUTED, max_width=column_width - 28)
 
     note_y = 672
     if report:
         s.arrow([(895, 636), (895, 657)], key, True)
-        s.rect(532, 663, 476, 48, TINT[key], "none", 12, '5 5')
-        s.text(552, 694, 'report · 读取汇总结果，绘制 O−C 残差图', 21, color, 600,
+        s.rect(532, 663, 476, 48, SOFT, LINE, '5 5')
+        s.text(552, 694, 'report · 读取汇总结果，绘制 O−C 残差图', 21, INK, 500,
                max_width=436)
         note_y = 739
     for i, note in enumerate(notes):

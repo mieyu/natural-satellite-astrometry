@@ -2,71 +2,65 @@
 <title id="title">NSPA O−C 统计</title>
 <desc id="desc">O−C 统计。输入：逐帧 O−C。处理顺序：按日分组 → 迭代剔除 → 质量门限 → 汇总输出。输出：O−C 数据；统计表。示例 k = 2.6、绝对值上限 0.2″；report 只读取汇总数据绘图，不参与归算。</desc>
 <defs>
-<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0b7b72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#a66212" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#3269b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#7955a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#526579" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
 </defs>
 <g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC','Hiragino Sans GB','Source Han Sans SC',sans-serif">
-<rect width="1040" height="758" rx="20" fill="#ffffff"/>
-<rect x="1" y="1" width="1038" height="756" rx="20" fill="none" stroke="#dce4ec"/>
-<rect x="32" y="30" width="56" height="56" rx="16" fill="#f5f0fa" stroke="none" stroke-width="1.4"/>
-<g transform="translate(44 42)" fill="none" stroke="#7955a3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 4 V 28 H 30 M 4 17 H 29"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="21" r="2"/><circle cx="26" cy="14" r="2"/></g>
-<text x="104" y="66" font-size="32" font-weight="700" fill="#162638" text-anchor="start">O−C 统计</text>
-<text x="104" y="103" font-size="21" font-weight="400" fill="#526579" text-anchor="start">剔除野值，汇总每个观测夜与每个目标的残差</text>
-<text x="1008" y="65" font-size="23" font-weight="600" fill="#7955a3" text-anchor="end">04</text>
-<rect x="32" y="140" width="976" height="96" rx="14" fill="#f5f8fb" stroke="#dce4ec" stroke-width="1.4"/>
-<text x="52" y="170" font-size="18" font-weight="600" fill="#526579" text-anchor="start">输入</text>
-<text x="132.0" y="178" font-size="23" font-weight="600" fill="#162638" text-anchor="start">逐帧 O−C</text>
-<text x="132.0" y="211" font-size="20" font-weight="400" fill="#526579" text-anchor="start">来自 match 的归算结果 · 多帧、多目标</text>
-<path d="M 145 236 L 145 270" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
-<rect x="32" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="52" y="298" width="46" height="30" rx="8" fill="#f5f0fa" stroke="none" stroke-width="1.4"/>
-<text x="75" y="320" font-size="18" font-weight="600" fill="#7955a3" text-anchor="middle">01</text>
-<text x="52" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">按日分组</text>
-<path d="M 52 384 L 238 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="52" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">按观测日期</text>
-<text x="52" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">与目标分别</text>
-<text x="52" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">整理残差序列</text>
-<path d="M 261 391 L 277 391" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
-<rect x="282" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="302" y="298" width="46" height="30" rx="8" fill="#f5f0fa" stroke="none" stroke-width="1.4"/>
-<text x="325" y="320" font-size="18" font-weight="600" fill="#7955a3" text-anchor="middle">02</text>
-<text x="302" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">迭代剔除</text>
-<path d="M 302 384 L 488 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="302" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">偏离均值 &lt; k·σ</text>
-<text x="302" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">且 |O−C| &lt; 上限</text>
-<text x="302" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">迭代至收敛</text>
-<path d="M 511 391 L 527 391" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
-<rect x="532" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="552" y="298" width="46" height="30" rx="8" fill="#f5f0fa" stroke="none" stroke-width="1.4"/>
-<text x="575" y="320" font-size="18" font-weight="600" fill="#7955a3" text-anchor="middle">03</text>
-<text x="552" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">质量门限</text>
-<path d="M 552 384 L 738 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="552" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">两个方向的 σ</text>
-<text x="552" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">均须 &lt; 0.3″</text>
-<text x="552" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">且保留 ≥ 2 帧</text>
-<path d="M 761 391 L 777 391" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
-<rect x="782" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
-<rect x="802" y="298" width="46" height="30" rx="8" fill="#f5f0fa" stroke="none" stroke-width="1.4"/>
-<text x="825" y="320" font-size="18" font-weight="600" fill="#7955a3" text-anchor="middle">04</text>
-<text x="802" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">汇总输出</text>
-<path d="M 802 384 L 988 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
-<text x="802" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">保留合格夜数据</text>
-<text x="802" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">统计均值与 σ</text>
-<text x="802" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">合并跨日结果</text>
-<path d="M 895 504 L 895 538" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
-<rect x="32" y="546" width="976" height="90" rx="14" fill="#162638" stroke="none" stroke-width="1.4"/>
-<text x="52" y="578" font-size="18" font-weight="600" fill="#c6d5e6" text-anchor="start">输出</text>
-<text x="132.0" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">O−C 数据</text>
-<text x="132.0" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">单日 / 全时段</text>
-<path d="M 540.0 564 L 540.0 618" fill="none" stroke="#435365" stroke-width="1.5"/>
-<text x="560.0" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">统计表</text>
-<text x="560.0" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">均值、σ、保留点数</text>
-<path d="M 895 636 L 895 657" fill="none" stroke="#7955a3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" marker-end="url(#arrow-comoc)"/>
-<rect x="532" y="663" width="476" height="48" rx="12" fill="#f5f0fa" stroke="none" stroke-width="1.4" stroke-dasharray="5 5"/>
-<text x="552" y="694" font-size="21" font-weight="600" fill="#7955a3" text-anchor="start">report · 读取汇总结果，绘制 O−C 残差图</text>
-<text x="32" y="739" font-size="20" font-weight="400" fill="#526579" text-anchor="start">示例 k = 2.6、绝对值上限 0.2″；report 只读取汇总数据绘图，不参与归算。</text>
+<rect width="1040" height="758" fill="#ffffff"/>
+<text x="32" y="65" font-size="28" font-weight="500" fill="#222222" text-anchor="start">(4)</text>
+<text x="104" y="66" font-size="30" font-weight="600" fill="#222222" text-anchor="start">O−C 统计</text>
+<text x="104" y="103" font-size="21" font-weight="400" fill="#555555" text-anchor="start">剔除野值，汇总每个观测夜与每个目标的残差</text>
+<path d="M 32 118 L 1008 118" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<rect x="32" y="140" width="976" height="96" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="170" font-size="18" font-weight="600" fill="#555555" text-anchor="start">输入</text>
+<text x="132.0" y="178" font-size="23" font-weight="600" fill="#222222" text-anchor="start">逐帧 O−C</text>
+<text x="132.0" y="211" font-size="20" font-weight="400" fill="#555555" text-anchor="start">来自 match 的归算结果 · 多帧、多目标</text>
+<path d="M 145 236 L 145 270" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
+<rect x="32" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">01</text>
+<text x="52" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">按日分组</text>
+<path d="M 52 384 L 238 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="52" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">按观测日期</text>
+<text x="52" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">与目标分别</text>
+<text x="52" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">整理残差序列</text>
+<path d="M 261 391 L 277 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
+<rect x="282" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="302" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">02</text>
+<text x="302" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">迭代剔除</text>
+<path d="M 302 384 L 488 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="302" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">偏离均值 &lt; k·σ</text>
+<text x="302" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">且 |O−C| &lt; 上限</text>
+<text x="302" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">迭代至收敛</text>
+<path d="M 511 391 L 527 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
+<rect x="532" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="552" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">03</text>
+<text x="552" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">质量门限</text>
+<path d="M 552 384 L 738 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="552" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">两个方向的 σ</text>
+<text x="552" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">均须 &lt; 0.3″</text>
+<text x="552" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">且保留 ≥ 2 帧</text>
+<path d="M 761 391 L 777 391" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
+<rect x="782" y="278" width="226" height="226" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="802" y="320" font-size="18" font-weight="500" fill="#555555" text-anchor="start">04</text>
+<text x="802" y="365" font-size="23" font-weight="600" fill="#222222" text-anchor="start">汇总输出</text>
+<path d="M 802 384 L 988 384" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="802" y="418" font-size="21" font-weight="400" fill="#555555" text-anchor="start">保留合格夜数据</text>
+<text x="802" y="447" font-size="21" font-weight="400" fill="#555555" text-anchor="start">统计均值与 σ</text>
+<text x="802" y="476" font-size="21" font-weight="400" fill="#555555" text-anchor="start">合并跨日结果</text>
+<path d="M 895 504 L 895 538" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-comoc)"/>
+<rect x="32" y="546" width="976" height="90" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="52" y="578" font-size="18" font-weight="600" fill="#555555" text-anchor="start">输出</text>
+<text x="132.0" y="579" font-size="23" font-weight="600" fill="#222222" text-anchor="start">O−C 数据</text>
+<text x="132.0" y="611" font-size="20" font-weight="400" fill="#555555" text-anchor="start">单日 / 全时段</text>
+<path d="M 540.0 564 L 540.0 618" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<text x="560.0" y="579" font-size="23" font-weight="600" fill="#222222" text-anchor="start">统计表</text>
+<text x="560.0" y="611" font-size="20" font-weight="400" fill="#555555" text-anchor="start">均值、σ、保留点数</text>
+<path d="M 895 636 L 895 657" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" marker-end="url(#arrow-comoc)"/>
+<rect x="532" y="663" width="476" height="48" fill="#f7f7f7" stroke="#999999" stroke-width="1.2" stroke-dasharray="5 5"/>
+<text x="552" y="694" font-size="21" font-weight="500" fill="#222222" text-anchor="start">report · 读取汇总结果，绘制 O−C 残差图</text>
+<text x="32" y="739" font-size="20" font-weight="400" fill="#555555" text-anchor="start">示例 k = 2.6、绝对值上限 0.2″；report 只读取汇总数据绘图，不参与归算。</text>
 </g>
 </svg>
