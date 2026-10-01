@@ -1,57 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 614" width="1600" height="614" role="img" aria-labelledby="t d">
-<title id="t">NSPA ③ 参考星匹配与底片归算</title><desc id="d">③ 参考星匹配与底片归算：用 GAIA 恒星建立像素→天球的对应，定位卫星。输入：星象表，GAIA DR3 星表，卫星历表；输出：目标 RA / Dec，参考星表，底片拟合 σ。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="720" viewBox="0 0 1040 720" role="img" aria-labelledby="title desc">
+<title id="title">NSPA 参考星匹配与底片归算</title>
+<desc id="desc">参考星匹配与底片归算。输入：检测星象表；GAIA DR3 星表；IMCCE 卫星历表。处理顺序：预报与取星 → 自动配对 → 底片常数 → 定位与归算。输出：目标 RA / Dec；参考星表；底片拟合 σ。底片模型可选 6 / 12 / 20 项；同一帧的后续目标复用已求得的底片常数。 底片常数只在内部使用，不写回 FITS 头，不生成 WCS。</desc>
 <defs>
-<marker id="ah-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8f7e"/></marker>
-<marker id="ah-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c26a00"/></marker>
-<marker id="ah-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fd6"/></marker>
-<marker id="ah-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a63d8c"/></marker>
-<marker id="ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker>
+<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#0b7b72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#a66212" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#3269b0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#7955a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#526579" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
 </defs>
-<style>text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif;fill:#1f2328}</style>
-<rect width="1600" height="614" fill="#ffffff"/>
-<rect x="0" y="0" width="12" height="614" rx="0" fill="#2f6fd6" stroke="none" stroke-width="1.5"/>
-<text x="44" y="62" font-size="34" font-weight="700" fill="#2f6fd6" text-anchor="start">③ 参考星匹配与底片归算</text>
-<text x="448.08000000000004" y="62" font-size="21" font-weight="400" fill="#57606a" text-anchor="start">用 GAIA 恒星建立像素→天球的对应，定位卫星</text>
-<rect x="44" y="112" width="300" height="406" rx="14" fill="#f6f8fa" stroke="#8c959f" stroke-width="2"/>
-<text x="68" y="156" font-size="20" font-weight="700" fill="#57606a" text-anchor="start">输入</text>
-<text x="68" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">星象表</text>
-<text x="68" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">来自 ②</text>
-<text x="68" y="284" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">GAIA DR3 星表</text>
-<text x="68" y="314" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">位置、自行、G 星等</text>
-<text x="68" y="364" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">卫星历表</text>
-<text x="68" y="394" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">IMCCE，按曝光中点插值</text>
-<rect x="420" y="112" width="780" height="88" rx="14" fill="#e9f0fb" stroke="#2f6fd6" stroke-width="2"/>
-<circle cx="466" cy="156.0" r="24" fill="#2f6fd6"/>
-<text x="466" y="165.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
-<text x="510" y="148" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">预报与取星</text>
-<text x="510" y="181" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">历表插值得到目标预报位置；截取视场内 GAIA 星并按自行改到观测历元</text>
-<rect x="420" y="218" width="780" height="88" rx="14" fill="#e9f0fb" stroke="#2f6fd6" stroke-width="2"/>
-<circle cx="466" cy="262.0" r="24" fill="#2f6fd6"/>
-<text x="466" y="271.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
-<text x="510" y="254" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">自动匹配</text>
-<text x="510" y="287" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">依次假设每颗检测星是目标，按标称比例尺与旋转角与 GAIA 配对，取最多者</text>
-<line x1="466" y1="199" x2="466" y2="216" stroke="#2f6fd6" stroke-width="2.5" marker-end="url(#ah-match)"/>
-<rect x="420" y="324" width="780" height="88" rx="14" fill="#e9f0fb" stroke="#2f6fd6" stroke-width="2"/>
-<circle cx="466" cy="368.0" r="24" fill="#2f6fd6"/>
-<text x="466" y="377.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
-<text x="510" y="360" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">底片常数</text>
-<text x="510" y="393" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">6 / 12 / 20 项多项式最小二乘，2.6σ 迭代剔除；再用新常数全图重匹配</text>
-<line x1="466" y1="305" x2="466" y2="322" stroke="#2f6fd6" stroke-width="2.5" marker-end="url(#ah-match)"/>
-<rect x="420" y="430" width="780" height="88" rx="14" fill="#e9f0fb" stroke="#2f6fd6" stroke-width="2"/>
-<circle cx="466" cy="474.0" r="24" fill="#2f6fd6"/>
-<text x="466" y="483.0" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
-<text x="510" y="466" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">定位目标</text>
-<text x="510" y="499" font-size="18.5" font-weight="400" fill="#1f2328" text-anchor="start">历表位置反算到像素，3 px 内最近的星即目标，换算为 RA / Dec</text>
-<line x1="466" y1="411" x2="466" y2="428" stroke="#2f6fd6" stroke-width="2.5" marker-end="url(#ah-match)"/>
-<line x1="352" y1="315.0" x2="412" y2="315.0" stroke="#2f6fd6" stroke-width="3.5" marker-end="url(#ah-match)"/>
-<rect x="1280" y="112" width="276" height="406" rx="14" fill="#ffffff" stroke="#2f6fd6" stroke-width="3"/>
-<text x="1304" y="156" font-size="20" font-weight="700" fill="#2f6fd6" text-anchor="start">输出</text>
-<text x="1304" y="204" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">目标 RA / Dec</text>
-<text x="1304" y="234" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">及 O−C = 实测 − 历表</text>
-<text x="1304" y="284" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">参考星表</text>
-<text x="1304" y="314" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">DS9 region，红圈</text>
-<text x="1304" y="364" font-size="23" font-weight="700" fill="#1f2328" text-anchor="start">底片拟合 σ</text>
-<text x="1304" y="394" font-size="17.5" font-weight="400" fill="#57606a" text-anchor="start">逐帧写出</text>
-<line x1="1208" y1="315.0" x2="1272" y2="315.0" stroke="#2f6fd6" stroke-width="3.5" marker-end="url(#ah-match)"/>
-<text x="44" y="574" font-size="18" font-weight="400" fill="#57606a" text-anchor="start">同一帧有多个目标时，后续目标复用该帧底片常数。底片常数只在内部使用，不写回 FITS 头（不生成 WCS）。</text>
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC','Hiragino Sans GB','Source Han Sans SC',sans-serif">
+<rect width="1040" height="720" rx="20" fill="#ffffff"/>
+<rect x="1" y="1" width="1038" height="718" rx="20" fill="none" stroke="#dce4ec"/>
+<rect x="32" y="30" width="56" height="56" rx="16" fill="#eef4fc" stroke="none" stroke-width="1.4"/>
+<g transform="translate(44 42)" fill="none" stroke="#3269b0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M 3 27 V 5 M 3 27 H 28 M 7 22 L 15 15 L 25 6"/><circle cx="7" cy="22" r="2"/><circle cx="15" cy="15" r="2"/><circle cx="25" cy="6" r="2"/></g>
+<text x="104" y="66" font-size="32" font-weight="700" fill="#162638" text-anchor="start">参考星匹配与底片归算</text>
+<text x="104" y="103" font-size="21" font-weight="400" fill="#526579" text-anchor="start">用 GAIA 恒星建立像素与天球坐标的对应，定位天然卫星</text>
+<text x="1008" y="65" font-size="23" font-weight="600" fill="#3269b0" text-anchor="end">03</text>
+<rect x="32" y="140" width="976" height="96" rx="14" fill="#f5f8fb" stroke="#dce4ec" stroke-width="1.4"/>
+<text x="52" y="170" font-size="18" font-weight="600" fill="#526579" text-anchor="start">输入</text>
+<text x="132.0" y="178" font-size="23" font-weight="600" fill="#162638" text-anchor="start">检测星象表</text>
+<text x="132.0" y="211" font-size="20" font-weight="400" fill="#526579" text-anchor="start">(x, y)、流量、SNR</text>
+<text x="417.3333333333333" y="178" font-size="23" font-weight="600" fill="#162638" text-anchor="start">GAIA DR3 星表</text>
+<text x="417.3333333333333" y="211" font-size="20" font-weight="400" fill="#526579" text-anchor="start">位置、自行、G 星等</text>
+<path d="M 397.3333333333333 161 L 397.3333333333333 218" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<text x="702.6666666666666" y="178" font-size="23" font-weight="600" fill="#162638" text-anchor="start">IMCCE 卫星历表</text>
+<text x="702.6666666666666" y="211" font-size="20" font-weight="400" fill="#526579" text-anchor="start">曝光中点位置插值</text>
+<path d="M 682.6666666666666 161 L 682.6666666666666 218" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<path d="M 260.66666666666663 236 L 260.66666666666663 254" fill="none" stroke="#3269b0" stroke-width="1.5"/>
+<path d="M 546.0 236 L 546.0 254" fill="none" stroke="#3269b0" stroke-width="1.5"/>
+<path d="M 831.3333333333333 236 L 831.3333333333333 254" fill="none" stroke="#3269b0" stroke-width="1.5"/>
+<path d="M 145 254 L 831.3333333333333 254" fill="none" stroke="#3269b0" stroke-width="1.5"/>
+<path d="M 145 254 L 145 270" fill="none" stroke="#3269b0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-match)"/>
+<rect x="32" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
+<rect x="52" y="298" width="46" height="30" rx="8" fill="#eef4fc" stroke="none" stroke-width="1.4"/>
+<text x="75" y="320" font-size="18" font-weight="600" fill="#3269b0" text-anchor="middle">01</text>
+<text x="52" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">预报与取星</text>
+<path d="M 52 384 L 238 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<text x="52" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">插值历表位置</text>
+<text x="52" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">截取视场恒星</text>
+<text x="52" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">自行改正到历元</text>
+<path d="M 261 391 L 277 391" fill="none" stroke="#3269b0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-match)"/>
+<rect x="282" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
+<rect x="302" y="298" width="46" height="30" rx="8" fill="#eef4fc" stroke="none" stroke-width="1.4"/>
+<text x="325" y="320" font-size="18" font-weight="600" fill="#3269b0" text-anchor="middle">02</text>
+<text x="302" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">自动配对</text>
+<path d="M 302 384 L 488 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<text x="302" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">逐颗假设目标</text>
+<text x="302" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">按尺度与旋转</text>
+<text x="302" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">取最多匹配者</text>
+<path d="M 511 391 L 527 391" fill="none" stroke="#3269b0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-match)"/>
+<rect x="532" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
+<rect x="552" y="298" width="46" height="30" rx="8" fill="#eef4fc" stroke="none" stroke-width="1.4"/>
+<text x="575" y="320" font-size="18" font-weight="600" fill="#3269b0" text-anchor="middle">03</text>
+<text x="552" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">底片常数</text>
+<path d="M 552 384 L 738 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<text x="552" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">最小二乘求解</text>
+<text x="552" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">2.6σ 迭代剔除</text>
+<text x="552" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">全图重配再拟合</text>
+<path d="M 761 391 L 777 391" fill="none" stroke="#3269b0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-match)"/>
+<rect x="782" y="278" width="226" height="226" rx="14" fill="#ffffff" stroke="#dce4ec" stroke-width="1.4"/>
+<rect x="802" y="298" width="46" height="30" rx="8" fill="#eef4fc" stroke="none" stroke-width="1.4"/>
+<text x="825" y="320" font-size="18" font-weight="600" fill="#3269b0" text-anchor="middle">04</text>
+<text x="802" y="365" font-size="23" font-weight="700" fill="#162638" text-anchor="start">定位与归算</text>
+<path d="M 802 384 L 988 384" fill="none" stroke="#dce4ec" stroke-width="1.5"/>
+<text x="802" y="418" font-size="21" font-weight="400" fill="#526579" text-anchor="start">历表反算像素</text>
+<text x="802" y="447" font-size="21" font-weight="400" fill="#526579" text-anchor="start">≤ 3 px 最近源</text>
+<text x="802" y="476" font-size="21" font-weight="400" fill="#526579" text-anchor="start">换算 RA / Dec</text>
+<path d="M 895 504 L 895 538" fill="none" stroke="#3269b0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-match)"/>
+<rect x="32" y="546" width="976" height="90" rx="14" fill="#162638" stroke="none" stroke-width="1.4"/>
+<text x="52" y="578" font-size="18" font-weight="600" fill="#c6d5e6" text-anchor="start">输出</text>
+<text x="132.0" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">目标 RA / Dec</text>
+<text x="132.0" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">O−C = 实测 − 历表</text>
+<path d="M 397.3333333333333 564 L 397.3333333333333 618" fill="none" stroke="#435365" stroke-width="1.5"/>
+<text x="417.3333333333333" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">参考星表</text>
+<text x="417.3333333333333" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">DS9 region · 红圈</text>
+<path d="M 682.6666666666666 564 L 682.6666666666666 618" fill="none" stroke="#435365" stroke-width="1.5"/>
+<text x="702.6666666666666" y="579" font-size="23" font-weight="600" fill="#ffffff" text-anchor="start">底片拟合 σ</text>
+<text x="702.6666666666666" y="611" font-size="20" font-weight="400" fill="#c6d5e6" text-anchor="start">逐帧输出</text>
+<text x="32" y="672" font-size="20" font-weight="400" fill="#526579" text-anchor="start">底片模型可选 6 / 12 / 20 项；同一帧的后续目标复用已求得的底片常数。</text>
+<text x="32" y="701" font-size="20" font-weight="400" fill="#526579" text-anchor="start">底片常数只在内部使用，不写回 FITS 头，不生成 WCS。</text>
+</g>
 </svg>

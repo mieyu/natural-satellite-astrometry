@@ -34,6 +34,7 @@ NSPA 用于天然卫星 CCD 观测数据的天体测量归算，包含图像预�
 </p>
 
 四个核心模块各自读写文件，可以整条运行，也可以只重跑其中一步。
+图中实线箭头表示主处理顺序，虚线箭头表示外部参考数据或辅助出图；四种颜色对应下方四个模块。
 `report` 不参与计算，只把 ④ 的汇总结果画成残差图。
 
 ## 处理效果
@@ -53,7 +54,7 @@ NSPA 用于天然卫星 CCD 观测数据的天体测量归算，包含图像预�
 ### ① 图像预处理
 
 <p align="center">
-  <a href="docs/assets/nspa-flow-pre.svg"><img src="docs/assets/nspa-flow-pre.svg" alt="图像预处理流程：原始 CCD 图像 → 估计背景 → 行、列串联长窗口中值得到超级背景 → 扣除背景并恢复背景水平 → 3×3 平滑 → 平坦背景图像" width="100%"></a>
+  <a href="docs/assets/nspa-flow-pre.svg"><img src="docs/assets/nspa-flow-pre.svg" alt="图像预处理流程：原始 CCD 图像 → 估计背景 → 沿行中值滤波并扣除背景 → 沿列再次滤波并扣除背景 → 可选 3×3 平滑 → 平坦背景 FITS；每次扣背景均加回原始背景均值" width="100%"></a>
 </p>
 
 这一帧的原始图像上有一个直径约 1000 px 的环形暗区和亮晕，亮晕与暗区的背景相差约 25 ADU。
@@ -108,7 +109,7 @@ ds9 fits/20241103S9001I.fit -zscale \
 ### ③ 参考星匹配与底片归算
 
 <p align="center">
-  <a href="docs/assets/nspa-flow-match.svg"><img src="docs/assets/nspa-flow-match.svg" alt="匹配与归算流程：星象表、GAIA DR3、卫星历表 → 预报与取星 → 自动匹配 → 底片常数最小二乘 → 历表反算像素并在 3 px 内定位目标 → 目标 RA/Dec、参考星表、底片 σ" width="100%"></a>
+  <a href="docs/assets/nspa-flow-match.svg"><img src="docs/assets/nspa-flow-match.svg" alt="匹配与归算流程：星象表、GAIA DR3、卫星历表 → 预报与取星 → 自动配对 → 底片常数最小二乘、全图重配再拟合 → 历表反算像素并在 3 px 内定位目标 → 目标 RA/Dec 与 O-C、参考星表、底片 σ" width="100%"></a>
 </p>
 
 归档 `.ref.reg` 记录了 **15 颗参考星**（红圈，R1–R15 为文件行序），它们都是检测星中与 GAIA 恒星对上的那部分。
@@ -146,7 +147,7 @@ S9 就是第 11 颗检测星。其余 8 个检测源在所附 GAIA 星表中 30�
 ### ④ O-C 统计
 
 <p align="center">
-  <a href="docs/assets/nspa-flow-comoc.svg"><img src="docs/assets/nspa-flow-comoc.svg" alt="O-C 统计流程：逐帧 O-C → 按日按目标分组 → k·σ 迭代剔除与绝对值上限 → 标准差小于 0.3″ 的质量门限 → 汇总；report 辅助绘制残差图" width="100%"></a>
+  <a href="docs/assets/nspa-flow-comoc.svg"><img src="docs/assets/nspa-flow-comoc.svg" alt="O-C 统计流程：逐帧 O-C → 按日按目标分组 → k·σ 迭代剔除与绝对值上限 → 两个方向的标准差均小于 0.3″ 且保留至少 2 帧 → 汇总；report 辅助绘制残差图" width="100%"></a>
 </p>
 
 ## O-C 结果
@@ -279,6 +280,12 @@ natural-satellite-astrometry/
 
 README 图件均可复现：`docs/assets/src/make_flow_diagrams.py` 生成流程图；
 `reconstruct_frame.py` 与 `make_frame_figures.py` 在给定归档目录（`--materials <含 inputs/images/... 的目录>`）时生成单帧证据图与 O-C 图。
+
+重新生成全部五张流程图（仅需 Python 标准库）：
+
+```bash
+python docs/assets/src/make_flow_diagrams.py
+```
 
 ## 文档
 
