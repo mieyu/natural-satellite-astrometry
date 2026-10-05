@@ -1,60 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" width="1600" height="560" role="img" aria-labelledby="t d">
-<title id="t">NSPA 总体数据流</title><desc id="d">原始 FITS 经图像预处理、星象检测、参考星匹配与底片归算、O-C 统计四个模块，得到目标天球位置与 O-C 残差；report 为辅助出图。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="800" viewBox="0 0 1040 800" role="img" aria-labelledby="title desc">
+<title id="title">NSPA 总体数据流</title>
+<desc id="desc">原始 CCD FITS 按顺序经过 pre、detect、match、comoc。GAIA DR3 星表与 IMCCE 卫星历表进入 match；comoc 汇总数据由 report 辅助绘图。</desc>
 <defs>
-<marker id="ah-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8f7e"/></marker>
-<marker id="ah-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c26a00"/></marker>
-<marker id="ah-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fd6"/></marker>
-<marker id="ah-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a63d8c"/></marker>
-<marker id="ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker>
+<marker id="arrow-pre" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-detect" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-match" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-comoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#222222" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
 </defs>
-<style>text{font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC',sans-serif;fill:#1f2328}</style>
-<rect width="1600" height="560" fill="#ffffff"/>
-<text x="40" y="56" font-size="32" font-weight="700" fill="#1f2328" text-anchor="start">NSPA 总体数据流</text>
-<text x="40" y="92" font-size="20" font-weight="400" fill="#57606a" text-anchor="start">一个观测夜目录为一个处理单元；四个核心模块依次运行，也可单独运行任一模块。</text>
-<rect x="40" y="210" width="206" height="190" rx="14" fill="#f6f8fa" stroke="#8c959f" stroke-width="2"/>
-<text x="143.0" y="272" font-size="24" font-weight="700" fill="#1f2328" text-anchor="middle">原始 CCD 图像</text>
-<text x="143.0" y="310" font-size="19" font-weight="400" fill="#57606a" text-anchor="middle">FITS，逐帧</text>
-<text x="143.0" y="340" font-size="17" font-weight="400" fill="#57606a" text-anchor="middle">一个观测夜一个目录</text>
-<rect x="306" y="210" width="206" height="190" rx="14" fill="#e7f4f2" stroke="#0e8f7e" stroke-width="2.5"/>
-<rect x="306" y="210" width="206" height="58" rx="14" fill="#0e8f7e" stroke="none" stroke-width="1.5"/>
-<rect x="306" y="250" width="206" height="18" rx="0" fill="#0e8f7e" stroke="none" stroke-width="1.5"/>
-<text x="409.0" y="249" font-size="23" font-weight="700" fill="#ffffff" text-anchor="middle">① 图像预处理</text>
-<text x="409.0" y="306" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">扣除天空背景</text>
-<text x="409.0" y="360" font-size="17" font-weight="700" fill="#0e8f7e" text-anchor="middle">→ 平坦背景图像</text>
-<line x1="252" y1="305.0" x2="300" y2="305.0" stroke="#0e8f7e" stroke-width="3" marker-end="url(#ah-pre)"/>
-<rect x="572" y="210" width="206" height="190" rx="14" fill="#fbf0e3" stroke="#c26a00" stroke-width="2.5"/>
-<rect x="572" y="210" width="206" height="58" rx="14" fill="#c26a00" stroke="none" stroke-width="1.5"/>
-<rect x="572" y="250" width="206" height="18" rx="0" fill="#c26a00" stroke="none" stroke-width="1.5"/>
-<text x="675.0" y="249" font-size="23" font-weight="700" fill="#ffffff" text-anchor="middle">② 星象检测</text>
-<text x="675.0" y="300" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">阈值分割</text>
-<text x="675.0" y="326" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">修正矩定心</text>
-<text x="675.0" y="360" font-size="17" font-weight="700" fill="#c26a00" text-anchor="middle">→ 星象表 (x, y, SNR)</text>
-<line x1="518" y1="305.0" x2="566" y2="305.0" stroke="#c26a00" stroke-width="3" marker-end="url(#ah-detect)"/>
-<rect x="838" y="210" width="206" height="190" rx="14" fill="#e9f0fb" stroke="#2f6fd6" stroke-width="2.5"/>
-<rect x="838" y="210" width="206" height="58" rx="14" fill="#2f6fd6" stroke="none" stroke-width="1.5"/>
-<rect x="838" y="250" width="206" height="18" rx="0" fill="#2f6fd6" stroke="none" stroke-width="1.5"/>
-<text x="941.0" y="249" font-size="23" font-weight="700" fill="#ffffff" text-anchor="middle">③ 匹配与归算</text>
-<text x="941.0" y="300" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">GAIA 参考星</text>
-<text x="941.0" y="326" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">底片常数</text>
-<text x="941.0" y="360" font-size="17" font-weight="700" fill="#2f6fd6" text-anchor="middle">→ 目标 RA/Dec、O−C</text>
-<line x1="784" y1="305.0" x2="832" y2="305.0" stroke="#2f6fd6" stroke-width="3" marker-end="url(#ah-match)"/>
-<rect x="1104" y="210" width="206" height="190" rx="14" fill="#f6eaf3" stroke="#a63d8c" stroke-width="2.5"/>
-<rect x="1104" y="210" width="206" height="58" rx="14" fill="#a63d8c" stroke="none" stroke-width="1.5"/>
-<rect x="1104" y="250" width="206" height="18" rx="0" fill="#a63d8c" stroke="none" stroke-width="1.5"/>
-<text x="1207.0" y="249" font-size="23" font-weight="700" fill="#ffffff" text-anchor="middle">④ O−C 统计</text>
-<text x="1207.0" y="300" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">剔除野值</text>
-<text x="1207.0" y="326" font-size="19" font-weight="500" fill="#1f2328" text-anchor="middle">逐晚统计</text>
-<text x="1207.0" y="360" font-size="17" font-weight="700" fill="#a63d8c" text-anchor="middle">→ O−C 数据与统计</text>
-<line x1="1050" y1="305.0" x2="1098" y2="305.0" stroke="#a63d8c" stroke-width="3" marker-end="url(#ah-comoc)"/>
-<rect x="1370" y="210" width="206" height="190" rx="14" fill="#f6f8fa" stroke="#1f2328" stroke-width="2"/>
-<text x="1473.0" y="272" font-size="24" font-weight="700" fill="#1f2328" text-anchor="middle">天体测量结果</text>
-<text x="1473.0" y="310" font-size="19" font-weight="400" fill="#57606a" text-anchor="middle">目标位置 + O−C</text>
-<text x="1473.0" y="340" font-size="17" font-weight="400" fill="#57606a" text-anchor="middle">单日与全时段汇总</text>
-<line x1="1316" y1="305.0" x2="1364" y2="305.0" stroke="#a63d8c" stroke-width="3" marker-end="url(#ah-comoc)"/>
-<rect x="748" y="120" width="386" height="58" rx="14" fill="#ffffff" stroke="#2f6fd6" stroke-width="1.8" stroke-dasharray="6 5"/>
-<text x="941.0" y="157" font-size="19" font-weight="600" fill="#2f6fd6" text-anchor="middle">GAIA DR3 星表 · 卫星历表 (IMCCE)</text>
-<line x1="941.0" y1="180" x2="941.0" y2="204" stroke="#2f6fd6" stroke-width="2.5" marker-end="url(#ah-match)"/>
-<rect x="1104" y="450" width="472" height="70" rx="14" fill="#ffffff" stroke="#a63d8c" stroke-width="1.8" stroke-dasharray="6 5"/>
-<text x="1124" y="493" font-size="19" font-weight="600" fill="#a63d8c" text-anchor="start">report（辅助）：由汇总数据绘制 O−C 残差图</text>
-<line x1="1207.0" y1="404" x2="1207.0" y2="446" stroke="#a63d8c" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah-comoc)"/>
+<g font-family="'PingFang SC','Microsoft YaHei','Noto Sans CJK SC','Hiragino Sans GB','Source Han Sans SC',sans-serif">
+<rect width="1040" height="800" fill="#ffffff"/>
+<text x="32" y="60" font-size="30" font-weight="600" fill="#222222" text-anchor="start">NSPA 天体测量处理流程</text>
+<text x="32" y="98" font-size="21" font-weight="400" fill="#555555" text-anchor="start">按观测夜组织数据；四个核心模块可依次运行，也可单步重跑。</text>
+<path d="M 32 118 L 1008 118" fill="none" stroke="#cccccc" stroke-width="1.5"/>
+<rect x="128" y="128" width="624" height="52" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="162" font-size="18" font-weight="600" fill="#555555" text-anchor="start">输入</text>
+<text x="216" y="162" font-size="23" font-weight="600" fill="#222222" text-anchor="start">原始 CCD 图像</text>
+<text x="728" y="162" font-size="20" font-weight="400" fill="#555555" text-anchor="end">FITS · 逐帧</text>
+<path d="M 440 180 L 440 200" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-main)"/>
+<text x="76" y="255" font-size="23" font-weight="500" fill="#222222" text-anchor="middle">(1)</text>
+<rect x="128" y="206" width="624" height="84" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="240" font-size="24" font-weight="600" fill="#222222" text-anchor="start">图像预处理</text>
+<text x="728" y="239" font-size="19" font-weight="400" fill="#555555" text-anchor="end">pre</text>
+<text x="152" y="270" font-size="20" font-weight="400" fill="#555555" text-anchor="start">背景估计与扣除</text>
+<text x="728" y="270" font-size="19" font-weight="500" fill="#222222" text-anchor="end">平坦背景 FITS</text>
+<path d="M 440 290 L 440 304" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-main)"/>
+<text x="76" y="359" font-size="23" font-weight="500" fill="#222222" text-anchor="middle">(2)</text>
+<rect x="128" y="310" width="624" height="84" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="344" font-size="24" font-weight="600" fill="#222222" text-anchor="start">星象检测与定心</text>
+<text x="728" y="343" font-size="19" font-weight="400" fill="#555555" text-anchor="end">detect</text>
+<text x="152" y="374" font-size="20" font-weight="400" fill="#555555" text-anchor="start">阈值分割 · 修正矩定心</text>
+<text x="728" y="374" font-size="19" font-weight="500" fill="#222222" text-anchor="end">星象表 / DS9 region</text>
+<path d="M 440 394 L 440 408" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-main)"/>
+<text x="76" y="463" font-size="23" font-weight="500" fill="#222222" text-anchor="middle">(3)</text>
+<rect x="128" y="414" width="624" height="84" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="448" font-size="24" font-weight="600" fill="#222222" text-anchor="start">参考星匹配与归算</text>
+<text x="728" y="447" font-size="19" font-weight="400" fill="#555555" text-anchor="end">match</text>
+<text x="152" y="478" font-size="20" font-weight="400" fill="#555555" text-anchor="start">GAIA 配对 · 底片常数求解</text>
+<text x="728" y="478" font-size="19" font-weight="500" fill="#222222" text-anchor="end">目标 RA / Dec 与 O−C</text>
+<path d="M 440 498 L 440 512" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-main)"/>
+<text x="76" y="567" font-size="23" font-weight="500" fill="#222222" text-anchor="middle">(4)</text>
+<rect x="128" y="518" width="624" height="84" fill="#ffffff" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="552" font-size="24" font-weight="600" fill="#222222" text-anchor="start">O−C 统计</text>
+<text x="728" y="551" font-size="19" font-weight="400" fill="#555555" text-anchor="end">comoc</text>
+<text x="152" y="582" font-size="20" font-weight="400" fill="#555555" text-anchor="start">野值剔除 · 按日、按目标统计</text>
+<text x="728" y="582" font-size="19" font-weight="500" fill="#222222" text-anchor="end">残差数据与统计表</text>
+<rect x="790" y="376" width="218" height="120" fill="#f7f7f7" stroke="#999999" stroke-width="1.2" stroke-dasharray="5 5"/>
+<text x="810" y="407" font-size="18" font-weight="600" fill="#555555" text-anchor="start">外部参考数据</text>
+<text x="810" y="443" font-size="22" font-weight="500" fill="#222222" text-anchor="start">GAIA DR3 星表</text>
+<text x="810" y="475" font-size="21" font-weight="400" fill="#222222" text-anchor="start">IMCCE 卫星历表</text>
+<path d="M 790 458 L 760 458" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" marker-end="url(#arrow-match)"/>
+<path d="M 440 602 L 440 642" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-main)"/>
+<rect x="128" y="650" width="624" height="88" fill="#f7f7f7" stroke="#999999" stroke-width="1.2"/>
+<text x="152" y="683" font-size="18" font-weight="600" fill="#555555" text-anchor="start">归算产物</text>
+<text x="152" y="717" font-size="22" font-weight="600" fill="#222222" text-anchor="start">目标天球位置 · O−C 数据 · 单日与全时段统计</text>
+<rect x="790" y="650" width="218" height="88" fill="#f7f7f7" stroke="#999999" stroke-width="1.2" stroke-dasharray="5 5"/>
+<text x="810" y="682" font-size="21" font-weight="500" fill="#222222" text-anchor="start">report · 辅助</text>
+<text x="810" y="716" font-size="22" font-weight="600" fill="#222222" text-anchor="start">O−C 残差图</text>
+<path d="M 752 560 L 899 560 L 899 644" fill="none" stroke="#222222" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 5" marker-end="url(#arrow-comoc)"/>
+<text x="804" y="597" font-size="18" font-weight="400" fill="#555555" text-anchor="start">读取汇总结果</text>
+<path d="M 128 771 L 161 771" fill="none" stroke="#555555" stroke-width="1.5"/>
+<text x="173" y="777" font-size="18" font-weight="400" fill="#555555" text-anchor="start">主处理流程</text>
+<path d="M 328 771 L 361 771" fill="none" stroke="#555555" stroke-width="1.5" stroke-dasharray="5 5"/>
+<text x="373" y="777" font-size="18" font-weight="400" fill="#555555" text-anchor="start">外部输入 / 辅助出图</text>
+</g>
 </svg>

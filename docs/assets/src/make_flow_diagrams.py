@@ -1,248 +1,269 @@
-"""README 流程图：1 张总体数据流 + 4 张模块流程图（可编辑 SVG）。
+"""Generate the five editable, self-contained SVG diagrams used in README.md.
+
+Run from any directory with Python's standard library only::
 
     python docs/assets/src/make_flow_diagrams.py
 
-输出 docs/assets/nspa-flow-{overview,pre,detect,match,comoc}.svg。
-图中只写科学用户需要的输入 → 关键方法 → 输出，不含函数名与源码路径；
-示例参数取自 inputs/configs/nspa2024.cfg。
+The 1040 px canvas is designed for GitHub's README column. Main arrows show
+execution order; dashed arrows show external inputs or auxiliary plotting.
+Use monochrome, square-cornered boxes and numbered stages for a scientific
+figure style that also remains legible in grayscale printing.
+Module parameters describe the example in inputs/configs/nspa2024.cfg.
 """
 
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 ASSETS = Path(__file__).resolve().parents[1]
+FONT = ("'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',"
+        "'Hiragino Sans GB','Source Han Sans SC',sans-serif")
+INK, MUTED, LINE = "#222222", "#555555", "#999999"
+PAPER, SOFT = "#ffffff", "#f7f7f7"
+ARROW_KEYS = ('pre', 'detect', 'match', 'comoc', 'main')
 
-FONT = ("'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC',"
-        "'Source Han Sans SC','Noto Sans SC',sans-serif")
-INK, MUTED, LINE, PAPER, CARD = "#1f2328", "#57606a", "#8c959f", "#ffffff", "#f6f8fa"
-ACCENT = {"pre": "#0e8f7e", "detect": "#c26a00", "match": "#2f6fd6", "comoc": "#a63d8c"}
-TINT = {"pre": "#e7f4f2", "detect": "#fbf0e3", "match": "#e9f0fb", "comoc": "#f6eaf3"}
 
-
-def text_width(s, size):
-    """粗略估计文本宽度：CJK 字符按 1 em，其余按 0.56 em。"""
-    return sum(size if ord(c) > 0x2E80 else 0.56 * size for c in s)
+def text_width(value, size):
+    """Conservative width estimate; rendering is checked in a browser too."""
+    return sum(size if ord(char) > 0x2E80 else size * 0.60 for char in value)
 
 
 class Svg:
-    def __init__(self, w, h, title, desc):
-        self.w, self.h = w, h
+    def __init__(self, height, title, description):
         self.parts = [
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" '
-            f'role="img" aria-labelledby="t d">',
-            f'<title id="t">{escape(title)}</title><desc id="d">{escape(desc)}</desc>',
-            "<defs>",
-            *(f'<marker id="ah-{k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" '
-              f'markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{c}"/></marker>'
-              for k, c in {**ACCENT, "grey": LINE}.items()),
-            "</defs>",
-            f'<style>text{{font-family:{FONT};fill:{INK}}}</style>',
-            f'<rect width="{w}" height="{h}" fill="{PAPER}"/>',
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="{height}" '
+            f'viewBox="0 0 1040 {height}" role="img" aria-labelledby="title desc">',
+            f'<title id="title">{escape(title)}</title>',
+            f'<desc id="desc">{escape(description)}</desc>',
+            '<defs>',
+            *(f'<marker id="arrow-{key}" viewBox="0 0 10 10" refX="9" refY="5" '
+              f'markerWidth="6" markerHeight="6" orient="auto">'
+              f'<path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="{INK}" '
+              f'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>'
+              for key in ARROW_KEYS),
+            '</defs>',
+            # A CSS "text { fill: ... }" rule would override text fill attributes.
+            f'<g font-family="{FONT}">',
+            f'<rect width="1040" height="{height}" fill="{PAPER}"/>',
         ]
 
-    def rect(self, x, y, w, h, fill, stroke="none", sw=1.5, r=14, dash=None):
-        d = f' stroke-dasharray="{dash}"' if dash else ""
-        self.parts.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r}" fill="{fill}" '
-                          f'stroke="{stroke}" stroke-width="{sw}"{d}/>')
+    def rect(self, x, y, width, height, fill=PAPER, stroke=LINE, dash=None):
+        dashed = f' stroke-dasharray="{dash}"' if dash else ''
+        self.parts.append(
+            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"{dashed}/>')
 
-    def text(self, x, y, s, size=20, color=INK, weight=400, anchor="start", max_w=None):
-        if max_w is not None:
-            assert text_width(s, size) <= max_w, f"text too wide ({text_width(s, size):.0f}>{max_w}): {s}"
-        self.parts.append(f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" '
-                          f'fill="{color}" text-anchor="{anchor}">{escape(s)}</text>')
+    def text(self, x, y, value, size=21, color=INK, weight=400, max_width=None,
+             anchor="start"):
+        if max_width is not None:
+            assert text_width(value, size) <= max_width, f'Text too wide: {value}'
+        self.parts.append(
+            f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" '
+            f'fill="{color}" text-anchor="{anchor}">{escape(value)}</text>')
 
-    def arrow(self, x1, y1, x2, y2, key="grey", sw=3, dash=None):
-        c = ACCENT.get(key, LINE)
-        d = f' stroke-dasharray="{dash}"' if dash else ""
-        self.parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{c}" '
-                          f'stroke-width="{sw}"{d} marker-end="url(#ah-{key})"/>')
+    def line(self, x1, y1, x2, y2, color=LINE, dash=None):
+        dashed = f' stroke-dasharray="{dash}"' if dash else ''
+        self.parts.append(
+            f'<path d="M {x1} {y1} L {x2} {y2}" fill="none" stroke="{color}" '
+            f'stroke-width="1.5"{dashed}/>')
 
-    def circle(self, cx, cy, r, fill):
-        self.parts.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}"/>')
+    def arrow(self, points, key="main", dashed=False):
+        path = 'M ' + ' L '.join(f'{x} {y}' for x, y in points)
+        dash = ' stroke-dasharray="5 5"' if dashed else ''
+        self.parts.append(
+            f'<path d="{path}" fill="none" stroke="{INK}" stroke-width="1.6" '
+            f'stroke-linejoin="round" stroke-linecap="round"{dash} '
+            f'marker-end="url(#arrow-{key})"/>')
+
+    def header(self, title, subtitle, key=None, number=None):
+        if key:
+            self.text(32, 65, f'({int(number)})', 28, INK, 500)
+            self.text(104, 66, title, 30, weight=600, max_width=760)
+            self.text(104, 103, subtitle, 21, MUTED, max_width=890)
+        else:
+            self.text(32, 60, title, 30, weight=600)
+            self.text(32, 98, subtitle, 21, MUTED, max_width=970)
+        self.line(32, 118, 1008, 118, '#cccccc')
 
     def save(self, name):
-        (ASSETS / name).write_text("\n".join(self.parts + ["</svg>"]) + "\n", encoding="utf-8")
-        print("wrote", name)
+        (ASSETS / name).write_text('\n'.join(self.parts + ['</g>', '</svg>']) + '\n',
+                                   encoding="utf-8")
+        print('wrote', name)
 
-
-# ── 总体数据流 ────────────────────────────────────────────────────────────
 
 def overview():
-    W, H = 1600, 560
-    s = Svg(W, H, "NSPA 总体数据流",
-            "原始 FITS 经图像预处理、星象检测、参考星匹配与底片归算、O-C 统计四个模块，"
-            "得到目标天球位置与 O-C 残差；report 为辅助出图。")
-    s.text(40, 56, "NSPA 总体数据流", 32, weight=700)
-    s.text(40, 92, "一个观测夜目录为一个处理单元；四个核心模块依次运行，也可单独运行任一模块。", 20, MUTED)
+    s = Svg(800, 'NSPA 总体数据流',
+            '原始 CCD FITS 按顺序经过 pre、detect、match、comoc。'
+            'GAIA DR3 星表与 IMCCE 卫星历表进入 match；comoc 汇总数据由 report 辅助绘图。')
+    s.header('NSPA 天体测量处理流程', '按观测夜组织数据；四个核心模块可依次运行，也可单步重跑。')
 
-    y, h = 210, 190
-    bw, gap, x0 = 206, 60, 40
-    xs = [x0 + i * (bw + gap) for i in range(6)]
-    # 输入数据
-    s.rect(xs[0], y, bw, h, CARD, LINE, 2)
-    s.text(xs[0] + bw / 2, y + 62, "原始 CCD 图像", 24, weight=700, anchor="middle", max_w=bw - 20)
-    s.text(xs[0] + bw / 2, y + 100, "FITS，逐帧", 19, MUTED, anchor="middle")
-    s.text(xs[0] + bw / 2, y + 130, "一个观测夜一个目录", 17, MUTED, anchor="middle", max_w=bw - 16)
+    s.rect(128, 128, 624, 52, SOFT)
+    s.text(152, 162, '输入', 18, MUTED, 600)
+    s.text(216, 162, '原始 CCD 图像', 23, weight=600)
+    s.text(728, 162, 'FITS · 逐帧', 20, MUTED, anchor="end")
+    s.arrow([(440, 180), (440, 200)])
 
-    mods = [
-        ("pre", "① 图像预处理", ("扣除天空背景",), "→ 平坦背景图像"),
-        ("detect", "② 星象检测", ("阈值分割", "修正矩定心"), "→ 星象表 (x, y, SNR)"),
-        ("match", "③ 匹配与归算", ("GAIA 参考星", "底片常数"), "→ 目标 RA/Dec、O−C"),
-        ("comoc", "④ O−C 统计", ("剔除野值", "逐晚统计"), "→ O−C 数据与统计"),
+    stages = [
+        ('pre', '图像预处理', '背景估计与扣除', '平坦背景 FITS'),
+        ('detect', '星象检测与定心', '阈值分割 · 修正矩定心', '星象表 / DS9 region'),
+        ('match', '参考星匹配与归算', 'GAIA 配对 · 底片常数求解', '目标 RA / Dec 与 O−C'),
+        ('comoc', 'O−C 统计', '野值剔除 · 按日、按目标统计', '残差数据与统计表'),
     ]
-    for i, (k, name, how, out) in enumerate(mods, 1):
-        x = xs[i]
-        s.rect(x, y, bw, h, TINT[k], ACCENT[k], 2.5)
-        s.rect(x, y, bw, 58, ACCENT[k], r=14)
-        s.rect(x, y + 40, bw, 18, ACCENT[k], r=0)
-        s.text(x + bw / 2, y + 39, name, 23, "#ffffff", 700, "middle", max_w=bw - 16)
-        for j, line in enumerate(how):
-            s.text(x + bw / 2, y + 96 + j * 26 - (len(how) - 1) * 6, line, 19, INK, 500, "middle",
-                   max_w=bw - 14)
-        s.text(x + bw / 2, y + 150, out, 17, ACCENT[k], 700, "middle", max_w=bw - 12)
-        s.arrow(xs[i - 1] + bw + 6, y + h / 2, x - 6, y + h / 2, k)
+    for i, (key, title, method, output) in enumerate(stages):
+        y = 206 + 104 * i
+        s.text(76, y + 49, f'({i + 1})', 23, INK, 500, anchor="middle")
+        s.rect(128, y, 624, 84)
+        s.text(152, y + 34, title, 24, weight=600, max_width=390)
+        s.text(728, y + 33, key, 19, MUTED, 400, anchor="end")
+        s.text(152, y + 64, method, 20, MUTED, max_width=350)
+        s.text(728, y + 64, output, 19, INK, 500, anchor="end")
+        if i < 3:
+            s.arrow([(440, y + 84), (440, y + 98)])
 
-    # 结果
-    x = xs[5]
-    s.rect(x, y, bw, h, CARD, INK, 2)
-    s.text(x + bw / 2, y + 62, "天体测量结果", 24, weight=700, anchor="middle", max_w=bw - 20)
-    s.text(x + bw / 2, y + 100, "目标位置 + O−C", 19, MUTED, anchor="middle")
-    s.text(x + bw / 2, y + 130, "单日与全时段汇总", 17, MUTED, anchor="middle")
-    s.arrow(xs[4] + bw + 6, y + h / 2, x - 6, y + h / 2, "comoc")
+    s.rect(790, 376, 218, 120, SOFT, LINE, '5 5')
+    s.text(810, 407, '外部参考数据', 18, MUTED, 600)
+    s.text(810, 443, 'GAIA DR3 星表', 22, INK, 500)
+    s.text(810, 475, 'IMCCE 卫星历表', 21, INK)
+    s.arrow([(790, 458), (760, 458)], 'match', True)
 
-    # 外部数据进入 ③
-    xm = xs[3]
-    s.rect(xm - 90, 120, bw + 180, 58, "#ffffff", ACCENT["match"], 1.8, dash="6 5")
-    s.text(xm + bw / 2, 157, "GAIA DR3 星表 · 卫星历表 (IMCCE)", 19, ACCENT["match"], 600, "middle",
-           max_w=bw + 170)
-    s.arrow(xm + bw / 2, 180, xm + bw / 2, y - 6, "match", 2.5)
+    s.arrow([(440, 602), (440, 642)])
+    s.rect(128, 650, 624, 88, SOFT)
+    s.text(152, 683, '归算产物', 18, MUTED, 600)
+    s.text(152, 717, '目标天球位置 · O−C 数据 · 单日与全时段统计', 22, INK, 600,
+           max_width=576)
+    s.rect(790, 650, 218, 88, SOFT, LINE, '5 5')
+    s.text(810, 682, 'report · 辅助', 21, INK, 500)
+    s.text(810, 716, 'O−C 残差图', 22, weight=600)
+    s.arrow([(752, 560), (899, 560), (899, 644)], 'comoc', True)
+    s.text(804, 597, '读取汇总结果', 18, MUTED)
 
-    # report 辅助
-    xr = xs[4]
-    s.rect(xr, 450, bw * 2 + gap, 70, "#ffffff", ACCENT["comoc"], 1.8, dash="6 5")
-    s.text(xr + 20, 493, "report（辅助）：由汇总数据绘制 O−C 残差图", 19, ACCENT["comoc"], 600,
-           max_w=bw * 2 + gap - 30)
-    s.arrow(xr + bw / 2, y + h + 4, xr + bw / 2, 446, "comoc", 2.5, dash="6 5")
-    s.save("nspa-flow-overview.svg")
+    s.line(128, 771, 161, 771, MUTED)
+    s.text(173, 777, '主处理流程', 18, MUTED)
+    s.line(328, 771, 361, 771, MUTED, '5 5')
+    s.text(373, 777, '外部输入 / 辅助出图', 18, MUTED)
+    s.save('nspa-flow-overview.svg')
 
 
-# ── 模块流程图 ────────────────────────────────────────────────────────────
+def module(key, number, title, subtitle, inputs, steps, outputs, notes,
+           report=False):
+    """Left-to-right method cards with input above and output below.
 
-def module(key, fname, title, subtitle, inputs, steps, outputs, footer, extra_out=None):
-    W = 1600
-    step_h, step_gap, top = 88, 18, 112
-    mid_h = len(steps) * step_h + (len(steps) - 1) * step_gap
-    H = top + mid_h + (150 if extra_out else 96)
-    a, t = ACCENT[key], TINT[key]
-    s = Svg(W, H, f"NSPA {title}", f"{title}：{subtitle}。输入：{'，'.join(i[0] for i in inputs)}；"
-            f"输出：{'，'.join(o[0] for o in outputs)}。")
-    s.rect(0, 0, 12, H, a, r=0)
-    s.text(44, 62, title, 34, a, 700)
-    s.text(44 + text_width(title, 34) + 26, 62, subtitle, 21, MUTED, max_w=1500 - text_width(title, 34))
+    Multiple inputs join a bus before the first method, rather than implying
+    that all inputs feed an arbitrary midpoint of the algorithm.
+    """
+    s = Svg(758 if report else 720, f'NSPA {title}',
+            f'{title}。输入：' + '；'.join(item[0] for item in inputs) +
+            '。处理顺序：' + ' → '.join(item[0] for item in steps) +
+            '。输出：' + '；'.join(item[0] for item in outputs) + '。' + ' '.join(notes))
+    s.header(title, subtitle, key, number)
 
-    # 输入卡片
-    cx, cw = 44, 300
-    s.rect(cx, top, cw, mid_h, CARD, LINE, 2)
-    s.text(cx + 24, top + 44, "输入", 20, MUTED, 700)
-    yy = top + 92
-    for head, *rest in inputs:
-        s.text(cx + 24, yy, head, 23, INK, 700, max_w=cw - 40)
-        for r in rest:
-            yy += 30
-            s.text(cx + 24, yy, r, 17.5, MUTED, max_w=cw - 40)
-        yy += 50
-
-    # 方法步骤
-    mx, mw = 420, 780
-    for i, (head, body) in enumerate(steps):
-        y = top + i * (step_h + step_gap)
-        s.rect(mx, y, mw, step_h, t, a, 2)
-        s.circle(mx + 46, y + step_h / 2, 24, a)
-        s.text(mx + 46, y + step_h / 2 + 9, str(i + 1), 26, "#ffffff", 700, "middle")
-        s.text(mx + 90, y + 36, head, 23, INK, 700, max_w=mw - 110)
-        s.text(mx + 90, y + 69, body, 18.5, INK, max_w=mw - 110)
+    s.rect(32, 140, 976, 96, SOFT)
+    s.text(52, 170, '输入', 18, MUTED, 600)
+    column_width = 856 / len(inputs)
+    centers = []
+    for i, (head, detail) in enumerate(inputs):
+        x = 132 + i * column_width
+        s.text(x, 178, head, 23, weight=600, max_width=column_width - 28)
+        s.text(x, 211, detail, 20, MUTED, max_width=column_width - 28)
         if i:
-            s.arrow(mx + 46, y - step_gap - 1, mx + 46, y - 2, key, 2.5)
-    s.arrow(cx + cw + 8, top + mid_h / 2, mx - 8, top + mid_h / 2, key, 3.5)
+            s.line(x - 20, 161, x - 20, 218)
+        centers.append(x + (column_width - 28) / 2)
 
-    # 输出卡片
-    ox, ow = 1280, 276
-    s.rect(ox, top, ow, mid_h, "#ffffff", a, 3)
-    s.text(ox + 24, top + 44, "输出", 20, a, 700)
-    yy = top + 92
-    for head, *rest in outputs:
-        s.text(ox + 24, yy, head, 23, INK, 700, max_w=ow - 40)
-        for r in rest:
-            yy += 30
-            s.text(ox + 24, yy, r, 17.5, MUTED, max_w=ow - 40)
-        yy += 50
-    s.arrow(mx + mw + 8, top + mid_h / 2, ox - 8, top + mid_h / 2, key, 3.5)
+    if len(inputs) == 1:
+        s.arrow([(145, 236), (145, 270)], key)
+    else:
+        for cx in centers:
+            s.line(cx, 236, cx, 254, INK)
+        s.line(145, 254, centers[-1], 254, INK)
+        s.arrow([(145, 254), (145, 270)], key)
 
-    fy = top + mid_h + 56
-    if extra_out:
-        s.rect(ox - 240, fy - 30, ow + 240, 64, "#ffffff", a, 1.8, dash="6 5")
-        s.text(ox - 220, fy + 9, extra_out, 19, a, 600, max_w=ow + 200)
-        s.arrow(ox + ow / 2, top + mid_h + 4, ox + ow / 2, fy - 34, key, 2.5, dash="6 5")
-        fy += 70
-    s.text(44, fy, footer, 18, MUTED, max_w=1500 if not extra_out else 1500)
-    s.save(fname)
+    for i, (head, lines) in enumerate(steps):
+        x = 32 + i * 250
+        s.rect(x, 278, 226, 226)
+        s.text(x + 20, 320, f'{i + 1:02}', 18, MUTED, 500)
+        s.text(x + 20, 365, head, 23, weight=600, max_width=186)
+        s.line(x + 20, 384, x + 206, 384, '#cccccc')
+        for j, value in enumerate(lines):
+            s.text(x + 20, 418 + 29 * j, value, 21, MUTED, max_width=186)
+        if i < 3:
+            s.arrow([(x + 229, 391), (x + 245, 391)], key)
+
+    s.arrow([(895, 504), (895, 538)], key)
+    s.rect(32, 546, 976, 90, SOFT)
+    s.text(52, 578, '输出', 18, MUTED, 600)
+    column_width = 856 / len(outputs)
+    for i, (head, detail) in enumerate(outputs):
+        x = 132 + i * column_width
+        if i:
+            s.line(x - 20, 564, x - 20, 618, '#cccccc')
+        s.text(x, 579, head, 23, INK, 600, max_width=column_width - 28)
+        s.text(x, 611, detail, 20, MUTED, max_width=column_width - 28)
+
+    note_y = 672
+    if report:
+        s.arrow([(895, 636), (895, 657)], key, True)
+        s.rect(532, 663, 476, 48, SOFT, LINE, '5 5')
+        s.text(552, 694, 'report · 读取汇总结果，绘制 O−C 残差图', 21, INK, 500,
+               max_width=436)
+        note_y = 739
+    for i, note in enumerate(notes):
+        s.text(32, note_y + 29 * i, note, 20, MUTED, max_width=976)
+    s.save(f'nspa-flow-{key}.svg')
 
 
 def modules():
-    module(
-        "pre", "nspa-flow-pre.svg", "① 图像预处理", "压平天空背景与大尺度结构，保留星象",
-        inputs=[("原始 CCD 图像", "FITS，逐帧读取", "背景含渐变、光晕、条纹")],
-        steps=[
-            ("估计背景水平", "迭代 σ 裁剪，得到背景均值与噪声 σ"),
-            ("构建“超级背景”", "先沿行、再沿列做长窗口中值滤波，星象被滤掉，只剩背景"),
-            ("扣除背景", "原图减去超级背景，再加回背景均值，整体灰度水平不变"),
-            ("轻度平滑（可选）", "3×3 均值平滑，降低逐像素噪声"),
-        ],
-        outputs=[("平坦背景图像", "FITS，与原图同尺寸", "像素坐标不变")],
-        footer="本页示例：中值窗口 65 px、行→列串联、减法扣背景、开启 3×3 平滑。"
-               "另可选同态滤波、双边 Retinex 两种背景处理方式。",
-    )
-    module(
-        "detect", "nspa-flow-detect.svg", "② 星象检测与定心", "在平坦图像上找出星象并测定中心",
-        inputs=[("预处理图像", "背景已压平", "（也可直接用原图）")],
-        steps=[
-            ("阈值分割", "保留高于 “背景 + k·σ” 的像素（示例 k = 5）"),
-            ("连通区域", "8 邻域相连的像素归为同一个星象"),
-            ("修正矩定心", "强度加权质心 (x, y)，同时给出流量与信噪比 SNR"),
-            ("筛选", "像素数 10 – 5026；去掉贴边（10 px 边框）与饱和星象；SNR 门限"),
-        ],
-        outputs=[("星象表", "每颗星 x, y, 流量, SNR", "DS9 region，可直接叠加")],
-        footer="坐标为 DS9 physical 像素（1-based）；星象表按流量从亮到暗排列。",
-    )
-    module(
-        "match", "nspa-flow-match.svg", "③ 参考星匹配与底片归算", "用 GAIA 恒星建立像素→天球的对应，定位卫星",
-        inputs=[("星象表", "来自 ②"), ("GAIA DR3 星表", "位置、自行、G 星等"),
-                ("卫星历表", "IMCCE，按曝光中点插值")],
-        steps=[
-            ("预报与取星", "历表插值得到目标预报位置；截取视场内 GAIA 星并按自行改到观测历元"),
-            ("自动匹配", "依次假设每颗检测星是目标，按标称比例尺与旋转角与 GAIA 配对，取最多者"),
-            ("底片常数", "6 / 12 / 20 项多项式最小二乘，2.6σ 迭代剔除；再用新常数全图重匹配"),
-            ("定位目标", "历表位置反算到像素，3 px 内最近的星即目标，换算为 RA / Dec"),
-        ],
-        outputs=[("目标 RA / Dec", "及 O−C = 实测 − 历表"), ("参考星表", "DS9 region，红圈"),
-                 ("底片拟合 σ", "逐帧写出")],
-        footer="同一帧有多个目标时，后续目标复用该帧底片常数。底片常数只在内部使用，不写回 FITS 头（不生成 WCS）。",
-    )
-    module(
-        "comoc", "nspa-flow-comoc.svg", "④ O−C 统计", "剔除野值，给出每晚、每个目标的残差统计",
-        inputs=[("逐帧 O−C", "来自 ③，多帧、多目标")],
-        steps=[
-            ("分组", "按观测日、按目标分别统计"),
-            ("迭代剔除野值", "|O−C − 均值| < k·σ（示例 k = 2.6），且 |O−C| < 上限（示例 0.2″）"),
-            ("质量门限", "剔除后 Δα·cosδ 与 Δδ 的标准差都 < 0.3″ 的当晚数据才保留"),
-            ("汇总", "输出单日与全时段的观测数据、均值与标准差"),
-        ],
-        outputs=[("O−C 数据", "单日 / 全时段"), ("统计表", "均值、σ、保留点数")],
-        footer="report 不参与计算，只读取 ④ 的汇总结果绘图。",
-        extra_out="report（辅助）：绘制 O−C 残差图",
-    )
+    module('pre', '01', '图像预处理', '压平天空背景与大尺度结构，为星象检测准备图像',
+           inputs=[('原始 CCD 图像', '逐帧读取 FITS · 背景可能包含渐变、光晕与条纹')],
+           steps=[
+               ('估计背景', ['迭代 σ 裁剪', '估计背景均值', '与噪声 σ']),
+               ('沿行处理', ['65 px 中值窗口', '估计并扣除背景', '加回背景均值']),
+               ('沿列处理', ['交换窗口方向', '再次扣除背景', '压低残留结构']),
+               ('轻度平滑', ['可选 3×3 均值', '降低像素噪声', '保持像素网格']),
+           ],
+           outputs=[('平坦背景 FITS', '与原图同尺寸 · 像素坐标保持不变')],
+           notes=['示例采用行、列串联中值与减法扣背景；每次扣背景均加回原始背景均值。',
+                  '以上为中值背景分支；也支持同态滤波、双边 Retinex。参数来自 nspa2024.cfg。'])
+
+    module('detect', '02', '星象检测与定心', '从图像中的连通亮区得到星象中心、流量与信噪比',
+           inputs=[('预处理图像', '读取平坦背景 FITS · 跳过预处理时也可读取原图')],
+           steps=[
+               ('阈值分割', ['背景 + k·σ', '保留阈值以上', '像素；示例 k = 5']),
+               ('连通区域', ['按 8 邻域连通', '将相连亮像素', '归为同一星象']),
+               ('修正矩定心', ['测定中心 (x, y)', '计算星象流量', '与信噪比 SNR']),
+               ('筛选星象', ['像素数与边缘', '饱和与 SNR', '逐项筛选']),
+           ],
+           outputs=[('星象表 · DS9 region', '中心 (x, y)、流量与 SNR · 按流量从亮到暗排列')],
+           notes=['筛选条件：像素数 10–5026，排除 10 px 边框内与饱和星象，并应用 SNR 门限。',
+                  '坐标采用 DS9 physical（1-based），可直接叠加到相同像素网格的图像上。'])
+
+    module('match', '03', '参考星匹配与底片归算', '用 GAIA 恒星建立像素与天球坐标的对应，定位天然卫星',
+           inputs=[('检测星象表', '(x, y)、流量、SNR'),
+                   ('GAIA DR3 星表', '位置、自行、G 星等'),
+                   ('IMCCE 卫星历表', '曝光中点位置插值')],
+           steps=[
+               ('预报与取星', ['插值历表位置', '截取视场恒星', '自行改正到历元']),
+               ('自动配对', ['逐颗假设目标', '按尺度与旋转', '取最多匹配者']),
+               ('底片常数', ['最小二乘求解', '2.6σ 迭代剔除', '全图重配再拟合']),
+               ('定位与归算', ['历表反算像素', '≤ 3 px 最近源', '换算 RA / Dec']),
+           ],
+           outputs=[('目标 RA / Dec', 'O−C = 实测 − 历表'),
+                    ('参考星表', 'DS9 region · 红圈'),
+                    ('底片拟合 σ', '逐帧输出')],
+           notes=['底片模型可选 6 / 12 / 20 项；同一帧的后续目标复用已求得的底片常数。',
+                  '底片常数只在内部使用，不写回 FITS 头，不生成 WCS。'])
+
+    module('comoc', '04', 'O−C 统计', '剔除野值，汇总每个观测夜与每个目标的残差',
+           inputs=[('逐帧 O−C', '来自 match 的归算结果 · 多帧、多目标')],
+           steps=[
+               ('按日分组', ['按观测日期', '与目标分别', '整理残差序列']),
+               ('迭代剔除', ['偏离均值 < k·σ', '且 |O−C| < 上限', '迭代至收敛']),
+               ('质量门限', ['两个方向的 σ', '均须 < 0.3″', '且保留 ≥ 2 帧']),
+               ('汇总输出', ['保留合格夜数据', '统计均值与 σ', '合并跨日结果']),
+           ],
+           outputs=[('O−C 数据', '单日 / 全时段'), ('统计表', '均值、σ、保留点数')],
+           notes=['示例 k = 2.6、绝对值上限 0.2″；report 只读取汇总数据绘图，不参与归算。'],
+           report=True)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     overview()
     modules()
