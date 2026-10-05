@@ -41,11 +41,21 @@ import matplotlib.pyplot as plt
 _log = get_logger("report")
 
 # ── 颜色 / 时间偏移 / 卫星标签（与上游脚本对应） ──────────────────────────
-_COLORS = ["r", "b", "k", "g", "c"]
-_T_OFFSET = [0.00, 0.15, 0.30, 0.45, 0.60]  # 各卫星时间轴错开量（天）
+_COLORS = ["r", "b", "k", "g", "c", "m", "darkorange", "purple"]
+_T_OFFSET = [0.00, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1.05]  # 各卫星时间轴错开量（天）
 _MONTH_EN = {
-    1: "Jan.", 2: "Feb.", 3: "Mar.", 4: "Apr.", 5: "May", 6: "Jun.",
-    7: "Jul.", 8: "Aug.", 9: "Sep.", 10: "Oct.", 11: "Nov.", 12: "Dec.",
+    1: "Jan.",
+    2: "Feb.",
+    3: "Mar.",
+    4: "Apr.",
+    5: "May",
+    6: "Jun.",
+    7: "Jul.",
+    8: "Aug.",
+    9: "Sep.",
+    10: "Oct.",
+    11: "Nov.",
+    12: "Dec.",
 }
 
 # Y 轴标题（角秒以双撇号 " 表示，与上游 MATLAB 脚本一致）
@@ -112,7 +122,9 @@ def _load_dat(filepath):
                         }
                     )
                 except (ValueError, IndexError) as e:
-                    _log.info(f"  警告：{Path(filepath).name} 第 {lineno} 行解析失败：{e}")
+                    _log.info(
+                        f"  警告：{Path(filepath).name} 第 {lineno} 行解析失败：{e}"
+                    )
     except Exception as e:
         _log.info(f"  错误：无法读取 {filepath}：{e}")
     return records
@@ -165,7 +177,7 @@ def _collect_by_period(dat_files, obj_total):
 # ── 绘图函数 ──────────────────────────────────────────────────────────────
 
 
-def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
+def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month, sat_prefix="S"):
     """在 (ax_ra, ax_de) 子图对上绘制单个观测时段的 O-C 散点。"""
     month_str = _MONTH_EN.get(month, str(month))
     xlabel = f"Time in day (UTC) in {month_str} {year}"
@@ -181,9 +193,9 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
         if t_arr.size == 0:
             continue
 
-        color = _COLORS[obj_idx - 1]
-        offset = _T_OFFSET[obj_idx - 1]
-        label = f"U{obj_idx}"
+        color = _COLORS[(obj_idx - 1) % len(_COLORS)]
+        offset = _T_OFFSET[(obj_idx - 1) % len(_T_OFFSET)]
+        label = f"{sat_prefix}{obj_idx}"
 
         x_shifted = t_arr + offset
         x_min = min(x_min, float(x_shifted.min()))
@@ -214,7 +226,7 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month):
     _format_time_axis(ax_de, x_min, x_max)
 
 
-def _build_summary_figure(all_period_data, periods, obj_total, outdir):
+def _build_summary_figure(all_period_data, periods, obj_total, outdir, sat_prefix="S"):
     """生成多时段汇总图（n_periods 行 × 2 列），保存为 OC_summary.png。"""
     n = len(periods)
     fig, axes = plt.subplots(n, 2, figsize=(14, 3.8 * n), squeeze=False)
@@ -228,6 +240,7 @@ def _build_summary_figure(all_period_data, periods, obj_total, outdir):
             obj_total,
             year,
             month,
+            sat_prefix=sat_prefix,
         )
 
     fig.tight_layout()
@@ -238,19 +251,21 @@ def _build_summary_figure(all_period_data, periods, obj_total, outdir):
     return out_path
 
 
-def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
+def _build_per_satellite_figures(
+    all_period_data, periods, obj_total, outdir, sat_prefix="S"
+):
     """为每颗卫星生成单独的多时段图（可选），保存为 OC_UN.png。"""
     saved = []
     for obj_idx in range(1, obj_total + 1):
         n = len(periods)
         fig, axes = plt.subplots(n, 2, figsize=(14, 3.5 * n), squeeze=False)
-        fig.suptitle(f"O-C Residuals — U{obj_idx}", fontsize=12, y=1.01)
+        fig.suptitle(f"O-C Residuals — {sat_prefix}{obj_idx}", fontsize=12, y=1.01)
 
         for row, (year, month) in enumerate(periods):
             seg = all_period_data[(year, month)].get(obj_idx, {})
             month_str = _MONTH_EN.get(month, str(month))
             xlabel = f"Time in day (UTC) in {month_str} {year}"
-            color = _COLORS[obj_idx - 1]
+            color = _COLORS[(obj_idx - 1) % len(_COLORS)]
 
             t_arr = seg.get("t", np.array([]))
             ra_arr = seg.get("ra", np.array([]))
@@ -274,11 +289,11 @@ def _build_per_satellite_figures(all_period_data, periods, obj_total, outdir):
             ax_de.grid(True, linewidth=0.5, alpha=0.7)
 
         fig.tight_layout()
-        out_path = outdir / f"OC_U{obj_idx}.png"
+        out_path = outdir / f"OC_{sat_prefix}{obj_idx}.png"
         fig.savefig(out_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         saved.append(out_path)
-        _log.info(f"  U{obj_idx} 图已保存：{out_path}")
+        _log.info(f"  {sat_prefix}{obj_idx} 图已保存：{out_path}")
 
     return saved
 
@@ -299,6 +314,7 @@ def run_report(config, outdir=None):
 
     obj_total = config.match.obj_total or 5
     per_satellite = config.report.per_satellite
+    sat_prefix = config.report.sat_prefix
 
     _log.info(f"\n{'=' * 50}")
     _log.info(f"05report 开始 — 读取目录：{outdir}")
@@ -323,7 +339,7 @@ def run_report(config, outdir=None):
         flist = dat_files[obj_idx]
         if flist:
             names = ", ".join(p.name for p in flist)
-            _log.info(f"    U{obj_idx}: {names}")
+            _log.info(f"    {sat_prefix}{obj_idx}: {names}")
 
     all_period_data = _collect_by_period(dat_files, obj_total)
 
@@ -341,16 +357,21 @@ def run_report(config, outdir=None):
             len(all_period_data[(year, month)][obj]["t"])
             for obj in range(1, obj_total + 1)
         ]
-        count_str = "  ".join(f"U{o}:{c}" for o, c in enumerate(counts, 1) if c > 0)
+        count_str = "  ".join(
+            f"{sat_prefix}{o}:{c}" for o, c in enumerate(counts, 1) if c > 0
+        )
         _log.info(f"    {year} {month_str:4s}  —  {count_str}")
 
-    summary_path = _build_summary_figure(all_period_data, periods, obj_total, outdir)
+    summary_path = _build_summary_figure(
+        all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix
+    )
     result.output_files.append(str(summary_path))
 
     if per_satellite:
         result.output_files.extend(
-            str(p) for p in _build_per_satellite_figures(
-                all_period_data, periods, obj_total, outdir
+            str(p)
+            for p in _build_per_satellite_figures(
+                all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix
             )
         )
 

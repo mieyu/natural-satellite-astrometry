@@ -3,15 +3,20 @@
 原始 .fit 来自 fits/，预处理图来自 fits_n/，检测产物 *.fit.reg 落到同日
 fits_reg/ 子目录。
 
-检测整体放进**一个全新 spawn 子进程**里串行执行：连通域标号依赖 numba
+检测整体放进**一个全新 spawn 子进程**里执行：连通域标号依赖 numba
 njit，而本环境（numba 0.65.0 + macOS）下，numba 一旦与 01pre 跑在同一个
 长期存活的进程里，其 JIT 编译/执行会间歇段错误（即便主线程串行）；而单独
-的全新进程跑检测则始终稳定。子进程内逐帧日志先写入 buffer，结束后整段交回
-主进程经 _log 回放，保证控制台输出与日志文件与历史一致。
+的全新进程跑检测则始终稳定。隔离子进程内可按 FITS 文件再开 spawn worker
+并行；逐帧日志先写入 buffer，结束后整段交回主进程经 _log 回放，保证控制台
+输出与日志文件与历史一致。
 """
 
 import io
 import multiprocessing as mp
+import os
+import queue
+import traceback
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -118,8 +123,33 @@ def _detect_one(
     return info
 
 
-def _run_detect_serial(config, fitspath_list):
-    """实际串行检测循环：逐日逐帧调用 _detect_one，汇总 StepResult。
+def _detect_one_captured(*args):
+    """并行 worker 入口：捕获单帧日志，返回 (log_text, info_dict)。"""
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        setup_logging(log_file=None)
+        info = _detect_one(*args)
+    return buf.getvalue(), info
+
+
+def _emit(log_text):
+    """worker 捕获的多行文本逐行交回当前进程 logger。"""
+    for line in log_text.splitlines():
+        _log.info(line)
+
+
+def _resolve_detect_workers(requested, n_files):
+    """解析 detect 并行度；0=自动，正数=上限，至少返回 1。"""
+    if n_files <= 1:
+        return 1
+    cpu = os.cpu_count() or 1
+    if requested == 0:
+        return max(1, min(n_files, cpu))
+    return max(1, min(n_files, requested))
+
+
+def _run_detect_isolated(config, fitspath_list):
+    """隔离子进程内的检测循环：逐日调度串行或文件级并行。
 
     在隔离子进程内执行（见模块 docstring）；日志直接经 _log 输出。
     """
@@ -131,6 +161,7 @@ def _run_detect_serial(config, fitspath_list):
         "pos_method": detect.pos_method,
         "connectivity": detect.connectivity,
     }
+    requested_workers = getattr(detect, "detect_workers", 0)
     result = StepResult("detect")
     for idx, fitspath in enumerate(fitspath_list, 1):
         fitspath = Path(fitspath)
@@ -147,9 +178,8 @@ def _run_detect_serial(config, fitspath_list):
         reg_out_dir = ensure_dir(stages[DETECT_DIR])
         pre_input_dir = stages[PRE_DIR]
 
-        _log.info("--- 串行检测 ---")
-        for n, fp in enumerate(fits_files):
-            info = _detect_one(
+        tasks = [
+            (
                 str(fp),
                 str(pre_input_dir),
                 str(fitspath),
@@ -157,12 +187,37 @@ def _run_detect_serial(config, fitspath_list):
                 detect_cfg,
                 n + 1,
             )
-            if info["err"] is not None:
-                raise info["err"]
-            if info["warning"]:
-                result.warnings.append(info["warning"])
-            if info["failed_item"]:
-                result.failed_items.append(info["failed_item"])
+            for n, fp in enumerate(fits_files)
+        ]
+        n_workers = _resolve_detect_workers(requested_workers, len(tasks))
+
+        if n_workers <= 1:
+            _log.info("--- 串行检测 ---")
+            for task in tasks:
+                info = _detect_one(*task)
+                if info["err"] is not None:
+                    raise info["err"]
+                if info["warning"]:
+                    result.warnings.append(info["warning"])
+                if info["failed_item"]:
+                    result.failed_items.append(info["failed_item"])
+        else:
+            _log.info(f"--- 并行检测：n_workers={n_workers} ---")
+            ctx = mp.get_context("spawn")
+            with ProcessPoolExecutor(
+                max_workers=n_workers,
+                mp_context=ctx,
+            ) as ex:
+                futures = [ex.submit(_detect_one_captured, *task) for task in tasks]
+                for fut in futures:
+                    log_text, info = fut.result()
+                    _emit(log_text)
+                    if info["err"] is not None:
+                        raise info["err"]
+                    if info["warning"]:
+                        result.warnings.append(info["warning"])
+                    if info["failed_item"]:
+                        result.failed_items.append(info["failed_item"])
 
         _log.info(f"\n    共检测图像：{len(fits_files)} 幅，reg 写入 {reg_out_dir}")
         result.output_files.extend(
@@ -178,13 +233,52 @@ def _run_detect_serial(config, fitspath_list):
     return result
 
 
-def _detect_subprocess_entry(config, fitspath_list):
-    """子进程入口：捕获本进程日志到 buffer，返回 (log_text, StepResult)。"""
+def _detect_process_entry(config, fitspath_list, out_queue):
+    """外层隔离进程入口：捕获日志，并把结果或异常通过 queue 传回。"""
     buf = io.StringIO()
-    with redirect_stdout(buf):
-        setup_logging(log_file=None)
-        result = _run_detect_serial(config, fitspath_list)
-    return buf.getvalue(), result
+    try:
+        with redirect_stdout(buf):
+            setup_logging(log_file=None)
+            result = _run_detect_isolated(config, fitspath_list)
+        out_queue.put((buf.getvalue(), result, None, None))
+    except BaseException as exc:
+        out_queue.put((buf.getvalue(), None, exc, traceback.format_exc()))
+
+
+def _run_in_fresh_process(config, fitspath_list):
+    """用非 daemon spawn Process 隔离 detect，避免外层 Pool 阻止内层并行。"""
+    ctx = mp.get_context("spawn")
+    out_queue = ctx.Queue()
+    proc = ctx.Process(
+        target=_detect_process_entry,
+        args=(config, fitspath_list, out_queue),
+    )
+    proc.start()
+
+    payload = None
+    while proc.is_alive():
+        try:
+            payload = out_queue.get(timeout=0.1)
+            break
+        except queue.Empty:
+            continue
+    proc.join()
+    if payload is None:
+        try:
+            payload = out_queue.get_nowait()
+        except queue.Empty as exc:
+            raise RuntimeError(
+                f"detect 子进程异常退出，exitcode={proc.exitcode}"
+            ) from exc
+
+    log_text, result, err, tb = payload
+    if err is not None:
+        if tb:
+            _log.info(tb.rstrip())
+        raise err
+    if proc.exitcode not in (0, None):
+        raise RuntimeError(f"detect 子进程异常退出，exitcode={proc.exitcode}")
+    return log_text, result
 
 
 def run_detect(config, fitspath_list):
@@ -196,11 +290,7 @@ def run_detect(config, fitspath_list):
     检测在一个全新 spawn 子进程内完成，以隔离 numba（见模块 docstring）；
     子进程捕获的日志整段交回，由主进程 _log 回放到控制台与日志文件。
     """
-    ctx = mp.get_context("spawn")
-    with ctx.Pool(processes=1) as pool:
-        log_text, result = pool.apply(
-            _detect_subprocess_entry, (config, fitspath_list)
-        )
+    log_text, result = _run_in_fresh_process(config, fitspath_list)
     for line in log_text.splitlines():
         _log.info(line)
     return result

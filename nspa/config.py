@@ -36,13 +36,26 @@ _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
     ("1bkgdmode", "pre", "bkgdmode", int, 2),
     ("1enhance_flag", "pre", "enhance_flag", int, 1),
     ("1median_impl", "pre", "median_impl", str, "auto"),
-    ("1homo_gauss_cutoff", "pre", "homo_gauss_cutoff", float, 50.0),  # 同态滤波(mode2)频域高斯截止频率
-    ("1bssr_gauss_size", "pre", "bssr_gauss_size", int, 9),           # BSSR(mode3)空间高斯窗口(奇数)
+    (
+        "1homo_gauss_cutoff",
+        "pre",
+        "homo_gauss_cutoff",
+        float,
+        50.0,
+    ),  # 同态滤波(mode2)频域高斯截止频率
+    (
+        "1bssr_gauss_size",
+        "pre",
+        "bssr_gauss_size",
+        int,
+        9,
+    ),  # BSSR(mode3)空间高斯窗口(奇数)
     # 02detect
     ("2bkgd_threshold", "detect", "bkgd_threshold", float, 5.0),
     ("2snr_threshold", "detect", "snr_threshold", float, 5.0),
     ("2pos_method", "detect", "pos_method", int, 2),
     ("2connectivity", "detect", "connectivity", str, "fortran"),
+    ("2detect_workers", "detect", "detect_workers", int, 0),
     # 03match
     ("3tele_label", "match", "tele_label", str, ""),
     ("3tele_focal", "match", "focal_length", float, 0.0),
@@ -62,6 +75,8 @@ _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
     ("4std_limit", "comoc", "std_limit", float, 0.0),
     ("4mean_limit", "comoc", "mean_limit", float, 0.0),
     ("4del_flag", "comoc", "del_flag", int, 0),
+    # 05report
+    ("5sat_prefix", "report", "sat_prefix", str, "S"),
 ]
 
 # ── 列表字段表 ────────────────────────────────────────────────────────────
@@ -88,6 +103,7 @@ def _strip_comment(s: str) -> str:
 
 # ── 段 dataclass ─────────────────────────────────────────────────────────
 
+
 @dataclass
 class PreConfig:
     biasflag: int = 0
@@ -100,7 +116,7 @@ class PreConfig:
     enhance_flag: int = 1
     median_impl: str = "auto"
     homo_gauss_cutoff: float = 50.0  # 同态滤波(mode2)频域高斯截止频率
-    bssr_gauss_size: int = 9         # BSSR(mode3)空间高斯窗口(奇数)
+    bssr_gauss_size: int = 9  # BSSR(mode3)空间高斯窗口(奇数)
 
 
 @dataclass
@@ -109,6 +125,7 @@ class DetectConfig:
     snr_threshold: float = 5.0
     pos_method: int = 2
     connectivity: str = "fortran"
+    detect_workers: int = 0
 
 
 @dataclass
@@ -142,6 +159,7 @@ class ComocConfig:
 class ReportConfig:
     output_dir: str = ""
     per_satellite: bool = True
+    sat_prefix: str = "S"
 
 
 _SECTIONS = {
@@ -180,11 +198,19 @@ class NspaConfig:
         if self.pre.superflag not in {0, 1, 2, 3}:
             errors.append("1superflag 必须为 0/1/2/3。")
 
-        if self.pre.median_impl not in {"auto", "scipy", "scipy_threaded", "bottleneck"}:
+        if self.pre.median_impl not in {
+            "auto",
+            "scipy",
+            "scipy_threaded",
+            "bottleneck",
+        }:
             errors.append("1median_impl 必须为 auto/scipy/scipy_threaded/bottleneck。")
 
         if self.detect.connectivity not in {"fortran", "scipy"}:
             errors.append("2connectivity 必须为 fortran 或 scipy。")
+
+        if self.detect.detect_workers < 0:
+            errors.append("2detect_workers 必须为非负整数（0 表示自动）。")
 
         if selected & {"match", "comoc", "report"}:
             if self.match.obj_total <= 0:
@@ -212,6 +238,7 @@ class NspaConfig:
 
 # ── 解析 ─────────────────────────────────────────────────────────────────
 
+
 def _set_section_attr(config: NspaConfig, section: str | None, attr: str, value: Any):
     target = config if section is None else getattr(config, section)
     setattr(target, attr, value)
@@ -225,8 +252,14 @@ def parse_config(config_path: str = "nspa.cfg") -> NspaConfig:
         _log.info(f"警告：配置文件 '{config_path}' 未找到，使用默认参数。")
         return config
 
-    scalar_index = {cfg_key: (section, attr, typ) for cfg_key, section, attr, typ, _ in _SCALAR_FIELDS}
-    list_index = {prefix: (section, attr, collapse) for prefix, section, attr, collapse in _LIST_FIELDS}
+    scalar_index = {
+        cfg_key: (section, attr, typ)
+        for cfg_key, section, attr, typ, _ in _SCALAR_FIELDS
+    }
+    list_index = {
+        prefix: (section, attr, collapse)
+        for prefix, section, attr, collapse in _LIST_FIELDS
+    }
     list_buckets: dict[str, dict[int, str]] = {prefix: {} for prefix in list_index}
 
     with open(config_path, "r", encoding="utf-8-sig") as f:
@@ -254,7 +287,7 @@ def parse_config(config_path: str = "nspa.cfg") -> NspaConfig:
         for prefix in list_index:
             if not key.startswith(prefix):
                 continue
-            suffix = key[len(prefix):]
+            suffix = key[len(prefix) :]
             try:
                 idx = int(suffix) if suffix else 1
             except ValueError:
