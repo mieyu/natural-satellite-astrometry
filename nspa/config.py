@@ -25,6 +25,7 @@ _log = get_logger("config")
 #   section ∈ {"pre", "detect", "match", "comoc", "report", None}
 #   None 表示挂在 NspaConfig 顶层。
 _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
+    ("run_manifest_dir", None, "run_manifest_dir", str, "outputs/runs"),
     # 01pre
     ("1biasflag", "pre", "biasflag", int, 0),
     ("1darkflag", "pre", "darkflag", int, 0),
@@ -163,6 +164,7 @@ class NspaConfig:
     match: MatchConfig = field(default_factory=MatchConfig)
     comoc: ComocConfig = field(default_factory=ComocConfig)
     report: ReportConfig = field(default_factory=ReportConfig)
+    run_manifest_dir: str = "outputs/runs"
 
     def validate(self, steps=None):
         """按本次运行阶段校验配置。配置错误直接阻断启动。"""

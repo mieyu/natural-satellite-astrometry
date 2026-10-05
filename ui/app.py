@@ -3,7 +3,7 @@
 启动：在仓库根执行  python ui/app.py
 （cwd 必须是仓库根，cfg 用相对路径，运行时据此解析 inputs/outputs。）
 
-纯附加层：不修改 nspa/ 任何代码，经 subprocess 调用 `python -m nspa.main`。
+经 subprocess 调用 `python -m nspa.main`，输入/输出根目录可在界面中选择。
 CLI 与 UI 可并存。
 """
 
@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 # 让 `import nspa` 可用（从仓库根启动时本就可用，这里兜底）
@@ -22,8 +22,6 @@ sys.path.insert(0, str(REPO_ROOT))
 from ui import cfg_writer, inputs_panel, params_panel  # noqa: E402
 from ui.runner import PipelineRunner  # noqa: E402
 
-GEN_CFG = REPO_ROOT / "inputs" / "configs" / "_ui_run.cfg"
-CFG_DIR = REPO_ROOT / "inputs" / "configs"
 DEFAULT_CFG_NAME = "nspa2024.cfg"
 STEPS = ["all", "pre", "detect", "match", "comoc", "report"]
 
@@ -35,16 +33,38 @@ class App(ttk.Frame):
         self.runner = PipelineRunner()
         self._img_ref = None
         self._selection = None
+        self.input_root = REPO_ROOT / "inputs"
+        self.output_root = REPO_ROOT / "outputs"
+        self.var_input_root = tk.StringVar(value=str(self.input_root))
+        self.var_output_root = tk.StringVar(value=str(self.output_root))
+        self.path_buttons = []
+
+        paths = ttk.LabelFrame(self, text="数据位置")
+        paths.pack(fill="x", pady=(0, 6))
+        paths.columnconfigure(1, weight=1)
+        for row, (label, variable, kind) in enumerate([
+            ("inputs 文件夹", self.var_input_root, "input"),
+            ("outputs 文件夹", self.var_output_root, "output"),
+        ]):
+            ttk.Label(paths, text=label).grid(row=row, column=0, sticky="w", padx=4, pady=3)
+            ttk.Entry(paths, textvariable=variable, state="readonly").grid(
+                row=row, column=1, sticky="ew", padx=4)
+            choose = ttk.Button(paths, text="选择…", command=lambda k=kind: self._choose_root(k))
+            choose.grid(row=row, column=2, padx=4)
+            reset = ttk.Button(paths, text="恢复默认", command=lambda k=kind: self._reset_root(k))
+            reset.grid(row=row, column=3, padx=4)
+            self.path_buttons.extend([choose, reset])
 
         # 输入面板
-        self.inputs = inputs_panel.build_widget(self, REPO_ROOT, self._on_inputs_change)
+        self.inputs = inputs_panel.build_widget(
+            self, REPO_ROOT, self._on_inputs_change, self.input_root, self.output_root)
         self.inputs.pack(fill="x", pady=(0, 6))
 
         # 控制条
         bar = ttk.Frame(self)
         bar.pack(fill="x", pady=(0, 6))
         ttk.Label(bar, text="配置模板").pack(side="left")
-        cfg_names = params_panel.list_config_files(REPO_ROOT)
+        cfg_names = params_panel.list_config_files(REPO_ROOT, self.input_root)
         initial_cfg = DEFAULT_CFG_NAME if DEFAULT_CFG_NAME in cfg_names else (cfg_names[0] if cfg_names else "")
         self.var_cfg = tk.StringVar(value=initial_cfg)
         self.cb_cfg = ttk.Combobox(bar, textvariable=self.var_cfg, values=cfg_names,
@@ -97,6 +117,54 @@ class App(ttk.Frame):
         self.files_list = tk.Listbox(rbox, height=6)
         self.files_list.pack(fill="x")
 
+    # ── 根目录选择 ──
+    def _choose_root(self, kind):
+        if self.runner.running:
+            return
+        current = self.input_root if kind == "input" else self.output_root
+        chosen = filedialog.askdirectory(
+            parent=self.winfo_toplevel(),
+            title="选择 inputs 文件夹（内含 images、catalogs、configs）" if kind == "input" else "选择 outputs 文件夹",
+            initialdir=str(current if current.is_dir() else current.parent),
+            mustexist=True,
+        )
+        if not chosen:
+            return
+        path = Path(chosen).resolve()
+        if kind == "input" and not (path / "images").is_dir():
+            messagebox.showerror("目录不匹配", "请选择包含 images 文件夹的 inputs 目录。")
+            return
+        self._set_roots(input_root=path) if kind == "input" else self._set_roots(output_root=path)
+
+    def _reset_root(self, kind):
+        if self.runner.running:
+            return
+        if kind == "input":
+            self._set_roots(input_root=REPO_ROOT / "inputs")
+        else:
+            self._set_roots(output_root=REPO_ROOT / "outputs")
+
+    def _set_roots(self, input_root=None, output_root=None):
+        input_root = Path(input_root).expanduser().resolve() if input_root is not None else self.input_root
+        output_root = Path(output_root).expanduser().resolve() if output_root is not None else self.output_root
+        input_changed = input_root != self.input_root
+        self.input_root, self.output_root = input_root, output_root
+        self.var_input_root.set(str(input_root))
+        self.var_output_root.set(str(output_root))
+        self.inputs.set_roots(input_root, output_root)
+        self._output_dir = None
+        self.files_list.delete(0, "end")
+        self._img_ref = None
+        self.img_label.config(image="", text="（运行后显示）")
+        if input_changed:
+            names = params_panel.list_config_files(REPO_ROOT, input_root)
+            self.cb_cfg["values"] = names
+            current = self.var_cfg.get()
+            if current not in names:
+                current = DEFAULT_CFG_NAME if DEFAULT_CFG_NAME in names else (names[0] if names else "")
+            self.var_cfg.set(current)
+            self._load_selected_cfg(log=False)
+
     # ── 输入联动 ──
     def _on_inputs_change(self):
         sel = self.inputs.get_selection()
@@ -114,7 +182,7 @@ class App(ttk.Frame):
         cfg_name = self.var_cfg.get()
         if not cfg_name:
             return
-        cfg_path = CFG_DIR / cfg_name
+        cfg_path = self.input_root / "configs" / cfg_name
         if cfg_path.exists():
             self.params.load_from_cfg(cfg_path)
             # 路径和目标数继续由输入区下拉框决定。
@@ -159,16 +227,31 @@ class App(ttk.Frame):
 
         scalars = self.params.get_scalars()
         scalars["4specified-output"] = sel["output_dir"]
+        scalars["run_manifest_dir"] = sel["run_manifest_dir"]
         scalars["3obj_total"] = str(sel["obj_total"])
 
-        cfg_writer.write_cfg(GEN_CFG, scalars, sel["fitspaths"],
-                             sel["eph_files"], sel["gaia_catfile"])
+        cfg_path = self.input_root / "configs" / "_ui_run.cfg"
+        try:
+            cfg_writer.write_cfg(cfg_path, scalars, sel["fitspaths"],
+                                 sel["eph_files"], sel["gaia_catfile"])
+        except OSError as exc:
+            messagebox.showerror("配置保存失败", f"无法写入 {cfg_path}：\n{exc}")
+            return
         self.log.delete("1.0", "end")
-        self._append(f"已生成配置：{GEN_CFG.relative_to(REPO_ROOT)}")
+        self._append(f"已生成配置：{cfg_path}")
         self._output_dir = (REPO_ROOT / sel["output_dir"]).resolve()
 
         self.btn_run.config(state="disabled")
-        self.runner.start(GEN_CFG, self.var_step.get(), REPO_ROOT)
+        for button in self.path_buttons:
+            button.config(state="disabled")
+        try:
+            self.runner.start(cfg_path, self.var_step.get(), REPO_ROOT)
+        except OSError as exc:
+            self.btn_run.config(state="normal")
+            for button in self.path_buttons:
+                button.config(state="normal")
+            messagebox.showerror("启动失败", str(exc))
+            return
         self.after(120, self._drain)
 
     def _drain(self):
@@ -176,6 +259,8 @@ class App(ttk.Frame):
             self._append(line)
         if self.runner.finished:
             self.btn_run.config(state="normal")
+            for button in self.path_buttons:
+                button.config(state="normal")
             rc = self.runner.returncode
             self._append(f"\n=== 运行结束，退出码 {rc} ===")
             if rc == 0:

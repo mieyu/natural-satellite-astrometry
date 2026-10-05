@@ -59,7 +59,7 @@ class PipelineRunner:
 class RunManifest:
     def __init__(self, ctx):
         self.ctx = ctx
-        self.path = Path("outputs/runs") / ctx.run_id / "manifest.json"
+        self.path = Path(ctx.config.run_manifest_dir) / ctx.run_id / "manifest.json"
         self.data = {
             "run_id": ctx.run_id,
             "config_file": ctx.config.config_path,

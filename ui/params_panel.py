@@ -10,6 +10,7 @@ from nspa.config import _SCALAR_FIELDS, parse_config
 
 _GENERATED_CFG_NAMES = {"_ui_run.cfg"}
 _INPUT_OWNED_SCALAR_KEYS = {
+    "run_manifest_dir",
     "3obj_total",
     "4specified-output",
 }
@@ -32,9 +33,10 @@ def fields_by_section():
     return grouped
 
 
-def list_config_files(repo_root):
+def list_config_files(repo_root, input_root=None):
     """列出可作为 UI 模板载入的手工 cfg 文件名。"""
-    cfg_dir = Path(repo_root) / "inputs" / "configs"
+    root = Path(input_root) if input_root is not None else Path(repo_root) / "inputs"
+    cfg_dir = root / "configs"
     if not cfg_dir.is_dir():
         return []
     return sorted(

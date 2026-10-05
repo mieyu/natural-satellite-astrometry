@@ -91,24 +91,26 @@ def _subdir_names(path):
     return sorted(d.name for d in p.iterdir() if d.is_dir())
 
 
-def images_root(repo_root):
-    return Path(repo_root) / "inputs" / "images"
+def images_root(repo_root, input_root=None):
+    root = Path(input_root) if input_root is not None else Path(repo_root) / "inputs"
+    return root / "images"
 
 
-def catalogs_root(repo_root):
-    return Path(repo_root) / "inputs" / "catalogs"
+def catalogs_root(repo_root, input_root=None):
+    root = Path(input_root) if input_root is not None else Path(repo_root) / "inputs"
+    return root / "catalogs"
 
 
-def list_targets(repo_root):
+def list_targets(repo_root, input_root=None):
     """inputs/images 下的目标目录名（J / S9 / U ...）。"""
-    return _subdir_names(images_root(repo_root))
+    return _subdir_names(images_root(repo_root, input_root))
 
 
-def list_epochs(repo_root, target):
+def list_epochs(repo_root, target, input_root=None):
     """inputs/images/<target> 下的观测期目录名（2024 / 2020 ...）。"""
     if not target:
         return []
-    return _subdir_names(images_root(repo_root) / target)
+    return _subdir_names(images_root(repo_root, input_root) / target)
 
 
 def resolve_fitspath(candidate):
@@ -126,9 +128,9 @@ def resolve_fitspath(candidate):
     return [], _subdir_names(candidate)
 
 
-def scan_catalog(repo_root, target, epoch):
+def scan_catalog(repo_root, target, epoch, input_root=None):
     """返回 (eph 文件列表, gaia 文件列表, 星表目录 Path)，均为该 target/epoch 下。"""
-    cat_dir = catalogs_root(repo_root) / target / epoch
+    cat_dir = catalogs_root(repo_root, input_root) / target / epoch
     if not cat_dir.is_dir():
         return [], [], cat_dir
     eph = sorted(str(p) for p in cat_dir.glob("EPH_*.DAT"))
@@ -136,8 +138,9 @@ def scan_catalog(repo_root, target, epoch):
     return eph, gaia, cat_dir
 
 
-def default_output_dir(repo_root, target, epoch):
-    return Path(repo_root) / "outputs" / "results" / target / epoch
+def default_output_dir(repo_root, target, epoch, output_root=None):
+    root = Path(output_root) if output_root is not None else Path(repo_root) / "outputs"
+    return root / "results" / target / epoch
 
 
 def relpath(repo_root, path):
@@ -150,7 +153,7 @@ def relpath(repo_root, path):
 
 # ── Tk 控件 ────────────────────────────────────────────────────────────────
 
-def build_widget(parent, repo_root, on_change):
+def build_widget(parent, repo_root, on_change, input_root=None, output_root=None):
     """构造输入面板（延迟导入 tkinter，便于纯函数无 GUI 测试）。"""
     import tkinter as tk
     from tkinter import ttk
@@ -160,6 +163,8 @@ def build_widget(parent, repo_root, on_change):
             super().__init__(master, text="输入数据集（从 inputs/ 选择）")
             self.repo_root = Path(repo_root)
             self.on_change = on_change
+            self.input_root = Path(input_root) if input_root is not None else self.repo_root / "inputs"
+            self.output_root = Path(output_root) if output_root is not None else self.repo_root / "outputs"
 
             self.var_target = tk.StringVar()
             self.var_epoch = tk.StringVar()
@@ -178,7 +183,7 @@ def build_widget(parent, repo_root, on_change):
             ttk.Label(self, text="目标").grid(row=row, column=0, sticky="w", padx=4, pady=3)
             self.cb_target = ttk.Combobox(self, textvariable=self.var_target,
                                           state="readonly", width=18,
-                                          values=list_targets(repo_root))
+                                          values=list_targets(repo_root, self.input_root))
             self.cb_target.grid(row=row, column=1, sticky="w", padx=4)
             self.cb_target.bind("<<ComboboxSelected>>", self._on_target)
 
@@ -212,6 +217,18 @@ def build_widget(parent, repo_root, on_change):
             self.preview.grid(row=row, column=0, columnspan=6, sticky="w", padx=4, pady=4)
 
         # —— 级联事件 ——
+        def set_roots(self, input_root, output_root):
+            input_root, output_root = Path(input_root), Path(output_root)
+            input_changed = input_root != self.input_root
+            self.input_root, self.output_root = input_root, output_root
+            if input_changed:
+                self.cb_target["values"] = list_targets(repo_root, self.input_root)
+                self.var_target.set("")
+                self._on_target()
+                self.preview.config(text="（请选择目标/观测期）", foreground="#555")
+            else:
+                self.on_change()
+
         def _on_target(self, _e=None):
             self.var_epoch.set("")
             self.var_sub.set("")
@@ -224,7 +241,7 @@ def build_widget(parent, repo_root, on_change):
             self._auto_eph_files = []
             self._eph_files = []
             self._gaia_files = []
-            self.cb_epoch["values"] = list_epochs(repo_root, self.var_target.get())
+            self.cb_epoch["values"] = list_epochs(repo_root, self.var_target.get(), self.input_root)
             self._fitspath_candidate = None
             self.preview.config(text="（请选择观测期）", foreground="#555")
             self.on_change()
@@ -246,7 +263,7 @@ def build_widget(parent, repo_root, on_change):
             t, e, s = self.var_target.get(), self.var_epoch.get(), self.var_sub.get()
             if not (t and e):
                 return None
-            base = images_root(repo_root) / t / e
+            base = images_root(repo_root, self.input_root) / t / e
             return base / s if s else base
 
         def _resolve(self):
@@ -259,7 +276,7 @@ def build_widget(parent, repo_root, on_change):
                 self._preview_days = days
                 self.cb_sub["values"] = subdirs  # 仍允许换更深目录
                 t, e = self.var_target.get(), self.var_epoch.get()
-                eph_all, gaia, cat_dir = scan_catalog(repo_root, t, e)
+                eph_all, gaia, cat_dir = scan_catalog(repo_root, t, e, self.input_root)
                 self._all_eph_files = eph_all
                 self._auto_eph_files, _count = select_eph(eph_all, derive_obs_month(cand))
                 eph_choices = [_AUTO_EPH_CHOICE] + eph_file_names(eph_all)
@@ -327,7 +344,8 @@ def build_widget(parent, repo_root, on_change):
                 "eph_files": [relpath(repo_root, p) for p in self._eph_files],
                 "gaia_catfile": relpath(repo_root, resolve_gaia_name(self._gaia_files, self.var_gaia.get()))
                                 if self.var_gaia.get() else "",
-                "output_dir": relpath(repo_root, default_output_dir(repo_root, t, e)),
+                "output_dir": relpath(repo_root, default_output_dir(repo_root, t, e, self.output_root)),
+                "run_manifest_dir": relpath(repo_root, self.output_root / "runs"),
                 "obj_total": self._obj_total,
             }
 
