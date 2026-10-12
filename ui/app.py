@@ -11,6 +11,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -32,6 +33,7 @@ class App(ttk.Frame):
         self.pack(fill="both", expand=True)
         self.runner = PipelineRunner()
         self._img_ref = None
+        self._close_pending = False
         self._selection = None
         self.input_root = REPO_ROOT / "inputs"
         self.output_root = REPO_ROOT / "outputs"
@@ -77,6 +79,10 @@ class App(ttk.Frame):
                      state="readonly", width=8).pack(side="left", padx=4)
         self.btn_run = ttk.Button(bar, text="▶ 运行", command=self._run)
         self.btn_run.pack(side="left", padx=6)
+        self.btn_pause = ttk.Button(bar, text="⏸ 暂停", command=self._toggle_pause, state="disabled")
+        self.btn_pause.pack(side="left", padx=(0, 6))
+        self.btn_stop = ttk.Button(bar, text="■ 中止", command=self._stop, state="disabled")
+        self.btn_stop.pack(side="left", padx=(0, 6))
         ttk.Button(bar, text="打开输出目录", command=self._open_output).pack(side="left")
 
         # 参数表单（横向和纵向可滚）
@@ -216,9 +222,15 @@ class App(ttk.Frame):
 
     # ── 运行 ──
     def _run(self):
+        if self.runner.running:
+            return
         sel = self.inputs.get_selection()
         if not sel:
             messagebox.showerror("缺少输入", "请先选择有效的目标/观测期（预览须显示 ✓ 解析到观测日）。")
+            return
+        input_errors = self.inputs.selection_errors(self.var_step.get())
+        if input_errors:
+            messagebox.showerror("输入月份不匹配", "\n".join(input_errors))
             return
         errors = self.params.validate()
         if errors:
@@ -240,32 +252,74 @@ class App(ttk.Frame):
         self.log.delete("1.0", "end")
         self._append(f"已生成配置：{cfg_path}")
         self._output_dir = (REPO_ROOT / sel["output_dir"]).resolve()
+        self._run_started_ns = time.time_ns()
+        self.files_list.delete(0, "end")
+        self._img_ref = None
+        self.img_label.config(image="", text="（本次运行后显示）")
 
         self.btn_run.config(state="disabled")
         for button in self.path_buttons:
             button.config(state="disabled")
         try:
             self.runner.start(cfg_path, self.var_step.get(), REPO_ROOT)
-        except OSError as exc:
+        except (OSError, RuntimeError) as exc:
             self.btn_run.config(state="normal")
             for button in self.path_buttons:
                 button.config(state="normal")
             messagebox.showerror("启动失败", str(exc))
             return
+        self.btn_stop.config(state="normal")
+        self.btn_pause.config(text="⏸ 暂停", state="normal")
         self.after(120, self._drain)
+
+    def _toggle_pause(self):
+        if self.runner.paused:
+            if self.runner.resume():
+                self.btn_pause.config(state="disabled")
+                self._append("正在继续流水线及其子进程…")
+        elif self.runner.pause():
+            self.btn_pause.config(state="disabled")
+            self._append("正在暂停流水线及其子进程…")
+
+    def _stop(self):
+        if self.runner.stop():
+            self.btn_stop.config(state="disabled")
+            self.btn_pause.config(state="disabled")
+            self._append("正在中止流水线及其子进程…")
+
+    def _on_close(self):
+        proc = self.runner.proc
+        if proc is not None and proc.poll() is None:
+            self._close_pending = True
+            self._stop()
+            return
+        self.winfo_toplevel().destroy()
 
     def _drain(self):
         for line in self.runner.poll_lines():
             self._append(line)
         if self.runner.finished:
             self.btn_run.config(state="normal")
+            self.btn_stop.config(state="disabled")
+            self.btn_pause.config(text="⏸ 暂停", state="disabled")
             for button in self.path_buttons:
                 button.config(state="normal")
             rc = self.runner.returncode
-            self._append(f"\n=== 运行结束，退出码 {rc} ===")
-            if rc == 0:
+            if self.runner.stopped_by_user:
+                self._append(f"\n=== 已中止，退出码 {rc} ===")
+            else:
+                self._append(f"\n=== 运行结束，退出码 {rc} ===")
+            if rc == 0 and not self.runner.stopped_by_user:
                 self._show_results()
+            if self._close_pending:
+                self.winfo_toplevel().destroy()
+                return
         else:
+            if not self.runner.stopped_by_user:
+                self.btn_pause.config(
+                    text="▶ 继续" if self.runner.paused else "⏸ 暂停",
+                    state="disabled" if self.runner.transition else "normal",
+                )
             self.after(120, self._drain)
 
     def _append(self, text):
@@ -278,11 +332,12 @@ class App(ttk.Frame):
         if not out or not out.is_dir():
             return
         self.files_list.delete(0, "end")
+        started_ns = getattr(self, "_run_started_ns", 0)
         for p in sorted(out.iterdir()):
-            if p.suffix in (".out", ".dat", ".png"):
+            if p.suffix in (".out", ".dat", ".png") and p.stat().st_mtime_ns >= started_ns:
                 self.files_list.insert("end", p.name)
         png = out / "OC_summary.png"
-        if png.exists():
+        if png.exists() and png.stat().st_mtime_ns >= started_ns:
             try:
                 img = tk.PhotoImage(file=str(png))
                 factor = max(1, img.width() // 480)
@@ -293,7 +348,7 @@ class App(ttk.Frame):
             except Exception as exc:
                 self.img_label.config(text=f"无法显示图像：{exc}")
         else:
-            self.img_label.config(text="未找到 OC_summary.png")
+            self.img_label.config(text="本次运行未生成 OC_summary.png")
 
     def _open_output(self):
         out = getattr(self, "_output_dir", None)
@@ -312,7 +367,8 @@ def main():
     root = tk.Tk()
     root.title("NSPA 流水线 UI")
     root.geometry("1180x820")
-    App(root)
+    app = App(root)
+    root.protocol("WM_DELETE_WINDOW", app._on_close)
     root.mainloop()
 
 

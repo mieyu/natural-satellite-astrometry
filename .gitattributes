@@ -1,0 +1,4 @@
+# Catalogs use fixed-width exported columns; retain their whitespace.
+inputs/catalogs/**/*.DAT -whitespace
+# Markdown permits two trailing spaces for an explicit line break.
+*.md whitespace=-blank-at-eol

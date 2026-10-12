@@ -90,8 +90,16 @@ inputs/images/
 # 归算中间数据
 **/observation_image_*.dat
 
-# 本地测试代码和基准数据
-/tests/
+# 本地基准数据保持忽略；发布不依赖观测数据的回归测试
+/tests/*
+!/tests/test_astrometry_stability.py
+!/tests/test_parallel_memory.py
+!/tests/test_screenshot_regressions.py
+
+# 本地演示项目和逐次试算结果
+/ppt_projects/
+/fits_comparison.png
+/outputs/results/**/run_*.dat
 
 # 本地算法笔记
 /同态滤波和BSSR.txt

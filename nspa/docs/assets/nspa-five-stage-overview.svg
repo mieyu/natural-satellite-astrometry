@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="470" viewBox="0 0 1100 470" role="img" aria-labelledby="title desc">
+  <title id="title">NSPA 五阶段运行流程</title>
+  <desc id="desc">原始 FITS 经预处理、检测、匹配、O-C 统计、报告绘图，分别产生预处理图、检测星表、目标位置、残差数据和图像。GAIA 星表与目标历表用于匹配。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#355775" stroke-width="2"/></marker>
+  </defs>
+  <rect width="1100" height="470" fill="#ffffff"/>
+  <g font-family="Microsoft YaHei,Noto Sans CJK SC,sans-serif">
+    <text x="42" y="52" font-size="28" font-weight="700" fill="#18334b">NSPA 五阶段运行流程</text>
+    <text x="42" y="83" font-size="17" fill="#526b7d">按一帧 FITS 的数据去向阅读；统计与绘图再跨观测日汇总</text>
+    <rect x="41" y="116" width="170" height="70" rx="12" fill="#e9f3fa" stroke="#8cb2d0"/>
+    <text x="126" y="143" font-size="19" font-weight="700" fill="#18334b" text-anchor="middle">原始 FITS</text>
+    <text x="126" y="169" font-size="15" fill="#38566c" text-anchor="middle">像素 + Header</text>
+    <g fill="none" stroke="#355775" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M211 151 H245"/><path d="M430 151 H462"/><path d="M647 151 H679"/><path d="M864 151 H896"/>
+    </g>
+    <rect x="250" y="110" width="180" height="82" rx="12" fill="#e7f4ed" stroke="#7dbca0"/>
+    <text x="340" y="142" font-size="19" font-weight="700" fill="#174633" text-anchor="middle">1 · pre</text>
+    <text x="340" y="170" font-size="16" fill="#315c49" text-anchor="middle">背景预处理</text>
+    <rect x="467" y="110" width="180" height="82" rx="12" fill="#fff4df" stroke="#deb467"/>
+    <text x="557" y="142" font-size="19" font-weight="700" fill="#65440d" text-anchor="middle">2 · detect</text>
+    <text x="557" y="170" font-size="16" fill="#73551d" text-anchor="middle">阈值 · 连通域 · 定心</text>
+    <rect x="684" y="110" width="180" height="82" rx="12" fill="#f1eefa" stroke="#a69acb"/>
+    <text x="774" y="142" font-size="19" font-weight="700" fill="#3e326b" text-anchor="middle">3 · match</text>
+    <text x="774" y="170" font-size="16" fill="#55477a" text-anchor="middle">参考星匹配 · 归算</text>
+    <rect x="901" y="110" width="158" height="82" rx="12" fill="#fcebea" stroke="#d49a96"/>
+    <text x="980" y="142" font-size="19" font-weight="700" fill="#66332e" text-anchor="middle">4 · comoc</text>
+    <text x="980" y="170" font-size="16" fill="#744942" text-anchor="middle">残差统计 · 剔除</text>
+    <path d="M980 193 V286" fill="none" stroke="#355775" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="887" y="294" width="186" height="82" rx="12" fill="#e6f4fa" stroke="#81b4c7"/>
+    <text x="980" y="326" font-size="19" font-weight="700" fill="#174c63" text-anchor="middle">5 · report</text>
+    <text x="980" y="354" font-size="16" fill="#356276" text-anchor="middle">O−C 残差图</text>
+    <rect x="694" y="279" width="161" height="64" rx="10" fill="#f7f7f7" stroke="#aaa" stroke-dasharray="5 4"/>
+    <text x="774" y="305" font-size="16" font-weight="700" fill="#3e3e3e" text-anchor="middle">GAIA 星表</text>
+    <text x="774" y="328" font-size="16" fill="#555" text-anchor="middle">+ 目标历表</text>
+    <path d="M774 279 V203" fill="none" stroke="#777" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+    <g font-size="15" fill="#435766" text-anchor="middle">
+      <text x="340" y="224">fits_n/*_n.fit</text>
+      <text x="557" y="224">fits_reg/*.reg</text>
+      <text x="774" y="224">object_N.out</text>
+      <text x="980" y="224">final_oc_N.out · .dat</text>
+      <text x="980" y="406">OC_summary.png</text>
+    </g>
+    <text x="42" y="446" font-size="15" fill="#5b6d79">pre 可配置为跳过；跳过时 detect 直接读取原图。report 读取 comoc 的跨日 .dat。</text>
+  </g>
+</svg>

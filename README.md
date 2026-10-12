@@ -27,6 +27,16 @@ NSPA 用于天然卫星 CCD 观测数据的天体测量归算，包含图像预�
 - **桌面界面**：`python ui/app.py`，选择数据与参数后调用同一个命令行入口。
 - **运行记录**：每次运行写出 `outputs/runs/<run_id>/manifest.json`，记录各步耗时、告警与失败项。
 
+完整操作和参数说明见[文档导航](docs/README.md)。Windows 已建立 `.venv` 时可双击 `start_ui.cmd` 启动桌面界面，支持暂停、继续和中止。
+
+不依赖本地观测文件的回归测试：
+
+```powershell
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+本次修复范围、验证样本与限制见[验证记录](docs/validation-20261012.md)。
+
 ## 总体流程
 
 <p align="center">
@@ -197,7 +207,7 @@ pip install -r requirements.txt
 
 | 数据 | 放置位置 | 说明 |
 |---|---|---|
-| 原始观测图像 | `inputs/images/<目标>/<观测期>/<YYYYMMDD>/fits/*.fit` | 支持的望远镜头格式：`ss156`、`ss156_2014`、`km100`、`km100B`、`lj240` |
+| 原始观测图像 | `inputs/images/<目标>/<观测期>/<YYYYMMDD>/fits/*.fit` | 支持的望远镜头格式：`ss156`、`ss156_2014`、`km100`、`km100B`、`km100c`、`lj240` |
 | GAIA 参考星表 | `inputs/catalogs/<目标>/<观测期>/GAIA3_*.DAT` | VizieR 文本导出：RA、Dec（度）、pmRA、pmDE（mas/yr）、G 星等 |
 | 目标历表 | `inputs/catalogs/<目标>/<观测期>/EPH_*.DAT` | IMCCE 格式：年 月 日 时 分 秒 RA(h) Dec(°) |
 

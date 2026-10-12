@@ -222,10 +222,14 @@ def _coarse_match_base_angle_fast(
         if nm < best["n"] or nm < 3:
             continue
 
-        par_tmp, sig0, _ = sol_par(
-            np.array(rx), np.array(ry), np.array(rra), np.array(rde),
-            nm, obj_ephra, obj_ephde, modeltype,
-        )
+        try:
+            par_tmp, sig0, _ = sol_par(
+                np.array(rx), np.array(ry), np.array(rra), np.array(rde),
+                nm, obj_ephra, obj_ephde, modeltype,
+            )
+        except np.linalg.LinAlgError:
+            # 候选配对可能不足或共线；继续搜索，不使用退化底片常数。
+            continue
         sig0_arcsec = sig0 / DEG2RAD * 3600.0
         if 0.001 < sig0_arcsec < 0.5 and (
             nm > best["n"] or sig0_arcsec < best["sig"]
@@ -380,6 +384,9 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
         par1_first, _, _ = sol_par(
             rxn_first, ryn_first, rra0, rde0, n_m, obj_ephra, obj_ephde, modeltype
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    底片常数精化失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -404,6 +411,9 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
         par1, sig0, _ = sol_par(
             rxn, ryn, rra0, rde0, n_m, ra_cen / DEG2RAD, de_cen / DEG2RAD, modeltype
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    底片常数精化失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -559,6 +569,9 @@ def _rematch_base_angle_field(
             de_cen / DEG2RAD,
             modeltype,
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    全图底片解算失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -693,7 +706,7 @@ def find_obj_base_angle(
     )
 
     if best["n"] < 3:
-        _log.info("    粗匹配失败：未找到足够参考星")
+        _log.info("    粗匹配失败：未找到参考星充足、矩阵非退化且残差合格的配对")
         r = _empty_result()
         r.nopre = 1
         return r

@@ -4,11 +4,15 @@
 cfg 的 4specified-output 目录下。
 """
 
+import re
+from datetime import datetime
 from pathlib import Path
 
 from nspa.application.log import get_logger
 from nspa.application.pipeline import StepResult
 from nspa.domain.models import OCStats
+from nspa.errors import ProcessingError
+from nspa.io.fits_io import read_fits_header
 from nspa.io.text_io import (
     read_object_out,
     write_comoc_lines,
@@ -20,7 +24,34 @@ from nspa.utils.math_utils import initial_stats, sigma_clip_oc
 _log = get_logger("comoc")
 
 
-def run_comoc(config, fitspath_list):
+def _valid_date_label(value):
+    if not re.fullmatch(r"\d{8}", value):
+        return False
+    try:
+        datetime.strptime(value, "%Y%m%d")
+    except ValueError:
+        return False
+    return True
+
+
+def _observation_date_label(fitspath, fit_files, tele_label, day_index):
+    """优先用观测日目录，再用文件名；异常名称改从 FITS 时间读取。"""
+    dirname = Path(fitspath).parent.name
+    if _valid_date_label(dirname):
+        return dirname
+    if fit_files:
+        prefix = fit_files[0].name[:8]
+        if _valid_date_label(prefix):
+            return prefix
+        try:
+            header = read_fits_header(str(fit_files[0]), tele_label)
+            return f"{header['year']:04d}{header['month']:02d}{header['day']:02d}"
+        except ProcessingError as exc:
+            _log.info(f"  无法从 FITS 确定日期：{exc}")
+    return f"unknown_day_{day_index:02d}"
+
+
+def run_comoc(config, fitspath_list, run_id=None):
     """对每个观测目录的每个目标逐日执行 O-C 野值剔除与统计汇总。"""
     comoc = config.comoc
     obj_total = config.match.obj_total
@@ -32,17 +63,21 @@ def run_comoc(config, fitspath_list):
     mean_limit = comoc.mean_limit
     eps = comoc.eps
     del_flag = comoc.del_flag
+    valid_total = 0
+    if run_id is None:
+        from nspa.application.context import make_run_id
+
+        run_id = make_run_id()
 
     for obj in range(1, obj_total + 1):
         obj_label = str(obj)
         oc_summary_path = outdir / f"00oc_{obj_label}.out"
-        # 月度汇总 .dat：以首个观测目录 basename 命名
-        first_obs = Path(fitspath_list[0])
-        month_out_path = outdir / f"{first_obs.name}{obj_label}.dat"
+        # 每次运行新建汇总文件，保留历史文件且不混入本次报告。
+        month_out_path = outdir / f"run_{run_id}_{obj_label}.dat"
 
         with (
             open(oc_summary_path, "a", encoding="utf-8") as f_oc_summary,
-            open(month_out_path, "a", encoding="utf-8") as f_month,
+            open(month_out_path, "x", encoding="utf-8") as f_month,
         ):
             for n_day, fitspath in enumerate(fitspath_list, 1):
                 fitspath = Path(fitspath)
@@ -52,9 +87,10 @@ def run_comoc(config, fitspath_list):
                 if del_flag == 1:
                     clean_proc_files(fitspath)
 
-                # 日期串：取首个原始 .fit basename 的前 8 位
                 fit_files = list_fits(fitspath)
-                date_str = fit_files[0].name[:8] if fit_files else "output"
+                date_str = _observation_date_label(
+                    fitspath, fit_files, config.match.tele_label, n_day
+                )
 
                 fits_out = ensure_dir(out_dir(fitspath))
                 objout_path = fits_out / f"object_{obj_label}.out"
@@ -72,6 +108,8 @@ def run_comoc(config, fitspath_list):
 
                 raw_lines, res_ra, res_de = read_object_out(str(objout_path))
                 n_raw = len(raw_lines)
+                if n_raw == 0:
+                    _log.info(f"  {date_str} 目标 {obj_label} 无有效匹配结果；统计零值不代表实际 O-C。")
 
                 # all_out 保留原始 147 列
                 with open(all_out, "w", encoding="utf-8") as f_all:
@@ -139,6 +177,7 @@ def run_comoc(config, fitspath_list):
                         open(obsdata_out, "w", encoding="utf-8") as f_obsdata,
                     ):
                         write_comoc_lines(f_out, f_final, f_obsdata, f_month, kept_lines)
+                    valid_total += stats.kept_count
 
                     f_oc_summary.write(
                         f"{date_str} & {stats.raw_count:4d} & "
@@ -149,15 +188,18 @@ def run_comoc(config, fitspath_list):
                         f"{stats.std_ra:9.3f} & {stats.std_de:9.3f}\n"
                     )
                 else:
-                    _log.info("删除该日期数据：============")
-                    _log.info(
-                        f"{date_str}{stats.raw_count:4d}"
-                        f"{stats.raw_mean_ra:9.4f}{stats.raw_mean_de:9.4f}"
-                        f"{stats.raw_std_ra:9.4f}{stats.raw_std_de:9.4f}"
-                        f"{stats.kept_count:4d}"
-                        f"{stats.mean_ra:9.4f}{stats.mean_de:9.4f}"
-                        f"{stats.std_ra:9.4f}{stats.std_de:9.4f}"
-                    )
+                    _log.info("本日结果未达到输出条件，未写入当日统计：============")
+                    if n_raw == 0:
+                        _log.info(f"{date_str}：无有效匹配数据，O-C 均值/方差未计算")
+                    else:
+                        _log.info(
+                            f"{date_str}{stats.raw_count:4d}"
+                            f"{stats.raw_mean_ra:9.4f}{stats.raw_mean_de:9.4f}"
+                            f"{stats.raw_std_ra:9.4f}{stats.raw_std_de:9.4f}"
+                            f"{stats.kept_count:4d}"
+                            f"{stats.mean_ra:9.4f}{stats.mean_de:9.4f}"
+                            f"{stats.std_ra:9.4f}{stats.std_de:9.4f}"
+                        )
                     _log.info("================")
                     result.warnings.append(
                         f"comoc: 精度不达标剔除 {date_str} obj={obj_label}"
@@ -178,6 +220,10 @@ def run_comoc(config, fitspath_list):
         _log.info(f"   本日匹配共归算天然卫星目标个数{obj:3d}")
         _log.info("=================================================================")
 
+    if valid_total == 0:
+        result.success = False
+        result.warnings.append("comoc: 本次运行没有有效 O-C 数据")
+        _log.info("警告：本次运行没有有效 O-C 数据。")
     _log.info(f"数据统计归算结束，共处理数据天数：{len(fitspath_list):3d}")
     _log.info("=================================================================")
     _log.info("=====================NSPA END======================")

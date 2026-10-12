@@ -52,9 +52,10 @@ def main():
         log.info(f"共读取到 {len(ctx.fitspath_list)} 个观测目录。\n")
 
         runner = PipelineRunner(select_steps(args.step))
-        runner.run(ctx)
+        results = runner.run(ctx)
 
         log.info(f"\n总耗时: {time.time() - t0:.2f} s")
+        return 1 if any(not result.success for result in results) else 0
     except ConfigError as e:
         sys.exit(f"错误：{e}")
     finally:
@@ -62,4 +63,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

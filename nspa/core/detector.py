@@ -13,10 +13,10 @@ njit，而本环境（numba 0.65.0 + macOS）下，numba 一旦与 01pre 跑在�
 
 import io
 import multiprocessing as mp
-import os
 import queue
 import traceback
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -34,6 +34,7 @@ from nspa.paths import (
     stage_dirs,
 )
 from nspa.utils.image_utils import detect_stars_by_moments
+from nspa.utils.parallel import image_worker_limit
 
 _log = get_logger("detect")
 
@@ -138,14 +139,9 @@ def _emit(log_text):
         _log.info(line)
 
 
-def _resolve_detect_workers(requested, n_files):
-    """解析 detect 并行度；0=自动，正数=上限，至少返回 1。"""
-    if n_files <= 1:
-        return 1
-    cpu = os.cpu_count() or 1
-    if requested == 0:
-        return max(1, min(n_files, cpu))
-    return max(1, min(n_files, requested))
+def _resolve_detect_workers(requested, n_files, image_paths=()):
+    """0=自动最多两进程；所有配置都受可用内存约束。"""
+    return image_worker_limit(requested, n_files, image_paths)
 
 
 def _run_detect_isolated(config, fitspath_list):
@@ -189,7 +185,12 @@ def _run_detect_isolated(config, fitspath_list):
             )
             for n, fp in enumerate(fits_files)
         ]
-        n_workers = _resolve_detect_workers(requested_workers, len(tasks))
+        image_paths = [
+            pre_input_dir / f"{fp.stem}_n{fp.suffix}" if pre.superflag else fp
+            for fp in fits_files
+        ]
+        n_workers = _resolve_detect_workers(requested_workers, len(tasks), image_paths)
+        _log.info(f"检测并发：配置={requested_workers}，实际={n_workers}（按图像尺寸与可用内存限制）")
 
         if n_workers <= 1:
             _log.info("--- 串行检测 ---")
@@ -209,8 +210,15 @@ def _run_detect_isolated(config, fitspath_list):
                 mp_context=ctx,
             ) as ex:
                 futures = [ex.submit(_detect_one_captured, *task) for task in tasks]
-                for fut in futures:
-                    log_text, info = fut.result()
+                for task, fut in zip(tasks, futures):
+                    try:
+                        log_text, info = fut.result()
+                    except BrokenProcessPool as exc:
+                        raise RuntimeError(
+                            f"检测工作进程异常退出（并发 {n_workers}；等待文件 {Path(task[0]).name}）。"
+                            "此文件不一定是崩溃源；可能原因包括内存不足或本地扩展崩溃。"
+                            "请将 2detect_workers 设为 1 后重试检测，并检查 Windows 应用日志。"
+                        ) from exc
                     _emit(log_text)
                     if info["err"] is not None:
                         raise info["err"]
@@ -273,6 +281,7 @@ def _run_in_fresh_process(config, fitspath_list):
 
     log_text, result, err, tb = payload
     if err is not None:
+        _emit(log_text)
         if tb:
             _log.info(tb.rstrip())
         raise err

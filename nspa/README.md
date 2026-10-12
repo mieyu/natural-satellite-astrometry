@@ -103,7 +103,7 @@ inputs/catalogs/S9/2024/GAIA3_S9_202410.DAT
 2pos_method=1         # 1/2/3 阶修正矩定中心
 
 # match
-3tele_label=km100B    # 望远镜标签：ss156 / ss156_2014 / km100 / km100B / lj240
+3tele_label=km100B    # 望远镜标签：ss156 / ss156_2014 / km100 / km100B / km100c / lj240
 3tele_focal=13300.0   # 焦距 (mm)
 3ccd_scale=0.0135     # 像素尺寸 (mm)
 3ccd_fieldsize=15     # 视场半宽 (arcmin)
@@ -125,6 +125,10 @@ inputs/catalogs/S9/2024/GAIA3_S9_202410.DAT
 4del_flag=0           # 1=运行后删除 fits_n / fits_reg / fits_ref
 ```
 
+`km100c` 对应 `fits_header_km100c` 格式：从 FITS 头的 `FRAME` 读取曝光开始时间、
+从 `EXPOSURE` 读取曝光秒数，再加半个曝光时长得到归算时刻；缺少 `GAIN` 时取 0。
+使用这类数据时设置 `3tele_label=km100c`。此格式不额外做时区转换。
+
 注释行用 `;` / `#` / `!` / `[` 开头；行内 `%` 之后视为注释。
 
 ## 产物落地约定
@@ -142,7 +146,7 @@ inputs/catalogs/S9/2024/GAIA3_S9_202410.DAT
 └── fits_out/         # 03/04 产物：object_N.out, final_object_N.out, final_oc_N.out
 ```
 
-跨日汇总（`.dat`、`OC_U{N}.png`、`OC_summary.png`、`00oc_*.out`、`*_all_*.out`、
+跨日汇总（每次运行新建的 `run_<运行编号>_<目标序号>.dat`、按历表代号命名的 `OC_<目标>.png`、`OC_summary.png`、`00oc_*.out`、`*_all_*.out`、
 `*_obsdata_*.out`）落在 cfg `4specified-output` 指定的目录。
 
 ## 作为库调用

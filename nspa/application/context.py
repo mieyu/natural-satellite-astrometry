@@ -1,6 +1,6 @@
 """流水线运行上下文：把配置与本次运行的派生信息组合在一起。"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -15,6 +15,7 @@ class PipelineContext:
     observation_dirs: list[ObservationDir]
     output_root: Path
     selected_steps: list[str]
+    report_dat_files: list[Path] = field(default_factory=list)
 
     @property
     def fitspath_list(self) -> list[Path]:
@@ -22,7 +23,7 @@ class PipelineContext:
 
 
 def make_run_id() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
 
 def build_context(config: NspaConfig, selected_steps, run_id=None) -> PipelineContext:

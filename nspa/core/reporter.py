@@ -130,12 +130,15 @@ def _load_dat(filepath):
     return records
 
 
-def _discover_dat_files(outdir, obj_total):
-    """按 .dat 文件名末尾数字归类到卫星编号，返回 {obj_idx: [path,...]}。"""
+def _discover_dat_files(outdir, obj_total, selected_files=None):
+    """按文件名末尾数字归类；有本次文件清单时不扫描历史文件。"""
     found = {obj: [] for obj in range(1, obj_total + 1)}
     pat = re.compile(r"^(.+?)(\d)$")  # 末尾一位数字 = 卫星编号
 
-    for fp in sorted(outdir.glob("*.dat")):
+    files = outdir.glob("*.dat") if selected_files is None else map(Path, selected_files)
+    for fp in sorted(files):
+        if fp.suffix.lower() != ".dat" or not fp.is_file():
+            continue
         stem = fp.stem
         m = pat.match(stem)
         if not m:
@@ -145,6 +148,16 @@ def _discover_dat_files(outdir, obj_total):
             found[idx].append(fp)
 
     return found
+
+
+def _object_labels(config, obj_total):
+    """报告标签取自所用历表代号，避免 N0 被标作 S1。"""
+    labels = {}
+    for idx, path in enumerate(config.match.eph_files[:obj_total], 1):
+        match = re.fullmatch(r"EPH_(.+)_\d{6}\.DAT", Path(path).name, re.IGNORECASE)
+        if match:
+            labels[idx] = match.group(1)
+    return labels
 
 
 def _collect_by_period(dat_files, obj_total):
@@ -177,7 +190,7 @@ def _collect_by_period(dat_files, obj_total):
 # ── 绘图函数 ──────────────────────────────────────────────────────────────
 
 
-def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month, sat_prefix="S"):
+def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month, sat_prefix="S", labels=None):
     """在 (ax_ra, ax_de) 子图对上绘制单个观测时段的 O-C 散点。"""
     month_str = _MONTH_EN.get(month, str(month))
     xlabel = f"Time in day (UTC) in {month_str} {year}"
@@ -195,7 +208,7 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month, sat_pref
 
         color = _COLORS[(obj_idx - 1) % len(_COLORS)]
         offset = _T_OFFSET[(obj_idx - 1) % len(_T_OFFSET)]
-        label = f"{sat_prefix}{obj_idx}"
+        label = (labels or {}).get(obj_idx, f"{sat_prefix}{obj_idx}")
 
         x_shifted = t_arr + offset
         x_min = min(x_min, float(x_shifted.min()))
@@ -226,7 +239,7 @@ def _plot_period_row(ax_ra, ax_de, period_data, obj_total, year, month, sat_pref
     _format_time_axis(ax_de, x_min, x_max)
 
 
-def _build_summary_figure(all_period_data, periods, obj_total, outdir, sat_prefix="S"):
+def _build_summary_figure(all_period_data, periods, obj_total, outdir, sat_prefix="S", labels=None):
     """生成多时段汇总图（n_periods 行 × 2 列），保存为 OC_summary.png。"""
     n = len(periods)
     fig, axes = plt.subplots(n, 2, figsize=(14, 3.8 * n), squeeze=False)
@@ -241,6 +254,7 @@ def _build_summary_figure(all_period_data, periods, obj_total, outdir, sat_prefi
             year,
             month,
             sat_prefix=sat_prefix,
+            labels=labels,
         )
 
     fig.tight_layout()
@@ -252,14 +266,15 @@ def _build_summary_figure(all_period_data, periods, obj_total, outdir, sat_prefi
 
 
 def _build_per_satellite_figures(
-    all_period_data, periods, obj_total, outdir, sat_prefix="S"
+    all_period_data, periods, obj_total, outdir, sat_prefix="S", labels=None
 ):
     """为每颗卫星生成单独的多时段图（可选），保存为 OC_UN.png。"""
     saved = []
     for obj_idx in range(1, obj_total + 1):
+        label = (labels or {}).get(obj_idx, f"{sat_prefix}{obj_idx}")
         n = len(periods)
         fig, axes = plt.subplots(n, 2, figsize=(14, 3.5 * n), squeeze=False)
-        fig.suptitle(f"O-C Residuals — {sat_prefix}{obj_idx}", fontsize=12, y=1.01)
+        fig.suptitle(f"O-C Residuals — {label}", fontsize=12, y=1.01)
 
         for row, (year, month) in enumerate(periods):
             seg = all_period_data[(year, month)].get(obj_idx, {})
@@ -289,11 +304,11 @@ def _build_per_satellite_figures(
             ax_de.grid(True, linewidth=0.5, alpha=0.7)
 
         fig.tight_layout()
-        out_path = outdir / f"OC_{sat_prefix}{obj_idx}.png"
+        out_path = outdir / f"OC_{label}.png"
         fig.savefig(out_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         saved.append(out_path)
-        _log.info(f"  {sat_prefix}{obj_idx} 图已保存：{out_path}")
+        _log.info(f"  {label} 图已保存：{out_path}")
 
     return saved
 
@@ -301,7 +316,7 @@ def _build_per_satellite_figures(
 # ── 公开入口 ──────────────────────────────────────────────────────────────
 
 
-def run_report(config, outdir=None):
+def run_report(config, outdir=None, dat_files=None):
     """读取 comoc 的 .dat 文件，生成 OC_summary.png 及各卫星单独图。
 
     outdir 默认取 config.comoc.output_dir；per_satellite 由 config.report 控制。
@@ -315,6 +330,7 @@ def run_report(config, outdir=None):
     obj_total = config.match.obj_total or 5
     per_satellite = config.report.per_satellite
     sat_prefix = config.report.sat_prefix
+    labels = _object_labels(config, obj_total)
 
     _log.info(f"\n{'=' * 50}")
     _log.info(f"05report 开始 — 读取目录：{outdir}")
@@ -324,14 +340,16 @@ def run_report(config, outdir=None):
         _log.info("05report 跳过。")
         result.warnings.append(f"report: 输出目录不存在 {outdir}")
         result.failed_items.append(str(outdir))
+        result.success = False
         return result
 
-    dat_files = _discover_dat_files(outdir, obj_total)
+    dat_files = _discover_dat_files(outdir, obj_total, dat_files)
 
     total_files = sum(len(v) for v in dat_files.values())
     if total_files == 0:
         _log.info(f"  警告：在 {outdir} 中未找到任何 .dat 文件，跳过绘图。")
         result.warnings.append(f"report: 未发现 .dat {outdir}")
+        result.success = False
         return result
 
     _log.info(f"  发现 .dat 文件共 {total_files} 个：")
@@ -339,13 +357,14 @@ def run_report(config, outdir=None):
         flist = dat_files[obj_idx]
         if flist:
             names = ", ".join(p.name for p in flist)
-            _log.info(f"    {sat_prefix}{obj_idx}: {names}")
+            _log.info(f"    {labels.get(obj_idx, f'{sat_prefix}{obj_idx}')}: {names}")
 
     all_period_data = _collect_by_period(dat_files, obj_total)
 
     if not all_period_data:
         _log.info("  警告：所有文件均无有效数据行，跳过绘图。")
         result.warnings.append(f"report: 无有效数据行 {outdir}")
+        result.success = False
         return result
 
     periods = sorted(all_period_data.keys())
@@ -358,12 +377,12 @@ def run_report(config, outdir=None):
             for obj in range(1, obj_total + 1)
         ]
         count_str = "  ".join(
-            f"{sat_prefix}{o}:{c}" for o, c in enumerate(counts, 1) if c > 0
+            f"{labels.get(o, f'{sat_prefix}{o}')}:{c}" for o, c in enumerate(counts, 1) if c > 0
         )
         _log.info(f"    {year} {month_str:4s}  —  {count_str}")
 
     summary_path = _build_summary_figure(
-        all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix
+        all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix, labels=labels
     )
     result.output_files.append(str(summary_path))
 
@@ -371,7 +390,7 @@ def run_report(config, outdir=None):
         result.output_files.extend(
             str(p)
             for p in _build_per_satellite_figures(
-                all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix
+                all_period_data, periods, obj_total, outdir, sat_prefix=sat_prefix, labels=labels
             )
         )
 
