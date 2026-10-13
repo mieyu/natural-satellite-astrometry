@@ -95,6 +95,7 @@ inputs/images/
 !/tests/test_astrometry_stability.py
 !/tests/test_parallel_memory.py
 !/tests/test_screenshot_regressions.py
+!/tests/test_rotation_acquisition.py
 
 # 本地演示项目和逐次试算结果
 /ppt_projects/

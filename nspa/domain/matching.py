@@ -13,6 +13,7 @@ GAIA 参考星投影到 tangent-plane 一次性建树，检测星批量半径查
 """
 
 import numpy as np
+from scipy.optimize import root
 from scipy.spatial import cKDTree
 
 from nspa.application.log import get_logger
@@ -25,6 +26,7 @@ from nspa.domain.astrometry import (
     xy2rade,
 )
 from nspa.domain.models import MatchResult
+from nspa.domain.rotation import acquire_rotation, plate_orientation
 
 _log = get_logger("matching")
 
@@ -606,7 +608,24 @@ def _locate_base_angle_target(
     """阶段四：历表位置反演到像素坐标，并在 3 像素内抓取目标。"""
     n_det = len(det_x)
     xi, eta = rade2xieta(obj_ephra * DEG2RAD, obj_ephde * DEG2RAD, ra_cen, de_cen)
-    pre_x, pre_y = xieta2xy(xi, eta, par1[:6])
+    half = modeltype // 2
+    linear = np.r_[par1[:3], par1[half:half + 3]]
+    pre_x, pre_y = xieta2xy(xi, eta, linear)
+    if modeltype != 6:
+        # Higher order models store eta coefficients at nm/2, not index 3.
+        # Invert the full model so distortion does not move the target outside
+        # the existing three-pixel acceptance radius.
+        def residual(pixel_offset):
+            ra, de = xy2rade(par1, modeltype, *(pixel_offset * pscale / fl),
+                             ra_cen, de_cen)
+            k, e = rade2xieta(ra, de, ra_cen, de_cen)
+            return (np.array([k, e]) - [xi, eta]) * fl / pscale
+
+        solved = root(residual, np.array([pre_x, pre_y]) * fl / pscale)
+        if not np.isfinite(solved.x).all() or np.linalg.norm(residual(solved.x)) > .01:
+            _log.info("    底片多项式反演未收敛，跳过此目标")
+            return None
+        pre_x, pre_y = solved.x * pscale / fl
     pre_x = pre_x * fl / pscale + x_cen
     pre_y = pre_y * fl / pscale + y_cen
     _log.info(
@@ -689,7 +708,7 @@ def find_obj_base_angle(
 
     # ── 阶段一：暴力粗匹配 ────────────────────────────────────────────────
     par_init = _initial_plate_par(field_angle)
-    best = _coarse_match_base_angle(
+    best = _empty_best() if field_angle == 0 else _coarse_match_base_angle(
         det_x,
         det_y,
         par_init,
@@ -704,6 +723,22 @@ def find_obj_base_angle(
         n_gaia,
         modeltype,
     )
+
+    if best["n"] < 3:
+        _log.info("    自动搜索底片旋转角：0–360°，同时检查镜像方向")
+        acquired = acquire_rotation(
+            det_x, det_y, det_flux, pscale, fl, limit_match,
+            obj_ephra, obj_ephde, np.asarray(gaia_ra)[:n_gaia],
+            np.asarray(gaia_de)[:n_gaia], np.asarray(gaia_mag)[:n_gaia], modeltype,
+        )
+        if acquired is not None:
+            best = acquired
+            angle, parity = plate_orientation(best["par"], 6)
+            _log.info(f"    自动旋转角初解：{angle:.6f}°，镜像方向={parity:+d}，"
+                      f"独立参考星={best['used']}，sigma={best['sig']:.4f}角秒")
+        else:
+            _log.info("    自动旋转角搜索失败：需要至少6颗独立参考星、正确的"
+                      "历表/时间和近似像元比例；请检查视场、检测质量及仪器配置")
 
     if best["n"] < 3:
         _log.info("    粗匹配失败：未找到参考星充足、矩阵非退化且残差合格的配对")
@@ -754,6 +789,8 @@ def find_obj_base_angle(
     n_m = rematched["n_m"]
     par1 = rematched["par1"]
     sig1 = rematched["sig1"]
+    solved_angle, parity = plate_orientation(par1, modeltype)
+    _log.info(f"    底片旋转角解算值：{solved_angle:.6f}°，镜像方向={parity:+d}")
 
     # ── 阶段四：预报并抓取目标 ────────────────────────────────────────────
     target = _locate_base_angle_target(
