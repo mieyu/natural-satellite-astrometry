@@ -19,6 +19,7 @@ from scipy.spatial import cKDTree
 from nspa.application.log import get_logger
 from nspa.domain.astrometry import (
     DEG2RAD,
+    _build_design_matrix,
     cal_rl,
     rade2xieta,
     sol_par,
@@ -613,13 +614,14 @@ def _locate_base_angle_target(
     pre_x, pre_y = xieta2xy(xi, eta, linear)
     if modeltype != 6:
         # Higher order models store eta coefficients at nm/2, not index 3.
-        # Invert the full model so distortion does not move the target outside
-        # the existing three-pixel acceptance radius.
+        # Invert the exact same polynomial basis used by sol_par. Working in
+        # tangent-plane coordinates avoids a redundant sky round trip and
+        # keeps all 12/20/30 terms, including both fourth-order x/y terms.
         def residual(pixel_offset):
-            ra, de = xy2rade(par1, modeltype, *(pixel_offset * pscale / fl),
-                             ra_cen, de_cen)
-            k, e = rade2xieta(ra, de, ra_cen, de_cen)
-            return (np.array([k, e]) - [xi, eta]) * fl / pscale
+            xn, yn = pixel_offset * pscale / fl
+            plate = _build_design_matrix(np.array([xn]), np.array([yn]), 1, modeltype)
+            predicted = plate @ par1[:modeltype]
+            return (predicted - [xi, eta]) * fl / pscale
 
         solved = root(residual, np.array([pre_x, pre_y]) * fl / pscale)
         if not np.isfinite(solved.x).all() or np.linalg.norm(residual(solved.x)) > .01:

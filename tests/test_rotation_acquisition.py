@@ -94,6 +94,47 @@ class RotationAcquisitionTests(unittest.TestCase):
         self.assertEqual(target['obj_x_obs'], x)
         self.assertEqual(target['obj_y_obs'], y)
 
+    def test_high_order_models_predict_target_inside_image(self):
+        # Regression for the former failure where the x prediction was plausible
+        # but a 12/20/30-parameter eta coefficient was read as a linear term.
+        rng = np.random.default_rng(20260914)
+        pscale, focal = .015, 13216.
+        center = np.array([2000., 2000.])
+        target = np.array([1600., 1536.])
+        refs = rng.uniform(300., 3700., (90, 2))
+        angle = 178. * DEG2RAD
+
+        for model in (12, 20, 30):
+            with self.subTest(model=model):
+                half = model // 2
+                par = np.zeros(model)
+                par[:3] = [np.cos(angle), np.sin(angle), 0.]
+                par[half:half + 3] = [-np.sin(angle), np.cos(angle), 0.]
+                par[3:6] = [.25, -.1, .15]
+                par[half + 3:half + 6] = [-.12, .18, -.2]
+                if model >= 20:
+                    par[6:10] = [12., -8., 6., -4.]
+                    par[half + 6:half + 10] = [-5., 7., -9., 11.]
+                if model == 30:
+                    par[10:15] = [6000., -3000., 4500., -2000., 5000.]
+                    par[half + 10:half + 15] = [-4000., 2500., -3500., 3000., -5500.]
+
+                normalized = (refs - center) * pscale / focal
+                ra, de = xy2rade(par, model, normalized[:, 0], normalized[:, 1],
+                                 125 * DEG2RAD, 20 * DEG2RAD)
+                target_xy = (target - center) * pscale / focal
+                target_ra, target_de = xy2rade(
+                    par, model, *target_xy, 125 * DEG2RAD, 20 * DEG2RAD)
+                detections = np.vstack([refs + rng.normal(0, .04, refs.shape), target])
+                result = find_obj_base_angle(
+                    detections[:, 0], detections[:, 1], np.ones(len(detections)),
+                    np.full(len(detections), 20.), 'high-order.fit', 178.,
+                    pscale, focal, 3., target_ra / DEG2RAD,
+                    target_de / DEG2RAD, ra / DEG2RAD, de / DEG2RAD,
+                    np.full(len(refs), 12.), len(refs), model)
+                self.assertEqual((result.nostar, result.nopre), (0, 0))
+                np.testing.assert_allclose([result.obj_x, result.obj_y], target, atol=.1)
+
     def test_insufficient_and_collinear_stars_are_rejected(self):
         for count in (4, 20):
             x = np.linspace(-.001, .001, count)
