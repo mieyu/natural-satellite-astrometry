@@ -10,11 +10,13 @@
 """
 
 import re
+from datetime import datetime
 from pathlib import Path
 
 from nspa.paths import expand_fitspath, list_fits
 
 _EPH_RE = re.compile(r"EPH_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
+_GAIA_RE = re.compile(r"GAIA3_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
 _AUTO_EPH_CHOICE = "自动匹配观测月"
 
 
@@ -34,10 +36,38 @@ def derive_obs_month(candidate):
     return None
 
 
-def select_eph(eph_files, obs_month=None):
-    """按目标代号分组挑选历表，返回 (每目标一个 eph 列表, obj_total=不同代号数)。
+def observation_months(days):
+    """从观测日目录或原始 FITS 文件名确认全部观测月。无法确认时返回空列表。"""
+    months = set()
+    for day in days:
+        files = list_fits(day)
+        if not files:
+            return []
+        dirname = Path(day).parent.name
+        for file in files:
+            candidates = [dirname, file.name[:8]]
+            candidates.extend(re.findall(r"(?:19|20)\d{6}", file.stem))
+            dates = [value for value in candidates if _is_calendar_date(value)]
+            if not dates:
+                return []
+            months.update(value[:6] for value in dates)
+    return sorted(months)
 
-    同一代号有多个月份时，优先选与观测月一致的；选不到则取首个。
+
+def _is_calendar_date(value):
+    if not re.fullmatch(r"\d{8}", value):
+        return False
+    try:
+        datetime.strptime(value, "%Y%m%d")
+    except ValueError:
+        return False
+    return True
+
+
+def select_eph(eph_files, obs_month=None):
+    """按目标代号分组挑选历表，返回 (每目标一个 eph 列表, 已选目标数)。
+
+    仅选择与观测月一致的文件；未知月份或缺文件时不猜测。
     """
     groups = {}
     for f in eph_files:
@@ -45,13 +75,46 @@ def select_eph(eph_files, obs_month=None):
         groups.setdefault(code, []).append((month, f))
     selected = []
     for code, variants in groups.items():
-        chosen = None
-        if obs_month:
-            chosen = next((f for month, f in variants if month == obs_month), None)
-        if chosen is None:
-            chosen = variants[0][1]
-        selected.append(chosen)
-    return selected, len(groups)
+        chosen = next((f for month, f in variants if month == obs_month), None)
+        if chosen is not None:
+            selected.append(chosen)
+    return selected, len(selected)
+
+
+def matching_gaia_name(gaia_files, obs_month, current_name=""):
+    """保留有效的手动选择；否则仅在观测月有唯一星表时自动选择。"""
+    if current_name in gaia_file_names(gaia_files):
+        return current_name
+    matches = []
+    for path in gaia_files:
+        match = _GAIA_RE.fullmatch(Path(path).name)
+        if match and match.group(2) == obs_month:
+            matches.append(Path(path).name)
+    return matches[0] if len(matches) == 1 else ""
+
+
+def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph,
+                             gaia_files):
+    """匹配前核对观测月与历表；GAIA 文件可由用户跨月选择。"""
+    if len(months) != 1:
+        return ["无法确认唯一观测月；请按月选择图像目录"]
+    month = months[0]
+    errors = []
+    available_codes = {parse_eph_name(path)[0] for path in all_eph}
+    selected_codes = {parse_eph_name(path)[0] for path in selected_eph}
+    missing = sorted(available_codes - selected_codes)
+    if missing and auto_eph:
+        errors.append(f"{month} 缺少目标历表：{', '.join(missing)}")
+    if not selected_eph:
+        errors.append(f"{month} 没有选中目标历表")
+    for path in selected_eph:
+        if parse_eph_name(path)[1] != month:
+            errors.append(f"目标历表与观测月 {month} 不一致：{Path(path).name}")
+    if not gaia_name:
+        errors.append(f"{month} 没有选中 GAIA 星表")
+    elif gaia_name not in gaia_file_names(gaia_files):
+        errors.append(f"GAIA 星表不在当前数据目录中：{gaia_name}")
+    return errors
 
 
 def eph_file_names(eph_files):
@@ -178,6 +241,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self._obj_total = 1
             self._fitspath_candidate = None
             self._preview_days = []
+            self._obs_months = []
 
             row = 0
             ttk.Label(self, text="目标").grid(row=row, column=0, sticky="w", padx=4, pady=3)
@@ -211,6 +275,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self.cb_gaia = ttk.Combobox(self, textvariable=self.var_gaia,
                                         state="readonly", width=46)
             self.cb_gaia.grid(row=row, column=1, columnspan=3, sticky="w", padx=4)
+            self.cb_gaia.bind("<<ComboboxSelected>>", lambda _e: self._update_preview())
 
             row += 1
             self.preview = ttk.Label(self, text="（请选择目标/观测期）", foreground="#555")
@@ -243,6 +308,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self._gaia_files = []
             self.cb_epoch["values"] = list_epochs(repo_root, self.var_target.get(), self.input_root)
             self._fitspath_candidate = None
+            self._obs_months = []
             self.preview.config(text="（请选择观测期）", foreground="#555")
             self.on_change()
 
@@ -274,11 +340,13 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             if days:
                 self._fitspath_candidate = cand
                 self._preview_days = days
+                self._obs_months = observation_months(days)
                 self.cb_sub["values"] = subdirs  # 仍允许换更深目录
                 t, e = self.var_target.get(), self.var_epoch.get()
                 eph_all, gaia, cat_dir = scan_catalog(repo_root, t, e, self.input_root)
                 self._all_eph_files = eph_all
-                self._auto_eph_files, _count = select_eph(eph_all, derive_obs_month(cand))
+                obs_month = self._obs_months[0] if len(self._obs_months) == 1 else None
+                self._auto_eph_files, _count = select_eph(eph_all, obs_month)
                 eph_choices = [_AUTO_EPH_CHOICE] + eph_file_names(eph_all)
                 self.cb_eph["values"] = eph_choices
                 if self.var_eph.get() not in eph_choices:
@@ -287,14 +355,13 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._gaia_files = gaia
                 gaia_choices = gaia_file_names(gaia)
                 self.cb_gaia["values"] = gaia_choices
-                if self.var_gaia.get() not in gaia_choices:
-                    self.var_gaia.set("")
-                if gaia_choices and not self.var_gaia.get():
-                    self.var_gaia.set(gaia_choices[0])
+                self.var_gaia.set(matching_gaia_name(
+                    gaia, obs_month, self.var_gaia.get()))
                 self._update_preview()
             else:
                 self._fitspath_candidate = None
                 self._preview_days = []
+                self._obs_months = []
                 self.var_eph.set("")
                 self.var_gaia.set("")
                 self.cb_eph["values"] = []
@@ -326,12 +393,30 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             if len(self._eph_files) > 4:
                 eph_names += " ..."
             gaia_count = len(self.cb_gaia["values"])
+            selected_gaia = self.var_gaia.get()
+            issues = self.selection_errors("match")
             self.preview.config(
                 text=f"✓ 解析到 {len(self._preview_days)} 个观测日："
                      f"{day_names}{' ...' if len(self._preview_days) > 6 else ''}"
                      f"  |  目标数 {self._obj_total}，历表 {len(self._eph_files)} 个"
-                     f"{f'：{eph_names}' if eph_names else ''}，GAIA {gaia_count} 个",
-                foreground="#0a0",
+                     f"{f'：{eph_names}' if eph_names else ''}"
+                     f"，GAIA 已选 {1 if selected_gaia else 0}/{gaia_count}"
+                     f"{f'：{selected_gaia}' if selected_gaia else ''}"
+                     f"{'  |  ⚠ ' + issues[0] if issues else ''}",
+                foreground="#a60" if issues else "#0a0",
+            )
+
+        def selection_errors(self, step="all"):
+            """匹配前核对观测月与所选历表；其他步骤不依赖这些星表。"""
+            if step not in {"all", "match"}:
+                return []
+            return catalog_selection_errors(
+                self._obs_months,
+                self._all_eph_files,
+                self._eph_files,
+                self.var_gaia.get(),
+                self.var_eph.get() == _AUTO_EPH_CHOICE,
+                self._gaia_files,
             )
 
         # —— 对外取值 ——

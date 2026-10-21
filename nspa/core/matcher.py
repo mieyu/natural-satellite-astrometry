@@ -17,6 +17,7 @@ from nspa.application.log import get_logger
 from nspa.application.pipeline import StepResult
 from nspa.domain.astrometry import extract_field_stars, print_par
 from nspa.domain.matching import find_obj_base_angle, find_obj_base_prepar
+from nspa.domain.rotation import plate_orientation
 from nspa.domain.models import (
     Ephemeris,
     GaiaCatalog,
@@ -244,7 +245,7 @@ def run_match(config, fitspath_list):
                         object_out_files[obj],
                         observation,
                         hdr["hh"], hdr["mm"], hdr["ss"], hdr["exptime"],
-                        match.plate_angle,
+                        plate_orientation(result.par1, match.model_type)[0],
                     )
                     _log.info(f"    写入out文件的结果，文件名：object_{obj}")
 

@@ -7,7 +7,6 @@
 """
 
 import numpy as np
-from scipy.linalg import inv
 
 from nspa.application.log import get_logger
 
@@ -83,7 +82,7 @@ def xy2rade(par, nm, x, y, ra0, de0):
             return (p[off]*x + p[off+1]*y + p[off+2] +
                     p[off+3]*x**2 + p[off+4]*x*y + p[off+5]*y**2 +
                     p[off+6]*x**3 + p[off+7]*x**2*y + p[off+8]*x*y**2 + p[off+9]*y**3 +
-                    p[off+10]*y**4 + p[off+11]*x**3*y + p[off+12]*x**2*y**2 +
+                    p[off+10]*x**4 + p[off+11]*x**3*y + p[off+12]*x**2*y**2 +
                     p[off+13]*x*y**3 + p[off+14]*y**4)
         return 0.0
 
@@ -127,52 +126,61 @@ def _build_design_matrix(x, y, n, nm):
         elif nm == 30:
             row = [xi, yi, 1.0, xi**2, xi*yi, yi**2,
                    xi**3, xi**2*yi, xi*yi**2, yi**3,
-                   yi**4, xi**3*yi, xi**2*yi**2, xi*yi**3, yi**4]
+                   xi**4, xi**3*yi, xi**2*yi**2, xi*yi**3, yi**4]
         else:
-            row = []
+            raise ValueError(f"不支持的底片模型：{nm}")
         A[2*i,   :h] = row
         A[2*i+1, h:] = row
     return A
 
 
 def least_squares(A, Y, K, n):
-    """带权迭代最小二乘（对应 Fortran LEAST+MATINV）。
+    """列缩放后的 SVD 最小二乘，保留原坐标下的底片常数。
 
     剔除残差超过 2.6σ 的观测对，最多迭代 30 次。
-    Returns (par, sigma, n_used)。
+    缩放矩阵的奇异值比低于 1e-10 时拒绝解算，避免病态解进入后续归算。
+    返回 (par, sigma, n_used)；数据不足或退化时抛出 LinAlgError。
     """
-    NE, SFA, SFB = 2 * n, 2.6, 0.01
-    P = np.ones(NE)
-    SITA20, NBIG, ILOOP = 0.0, 0, 0
-
-    while True:
-        ILOOP += 1
-        NEP = NE - NBIG * 2
-        AT = A.T.copy()
-        for i in range(NE):
-            AT[:, i] *= P[i]
-        try:
-            X = inv(AT @ A) @ AT @ Y
-        except Exception:
-            return np.zeros(K), 0.0, 0
-
+    A = np.asarray(A, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64).reshape(-1)
+    if A.shape != (2 * n, K) or Y.shape != (2 * n,):
+        raise ValueError("底片解算矩阵与观测数据维度不一致")
+    if not np.isfinite(A).all() or not np.isfinite(Y).all():
+        raise np.linalg.LinAlgError("底片解算含非有限值")
+    keep = np.ones(n, dtype=bool)
+    previous_sigma = None
+    for iteration in range(30):
+        rows = np.repeat(keep, 2)
+        used = int(keep.sum())
+        if 2 * used <= K:
+            raise np.linalg.LinAlgError(
+                f"有效参考星不足：{used} 颗，{K} 参数模型需至少 {K // 2 + 1} 颗以估计残差")
+        active = A[rows]
+        scales = np.linalg.norm(active, axis=0)
+        if np.any(scales == 0) or not np.isfinite(scales).all():
+            raise np.linalg.LinAlgError("底片矩阵退化：存在零列或无效列")
+        coefficients, _, rank, singular = np.linalg.lstsq(
+            active / scales, Y[rows], rcond=1e-10)
+        if rank < K:
+            raise np.linalg.LinAlgError(
+                f"底片矩阵病态或秩不足：秩 {rank}/{K}，"
+                f"缩放后奇异值比 {singular[-1] / singular[0]:.3e}；请检查参考星分布及匹配")
+        X = coefficients / scales
         V = A @ X - Y
-        SITA2 = np.sqrt(sum(V[i, 0]**2 * P[i] for i in range(NE)) / max(NEP - K, 1)) if NEP != K else 0.0
-
-        if abs(SITA2 - SITA20) >= SFB * SITA20 and ILOOP <= 30:
-            SITA20 = SITA2
-            NBIG = 0
-            P = np.ones(NE)
-            for i in range(1, NE, 2):
-                if abs(V[i, 0]) >= SFA * SITA2 or abs(V[i-1, 0]) >= SFA * SITA2:
-                    P[i-1] = P[i] = 0.0
-                    NBIG += 1
-        else:
+        sigma = float(np.linalg.norm(V[rows]) / np.sqrt(2 * used - K))
+        # 精确拟合的舍入误差不应触发剔星，尤其不能在 sigma=0 时剔除全部星。
+        roundoff = 64 * np.finfo(float).eps * max(
+            float(np.max(np.abs(Y[rows]))), np.finfo(float).tiny)
+        if (sigma <= roundoff or iteration == 29 or
+                (previous_sigma is not None and
+                 abs(sigma - previous_sigma) < 0.01 * previous_sigma)):
             break
-        if ILOOP > 30:
+        next_keep = np.all(np.abs(V.reshape(n, 2)) < 2.6 * sigma, axis=1)
+        if np.array_equal(next_keep, keep):
             break
-
-    return X.flatten(), SITA2, NE // 2 - NBIG
+        previous_sigma = sigma
+        keep = next_keep
+    return X, sigma, used
 
 
 def sol_par(x, y, ra, de, n, ra0, de0, nm):

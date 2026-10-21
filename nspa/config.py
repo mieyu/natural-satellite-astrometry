@@ -36,6 +36,7 @@ _SCALAR_FIELDS: list[tuple[str, str | None, str, type, Any]] = [
     ("1bkgdmode", "pre", "bkgdmode", int, 2),
     ("1enhance_flag", "pre", "enhance_flag", int, 1),
     ("1median_impl", "pre", "median_impl", str, "auto"),
+    ("1pre_workers", "pre", "pre_workers", int, 0),
     (
         "1homo_gauss_cutoff",
         "pre",
@@ -115,6 +116,7 @@ class PreConfig:
     bkgdmode: int = 2
     enhance_flag: int = 1
     median_impl: str = "auto"
+    pre_workers: int = 0
     homo_gauss_cutoff: float = 50.0  # 同态滤波(mode2)频域高斯截止频率
     bssr_gauss_size: int = 9  # BSSR(mode3)空间高斯窗口(奇数)
 
@@ -211,6 +213,8 @@ class NspaConfig:
 
         if self.detect.detect_workers < 0:
             errors.append("2detect_workers 必须为非负整数（0 表示自动）。")
+        if self.pre.pre_workers < 0:
+            errors.append("1pre_workers 必须为非负整数（0 表示自动）。")
 
         if selected & {"match", "comoc", "report"}:
             if self.match.obj_total <= 0:

@@ -4,7 +4,9 @@
   - 读取异常统一抛 ProcessingError，调用方应捕获后跳过单图，不中断流水线。
 """
 
+import re
 import warnings
+from datetime import datetime, timedelta
 
 import numpy as np
 from astropy.io import fits
@@ -50,49 +52,67 @@ def write_fits(fitsfile, data, header, dtype="float32"):
 def read_fits_header(fitsfile, tele_label):
     """解析 FITS 头，返回曝光中点 UTC 时间及基本参数 dict。
 
-    支持 tele_label：ss156 / ss156_2014 / km100 / lj240 / km100B。
+    支持 tele_label：ss156 / ss156_2014 / km100 / lj240 / km100B / km100c。
     解析失败时抛 ProcessingError（单图错误，调用方应捕获后跳过此图）。
     """
     try:
         with fits.open(fitsfile) as hdul:
             h = hdul[0].header
+            label = tele_label.strip().lower()
+            if label not in ('ss156', 'ss156_2014', 'km100', 'lj240', 'km100b', 'km100c'):
+                raise ProcessingError(f"未知望远镜标签：{tele_label}")
             naxis1 = h.get('NAXIS1', 0)
             naxis2 = h.get('NAXIS2', 0)
             bscale = h.get('BSCALE', 1.0)
             bzero = h.get('BZERO', 0.0)
-            gain = h.get('GAIN', 1.0)
-            exptime = h.get('EXPTIME', 0.0)
+            gain = h.get('GAIN', 0.0 if label == 'km100c' else 1.0)
 
-            # 按望远镜标签选择时间关键字
-            key = 'DATE-STA' if tele_label == 'ss156_2014' else 'DATE-OBS'
-            date_str = h.get(key, '')
-            if not date_str:
-                raise ProcessingError(f"{fitsfile} 中未找到时间关键字 {key}")
-            if tele_label not in ('ss156', 'ss156_2014', 'km100', 'lj240', 'km100B'):
-                raise ProcessingError(f"未知望远镜标签：{tele_label}")
+            if label == 'km100c':
+                # fits_header_km100c：FRAME 为起始时刻，EXPOSURE 为曝光秒数。
+                frame = h.get('FRAME', '')
+                if not frame:
+                    raise ProcessingError(f"{fitsfile} 中未找到时间关键字 FRAME")
+                if 'EXPOSURE' not in h:
+                    raise ProcessingError(f"{fitsfile} 中未找到曝光关键字 EXPOSURE")
+                fields = re.findall(r'\d+(?:\.\d+)?', str(frame))
+                if len(fields) != 6:
+                    raise ProcessingError(f"{fitsfile} 的 FRAME 时间格式无效：{frame!r}")
+                year, month, day, hh, mm = map(int, fields[:5])
+                ss = float(fields[5])
+                exptime = float(h['EXPOSURE'])
+                midpoint = datetime(year, month, day, hh, mm) + timedelta(
+                    seconds=ss + 0.5 * exptime)
+                year, month, day = midpoint.year, midpoint.month, midpoint.day
+                hh, mm = midpoint.hour, midpoint.minute
+                ss = midpoint.second + midpoint.microsecond / 1_000_000
+            else:
+                exptime = h.get('EXPTIME', 0.0)
+                key = 'DATE-STA' if label == 'ss156_2014' else 'DATE-OBS'
+                date_str = h.get(key, '')
+                if not date_str:
+                    raise ProcessingError(f"{fitsfile} 中未找到时间关键字 {key}")
+                p = date_str.replace('T', ' ').replace('-', ' ').replace(':', ' ').split()
+                year, month, day = int(p[0]), int(p[1]), int(p[2])
+                hh, mm, ss = int(p[3]), int(p[4]), float(p[5])
 
-            p = date_str.replace('T', ' ').replace('-', ' ').replace(':', ' ').split()
-            year, month, day = int(p[0]), int(p[1]), int(p[2])
-            hh, mm, ss = int(p[3]), int(p[4]), float(p[5])
+                # 修正到曝光中点
+                ss += 0.5 * exptime
+                while ss >= 60:
+                    mm += 1
+                    ss -= 60
+                    if mm >= 60:
+                        hh += 1
+                        mm -= 60
+                        if hh >= 24:
+                            day += 1
+                            hh -= 24
 
-            # 修正到曝光中点
-            ss += 0.5 * exptime
-            while ss >= 60:
-                mm += 1
-                ss -= 60
-                if mm >= 60:
-                    hh += 1
-                    mm -= 60
-                    if hh >= 24:
-                        day += 1
-                        hh -= 24
-
-            # 北京时 -> UTC（仅 ss156 系列）
-            if tele_label in ('ss156', 'ss156_2014'):
-                if hh < 8:
-                    day -= 1
-                    hh += 24
-                hh -= 8
+                # 北京时 -> UTC（仅 ss156 系列）
+                if label in ('ss156', 'ss156_2014'):
+                    if hh < 8:
+                        day -= 1
+                        hh += 24
+                    hh -= 8
 
             return dict(naxis1=naxis1, naxis2=naxis2, bscale=bscale, bzero=bzero,
                         gain=gain, exptime=exptime,

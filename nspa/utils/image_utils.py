@@ -74,6 +74,28 @@ def calculate_background(data, sigma_factor=2.6, convergence=0.01, max_iter=100)
     return avervalue, sigma
 
 
+def _recover_quantized_background(data, background):
+    """从背景整数值及相邻两个 ADU 档位恢复被 sigma clipping 压塌的噪声。
+
+    只在检测到近零 sigma 的整型 FITS 上调用。排除更亮的星像像素，避免
+    用整幅图的标准差把星像本身当作背景噪声。
+    """
+    level = int(round(background))
+    lower = float(np.count_nonzero(data == level - 1))
+    middle = float(np.count_nonzero(data == level))
+    upper = float(np.count_nonzero(data == level + 1))
+    count = lower + middle + upper
+    if count < 2:
+        raise ValueError("整型 FITS 背景噪声接近 0，无法从相邻 ADU 档位恢复")
+
+    offset = (upper - lower) / count
+    variance = (lower + upper) / count - offset * offset
+    sigma = float(np.sqrt(max(variance, 0.0)))
+    if sigma < 0.05:
+        raise ValueError("整型 FITS 背景噪声接近 0，无法可靠地设置检测阈值")
+    return level + offset, sigma
+
+
 def _median_filter_1d_bn(data, window, axis):
     """bottleneck.move_median 中心对齐版本。
 
@@ -530,6 +552,8 @@ def detect_stars_by_moments(
     EPS = 1e-9
 
     bkgd, bkgdsigma = calculate_background(data)
+    if bitpix > 0 and bkgdsigma < 0.05:
+        bkgd, bkgdsigma = _recover_quantized_background(data, bkgd)
 
     # 阈值分割：低于 bkgd + threshold*sigma 的像素归 0
     abox = data - (bkgd + bkgd_threshold * bkgdsigma)

@@ -4,6 +4,8 @@ Step 协议：拥有 name、title 属性；run(ctx) 返回 StepResult。
 所有实际算法在 nspa.core 内，通过 ctx.config（NspaConfig）传参。
 """
 
+from pathlib import Path
+
 from nspa.application.pipeline import StepResult
 
 
@@ -50,7 +52,11 @@ class ComocStep:
     def run(self, ctx):
         from nspa.core.analyzer import run_comoc
 
-        return _ensure_result(run_comoc(ctx.config, ctx.fitspath_list), self.name)
+        result = _ensure_result(run_comoc(ctx.config, ctx.fitspath_list, ctx.run_id), self.name)
+        ctx.report_dat_files = [
+            Path(name) for name in result.output_files if Path(name).suffix.lower() == ".dat"
+        ]
+        return result
 
 
 class ReportStep:
@@ -60,7 +66,8 @@ class ReportStep:
     def run(self, ctx):
         from nspa.core.reporter import run_report
 
-        return _ensure_result(run_report(ctx.config), self.name)
+        dat_files = ctx.report_dat_files if "comoc" in ctx.selected_steps else None
+        return _ensure_result(run_report(ctx.config, dat_files=dat_files), self.name)
 
 
 STEP_CLASSES = {

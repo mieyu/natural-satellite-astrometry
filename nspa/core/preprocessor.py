@@ -5,8 +5,8 @@ Retinex），结果落到同日 fits_n/ 子目录。
 
 并发模型
 --------
-  - 文件级：ProcessPoolExecutor，n_workers = min(文件数, CPU 核数)
-  - 滤波内：median_impl="scipy_threaded" 时沿正交轴切块多线程
+  - 文件级：自动最多两进程，并按图像尺寸与可用内存限制
+  - 滤波内：median_impl="scipy_threaded" 时沿正交轴切块，最多两线程
   - 子进程内 redirect_stdout 捕获日志，主进程按提交顺序回放，
     保证文件处理顺序与日志可读性
 """
@@ -23,6 +23,7 @@ import numpy as np
 from nspa.application.log import get_logger, setup_logging
 from nspa.application.pipeline import StepResult
 from nspa.io.fits_io import read_fits, write_fits
+from nspa.utils.parallel import image_worker_limit
 from nspa.paths import (
     PRE_DIR,
     clean_pre_dir,
@@ -181,22 +182,22 @@ def _worker(mode, fitsfile, kwargs):
     return buf.getvalue(), None
 
 
-def _resolve_parallel(median_impl_cfg, n_files, banded):
+def _resolve_parallel(median_impl_cfg, n_files, banded, requested=0, image_paths=()):
     """根据文件数、CPU 核数与核形状自动选并发参数。
 
     返回 (n_workers, resolved_impl, n_threads)：
-      - n_workers = min(文件数, CPU)
+      - 自动最多 2 个进程，并根据图像尺寸和可用内存进一步限制
       - median_impl="auto"：带状核解析为 "bottleneck"，否则 "scipy_threaded"
-      - 仅当 impl="scipy_threaded" 时 n_threads = max(1, CPU // n_workers)
+      - 仅当 impl="scipy_threaded" 时启用线程，最多 2 个
     """
     cpu = os.cpu_count() or 1
-    n_workers = max(1, min(n_files, cpu))
+    n_workers = image_worker_limit(requested, n_files, image_paths, bytes_per_pixel=128)
     if median_impl_cfg == "auto":
         resolved = "bottleneck" if banded else "scipy_threaded"
     else:
         resolved = median_impl_cfg
     if resolved == "scipy_threaded":
-        n_threads = max(1, cpu // n_workers)
+        n_threads = max(1, min(2, cpu // n_workers))
     else:
         n_threads = 1
     return n_workers, resolved, n_threads
@@ -250,7 +251,8 @@ def run_pre(config, fitspath_list):
 
         banded = (pre.med_length == 1) or (pre.med_width == 1)
         n_workers, resolved_impl, n_threads = _resolve_parallel(
-            pre.median_impl, len(science_files), banded
+            pre.median_impl, len(science_files), banded,
+            getattr(pre, "pre_workers", 0), science_files,
         )
         if pre.superflag == 1:
             _log.info(

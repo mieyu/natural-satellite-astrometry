@@ -13,11 +13,13 @@ GAIA 参考星投影到 tangent-plane 一次性建树，检测星批量半径查
 """
 
 import numpy as np
+from scipy.optimize import root
 from scipy.spatial import cKDTree
 
 from nspa.application.log import get_logger
 from nspa.domain.astrometry import (
     DEG2RAD,
+    _build_design_matrix,
     cal_rl,
     rade2xieta,
     sol_par,
@@ -25,6 +27,7 @@ from nspa.domain.astrometry import (
     xy2rade,
 )
 from nspa.domain.models import MatchResult
+from nspa.domain.rotation import acquire_rotation, plate_orientation
 
 _log = get_logger("matching")
 
@@ -222,10 +225,14 @@ def _coarse_match_base_angle_fast(
         if nm < best["n"] or nm < 3:
             continue
 
-        par_tmp, sig0, _ = sol_par(
-            np.array(rx), np.array(ry), np.array(rra), np.array(rde),
-            nm, obj_ephra, obj_ephde, modeltype,
-        )
+        try:
+            par_tmp, sig0, _ = sol_par(
+                np.array(rx), np.array(ry), np.array(rra), np.array(rde),
+                nm, obj_ephra, obj_ephde, modeltype,
+            )
+        except np.linalg.LinAlgError:
+            # 候选配对可能不足或共线；继续搜索，不使用退化底片常数。
+            continue
         sig0_arcsec = sig0 / DEG2RAD * 3600.0
         if 0.001 < sig0_arcsec < 0.5 and (
             nm > best["n"] or sig0_arcsec < best["sig"]
@@ -380,6 +387,9 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
         par1_first, _, _ = sol_par(
             rxn_first, ryn_first, rra0, rde0, n_m, obj_ephra, obj_ephde, modeltype
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    底片常数精化失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -404,6 +414,9 @@ def _refine_base_angle_center(best, pscale, fl, obj_ephra, obj_ephde, modeltype)
         par1, sig0, _ = sol_par(
             rxn, ryn, rra0, rde0, n_m, ra_cen / DEG2RAD, de_cen / DEG2RAD, modeltype
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    底片常数精化失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -559,6 +572,9 @@ def _rematch_base_angle_field(
             de_cen / DEG2RAD,
             modeltype,
         )
+    except np.linalg.LinAlgError as exc:
+        _log.info(f"    全图底片解算失败：{exc}")
+        return None
     except Exception:
         return None
 
@@ -593,7 +609,25 @@ def _locate_base_angle_target(
     """阶段四：历表位置反演到像素坐标，并在 3 像素内抓取目标。"""
     n_det = len(det_x)
     xi, eta = rade2xieta(obj_ephra * DEG2RAD, obj_ephde * DEG2RAD, ra_cen, de_cen)
-    pre_x, pre_y = xieta2xy(xi, eta, par1[:6])
+    half = modeltype // 2
+    linear = np.r_[par1[:3], par1[half:half + 3]]
+    pre_x, pre_y = xieta2xy(xi, eta, linear)
+    if modeltype != 6:
+        # Higher order models store eta coefficients at nm/2, not index 3.
+        # Invert the exact same polynomial basis used by sol_par. Working in
+        # tangent-plane coordinates avoids a redundant sky round trip and
+        # keeps all 12/20/30 terms, including both fourth-order x/y terms.
+        def residual(pixel_offset):
+            xn, yn = pixel_offset * pscale / fl
+            plate = _build_design_matrix(np.array([xn]), np.array([yn]), 1, modeltype)
+            predicted = plate @ par1[:modeltype]
+            return (predicted - [xi, eta]) * fl / pscale
+
+        solved = root(residual, np.array([pre_x, pre_y]) * fl / pscale)
+        if not np.isfinite(solved.x).all() or np.linalg.norm(residual(solved.x)) > .01:
+            _log.info("    底片多项式反演未收敛，跳过此目标")
+            return None
+        pre_x, pre_y = solved.x * pscale / fl
     pre_x = pre_x * fl / pscale + x_cen
     pre_y = pre_y * fl / pscale + y_cen
     _log.info(
@@ -676,7 +710,7 @@ def find_obj_base_angle(
 
     # ── 阶段一：暴力粗匹配 ────────────────────────────────────────────────
     par_init = _initial_plate_par(field_angle)
-    best = _coarse_match_base_angle(
+    best = _empty_best() if field_angle == 0 else _coarse_match_base_angle(
         det_x,
         det_y,
         par_init,
@@ -693,7 +727,23 @@ def find_obj_base_angle(
     )
 
     if best["n"] < 3:
-        _log.info("    粗匹配失败：未找到足够参考星")
+        _log.info("    自动搜索底片旋转角：0–360°，同时检查镜像方向")
+        acquired = acquire_rotation(
+            det_x, det_y, det_flux, pscale, fl, limit_match,
+            obj_ephra, obj_ephde, np.asarray(gaia_ra)[:n_gaia],
+            np.asarray(gaia_de)[:n_gaia], np.asarray(gaia_mag)[:n_gaia], modeltype,
+        )
+        if acquired is not None:
+            best = acquired
+            angle, parity = plate_orientation(best["par"], 6)
+            _log.info(f"    自动旋转角初解：{angle:.6f}°，镜像方向={parity:+d}，"
+                      f"独立参考星={best['used']}，sigma={best['sig']:.4f}角秒")
+        else:
+            _log.info("    自动旋转角搜索失败：需要至少6颗独立参考星、正确的"
+                      "历表/时间和近似像元比例；请检查视场、检测质量及仪器配置")
+
+    if best["n"] < 3:
+        _log.info("    粗匹配失败：未找到参考星充足、矩阵非退化且残差合格的配对")
         r = _empty_result()
         r.nopre = 1
         return r
@@ -741,6 +791,8 @@ def find_obj_base_angle(
     n_m = rematched["n_m"]
     par1 = rematched["par1"]
     sig1 = rematched["sig1"]
+    solved_angle, parity = plate_orientation(par1, modeltype)
+    _log.info(f"    底片旋转角解算值：{solved_angle:.6f}°，镜像方向={parity:+d}")
 
     # ── 阶段四：预报并抓取目标 ────────────────────────────────────────────
     target = _locate_base_angle_target(
