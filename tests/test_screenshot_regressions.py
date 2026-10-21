@@ -8,11 +8,15 @@ from unittest.mock import patch
 from nspa.application.pipeline import StepResult
 from nspa.application.steps import ComocStep, ReportStep
 from nspa.core.analyzer import _observation_date_label
+from nspa.io.catalog_io import read_catalog
 from nspa.core.reporter import _discover_dat_files, _object_labels, run_report
+from ui.cfg_writer import build_cfg_text
 from ui.inputs_panel import (
     catalog_selection_errors,
     matching_gaia_name,
     observation_months,
+    resolve_gaia_name,
+    scan_catalog,
     select_eph,
 )
 
@@ -46,24 +50,54 @@ class ScreenshotRegressionTests(unittest.TestCase):
         files = ["GAIA3_S9_202511.DAT", "GAIA3_S9_202512.DAT"]
         self.assertEqual(matching_gaia_name(files, "202512"), files[1])
         self.assertEqual(matching_gaia_name(files, "202501"), "")
+        self.assertEqual(matching_gaia_name(files, "202512", files[0]), files[0])
+        self.assertEqual(matching_gaia_name(files, "202512", "missing.DAT"), files[1])
         self.assertEqual(matching_gaia_name([
             "GAIA3_N0_202512.DAT", "GAIA3_N1_202512.DAT"
         ], "202512"), "")
 
-    def test_catalog_validation_blocks_wrong_month_and_missing_target(self):
+    def test_catalog_validation_allows_selected_cross_month_gaia(self):
         all_eph = ["EPH_N0_202512.DAT", "EPH_N1_202512.DAT", "EPH_N2_202410.DAT"]
+        gaia_files = ["GAIA3_N0_202511.DAT", "GAIA3_N0_202512.DAT"]
         errors = catalog_selection_errors(
-            ["202512"], all_eph, all_eph[:2], "GAIA3_N0_202511.DAT", True
+            ["202512"], all_eph, all_eph[:2], gaia_files[0], True, gaia_files
         )
         self.assertTrue(any("N2" in error for error in errors))
-        self.assertTrue(any("GAIA" in error for error in errors))
+        self.assertFalse(any("GAIA" in error for error in errors))
         self.assertEqual(catalog_selection_errors(
-            ["202512"], all_eph[:2], all_eph[:2], "GAIA3_N0_202512.DAT", True
+            ["202512"], all_eph[:2], all_eph[:2], gaia_files[0], True, gaia_files
         ), [])
+        self.assertTrue(any("没有选中 GAIA" in error for error in catalog_selection_errors(
+            ["202512"], all_eph[:2], all_eph[:2], "", True, gaia_files
+        )))
+        self.assertTrue(any("GAIA" in error for error in catalog_selection_errors(
+            ["202512"], all_eph[:2], all_eph[:2], "missing.DAT", True, gaia_files
+        )))
+        self.assertTrue(any("目标历表与观测月" in error for error in catalog_selection_errors(
+            ["202512"], all_eph[:2], ["EPH_N0_202511.DAT"], gaia_files[0],
+            False, gaia_files
+        )))
         self.assertTrue(catalog_selection_errors(
             ["202511", "202512"], all_eph[:2], all_eph[:2],
-            "GAIA3_N0_202512.DAT", True
+            gaia_files[1], True, gaia_files
         ))
+
+    def test_real_november_observation_can_use_october_gaia_catalog(self):
+        repo = Path(__file__).resolve().parent.parent
+        eph, gaia, _ = scan_catalog(repo, "S9", "2024")
+        selected_eph, _ = select_eph(eph, "202411")
+        selected_gaia = "GAIA3_S9_202410.DAT"
+        self.assertEqual(matching_gaia_name(gaia, "202411"), "")
+        self.assertEqual(matching_gaia_name(gaia, "202411", selected_gaia),
+                         selected_gaia)
+        self.assertEqual(catalog_selection_errors(
+            ["202411"], eph, selected_eph, selected_gaia, True, gaia
+        ), [])
+        selected_path = resolve_gaia_name(gaia, selected_gaia)
+        self.assertTrue(Path(selected_path).is_file())
+        self.assertGreater(read_catalog(selected_path, 0, 20)[0], 0)
+        cfg = build_cfg_text({}, [], selected_eph, selected_path, header=False)
+        self.assertIn(f"3gaia_catfile1={selected_path}", cfg)
 
     def test_report_only_reads_current_run_files_when_given(self):
         outdir = Path("outputs/results/N0/2025")

@@ -81,8 +81,10 @@ def select_eph(eph_files, obs_month=None):
     return selected, len(selected)
 
 
-def matching_gaia_name(gaia_files, obs_month):
-    """仅在观测月有唯一 GAIA 文件时自动选择。"""
+def matching_gaia_name(gaia_files, obs_month, current_name=""):
+    """保留有效的手动选择；否则仅在观测月有唯一星表时自动选择。"""
+    if current_name in gaia_file_names(gaia_files):
+        return current_name
     matches = []
     for path in gaia_files:
         match = _GAIA_RE.fullmatch(Path(path).name)
@@ -91,8 +93,9 @@ def matching_gaia_name(gaia_files, obs_month):
     return matches[0] if len(matches) == 1 else ""
 
 
-def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph):
-    """匹配前核对月份；缺文件或跨月文件必须阻断。"""
+def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph,
+                             gaia_files):
+    """匹配前核对观测月与历表；GAIA 文件可由用户跨月选择。"""
     if len(months) != 1:
         return ["无法确认唯一观测月；请按月选择图像目录"]
     month = months[0]
@@ -107,11 +110,10 @@ def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph)
     for path in selected_eph:
         if parse_eph_name(path)[1] != month:
             errors.append(f"目标历表与观测月 {month} 不一致：{Path(path).name}")
-    gaia_match = _GAIA_RE.fullmatch(gaia_name)
     if not gaia_name:
         errors.append(f"{month} 没有选中 GAIA 星表")
-    elif not gaia_match or gaia_match.group(2) != month:
-        errors.append(f"GAIA 星表与观测月 {month} 不一致：{gaia_name}")
+    elif gaia_name not in gaia_file_names(gaia_files):
+        errors.append(f"GAIA 星表不在当前数据目录中：{gaia_name}")
     return errors
 
 
@@ -353,11 +355,8 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._gaia_files = gaia
                 gaia_choices = gaia_file_names(gaia)
                 self.cb_gaia["values"] = gaia_choices
-                if self.var_gaia.get() not in gaia_choices:
-                    self.var_gaia.set("")
-                current_gaia = _GAIA_RE.fullmatch(self.var_gaia.get())
-                if gaia_choices and (not current_gaia or current_gaia.group(2) != obs_month):
-                    self.var_gaia.set(matching_gaia_name(gaia, obs_month))
+                self.var_gaia.set(matching_gaia_name(
+                    gaia, obs_month, self.var_gaia.get()))
                 self._update_preview()
             else:
                 self._fitspath_candidate = None
@@ -417,6 +416,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._eph_files,
                 self.var_gaia.get(),
                 self.var_eph.get() == _AUTO_EPH_CHOICE,
+                self._gaia_files,
             )
 
         # —— 对外取值 ——
