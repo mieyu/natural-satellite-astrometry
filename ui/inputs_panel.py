@@ -13,11 +13,12 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from nspa.paths import expand_fitspath, list_fits
+from nspa.paths import STAGE_DIRS, expand_fitspath, list_fits
 
 _EPH_RE = re.compile(r"EPH_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
 _GAIA_RE = re.compile(r"GAIA3_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
 _AUTO_EPH_CHOICE = "自动匹配观测月"
+_ALL_DAYS_CHOICE = "全部观测日"
 
 
 def parse_eph_name(path):
@@ -183,12 +184,39 @@ def resolve_fitspath(candidate):
     - 为空 → 返回其子目录名，供再下钻一层。
     """
     candidate = Path(candidate)
+    # 选中某一天时，直接定位其原始图像目录，无需再选择 fits。
+    for name in ("fits", "FITS"):
+        raw = candidate / name
+        if raw.is_dir() and list_fits(raw):
+            return [raw], []
     days = expand_fitspath([str(candidate)]) if candidate.is_dir() else []
     # expand_fitspath 在“直接模式”下会原样返回 candidate，需确认确有 .fit
     valid_days = [d for d in days if list_fits(d)]
     if valid_days:
         return valid_days, []
     return [], _subdir_names(candidate)
+
+
+def data_subdir_choices(base):
+    """列出相对观测期的可选目录；保留月份/日期层级，不列处理产物。"""
+    base = Path(base)
+    choices = []
+
+    def visit(parent):
+        if list_fits(parent):
+            return
+        if any((parent / name).is_dir() and list_fits(parent / name)
+               for name in ("fits", "FITS")):
+            return
+        for name in _subdir_names(parent):
+            child = parent / name
+            if name.lower() in {*STAGE_DIRS, "fits"} or child.is_symlink():
+                continue
+            choices.append(child.relative_to(base).as_posix())
+            visit(child)
+
+    visit(base)
+    return choices
 
 
 def scan_catalog(repo_root, target, epoch, input_root=None):
@@ -243,43 +271,48 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self._preview_days = []
             self._obs_months = []
 
+            # 选择控件独立布局，预览文字不参与其列宽计算。
+            fields = ttk.Frame(self)
+            fields.pack(anchor="w", fill="x")
             row = 0
-            ttk.Label(self, text="目标").grid(row=row, column=0, sticky="w", padx=4, pady=3)
-            self.cb_target = ttk.Combobox(self, textvariable=self.var_target,
+            ttk.Label(fields, text="目标").grid(row=row, column=0, sticky="w", padx=4, pady=3)
+            self.cb_target = ttk.Combobox(fields, textvariable=self.var_target,
                                           state="readonly", width=18,
                                           values=list_targets(repo_root, self.input_root))
             self.cb_target.grid(row=row, column=1, sticky="w", padx=4)
             self.cb_target.bind("<<ComboboxSelected>>", self._on_target)
 
-            ttk.Label(self, text="观测期").grid(row=row, column=2, sticky="w", padx=4)
-            self.cb_epoch = ttk.Combobox(self, textvariable=self.var_epoch,
+            ttk.Label(fields, text="观测期").grid(row=row, column=2, sticky="w", padx=4)
+            self.cb_epoch = ttk.Combobox(fields, textvariable=self.var_epoch,
                                          state="readonly", width=14)
             self.cb_epoch.grid(row=row, column=3, sticky="w", padx=4)
             self.cb_epoch.bind("<<ComboboxSelected>>", self._on_epoch)
 
-            ttk.Label(self, text="子目录").grid(row=row, column=4, sticky="w", padx=4)
-            self.cb_sub = ttk.Combobox(self, textvariable=self.var_sub,
-                                       state="readonly", width=14)
+            ttk.Label(fields, text="观测日 / 子目录").grid(row=row, column=4, sticky="w", padx=4)
+            self.cb_sub = ttk.Combobox(fields, textvariable=self.var_sub,
+                                       state="readonly", width=22)
             self.cb_sub.grid(row=row, column=5, sticky="w", padx=4)
             self.cb_sub.bind("<<ComboboxSelected>>", self._on_sub)
 
             row += 1
-            ttk.Label(self, text="目标历表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
-            self.cb_eph = ttk.Combobox(self, textvariable=self.var_eph,
+            ttk.Label(fields, text="目标历表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
+            self.cb_eph = ttk.Combobox(fields, textvariable=self.var_eph,
                                        state="readonly", width=46)
             self.cb_eph.grid(row=row, column=1, columnspan=3, sticky="w", padx=4)
             self.cb_eph.bind("<<ComboboxSelected>>", self._on_eph)
 
             row += 1
-            ttk.Label(self, text="GAIA 星表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
-            self.cb_gaia = ttk.Combobox(self, textvariable=self.var_gaia,
+            ttk.Label(fields, text="GAIA 星表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
+            self.cb_gaia = ttk.Combobox(fields, textvariable=self.var_gaia,
                                         state="readonly", width=46)
             self.cb_gaia.grid(row=row, column=1, columnspan=3, sticky="w", padx=4)
             self.cb_gaia.bind("<<ComboboxSelected>>", lambda _e: self._update_preview())
 
-            row += 1
-            self.preview = ttk.Label(self, text="（请选择目标/观测期）", foreground="#555")
-            self.preview.grid(row=row, column=0, columnspan=6, sticky="w", padx=4, pady=4)
+            self.preview = ttk.Label(self, text="（请选择目标/观测期）", foreground="#555",
+                                     width=1, anchor="w", justify="left", wraplength=400)
+            self.preview.pack(fill="x", padx=4, pady=4)
+            self.preview.bind("<Configure>", lambda event: self.preview.configure(
+                wraplength=max(1, event.width - 8)))
 
         # —— 级联事件 ——
         def set_roots(self, input_root, output_root):
@@ -313,8 +346,12 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self.on_change()
 
         def _on_epoch(self, _e=None):
-            self.var_sub.set("")
-            self.cb_sub["values"] = []
+            t, e = self.var_target.get(), self.var_epoch.get()
+            if not (t and e):
+                return
+            base = images_root(repo_root, self.input_root) / t / e
+            self.cb_sub["values"] = [_ALL_DAYS_CHOICE] + data_subdir_choices(base)
+            self.var_sub.set(_ALL_DAYS_CHOICE)
             self._resolve()
 
         def _on_sub(self, _e=None):
@@ -330,7 +367,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             if not (t and e):
                 return None
             base = images_root(repo_root, self.input_root) / t / e
-            return base / s if s else base
+            return base / s if s and s != _ALL_DAYS_CHOICE else base
 
         def _resolve(self):
             cand = self._candidate_path()
@@ -338,10 +375,11 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 return
             days, subdirs = resolve_fitspath(cand)
             if days:
-                self._fitspath_candidate = cand
+                self._fitspath_candidate = (
+                    days[0] if len(days) == 1 and days[0].parent == cand else cand
+                )
                 self._preview_days = days
                 self._obs_months = observation_months(days)
-                self.cb_sub["values"] = subdirs  # 仍允许换更深目录
                 t, e = self.var_target.get(), self.var_epoch.get()
                 eph_all, gaia, cat_dir = scan_catalog(repo_root, t, e, self.input_root)
                 self._all_eph_files = eph_all
@@ -370,9 +408,9 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._auto_eph_files = []
                 self._eph_files = []
                 self._gaia_files = []
-                self.cb_sub["values"] = subdirs
                 self.preview.config(
-                    text=f"未解析到观测日，请在“子目录”里继续下钻（可选：{', '.join(subdirs[:8])}）",
+                    text="当前目录未找到观测图像，请选择具体月份或观测日。"
+                         if subdirs else "当前目录没有原始 FITS 图像，请检查数据位置。",
                     foreground="#a60",
                 )
             self.on_change()

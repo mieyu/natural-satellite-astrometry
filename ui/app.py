@@ -86,7 +86,7 @@ class App(ttk.Frame):
         ttk.Button(bar, text="打开输出目录", command=self._open_output).pack(side="left")
 
         # 参数表单（横向和纵向可滚）
-        pbox = ttk.LabelFrame(self, text="参数（默认值来自 nspa.config，可改）")
+        pbox = ttk.LabelFrame(self, text="处理参数：图像预处理 → 星点检测 → 坐标计算 → 位置偏差统计")
         pbox.pack(fill="x", pady=(0, 6))
         canvas = tk.Canvas(pbox, height=245, highlightthickness=0)
         vbar = ttk.Scrollbar(pbox, orient="vertical", command=canvas.yview)
