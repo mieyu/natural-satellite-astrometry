@@ -91,6 +91,7 @@ def run_match(config, fitspath_list):
     """
     match = config.match
     step_result = StepResult("match")
+    written_outputs = 0
     for idx, fitspath in enumerate(fitspath_list, 1):
         fitspath = Path(fitspath)
         _log.info(f"\n{'#' * 10} 本观测时段，第{idx:02d}日：fits文件夹：{fitspath}")
@@ -113,6 +114,7 @@ def run_match(config, fitspath_list):
         if not fits_files:
             _log.info(f"    本日图像不足，跳过：{fitspath}")
             step_result.warnings.append(f"match: 无 .fit {fitspath}")
+            step_result.failed_items.append(str(fitspath))
             continue
         n_total = len(fits_files)
         _log.info(f"======本日观测图像数量共计：{n_total} 幅")
@@ -260,6 +262,10 @@ def run_match(config, fitspath_list):
 
         _close_object_outputs(object_out_files)
         _sort_object_outputs(out_directory, match.obj_total)
+        written_outputs += sum(
+            (out_directory / f"object_{obj}.out").stat().st_size > 0
+            for obj in range(1, match.obj_total + 1)
+        )
 
         step_result.output_files.extend(
             str(p) for p in sorted(out_directory.glob("object_*.out"))
@@ -273,4 +279,8 @@ def run_match(config, fitspath_list):
 
     _log.info(f"\n   本时段观测任务匹配结束，共匹配天数：{len(fitspath_list)}")
     _log.info("=================================================================")
+    if step_result.failed_items or written_outputs == 0:
+        step_result.success = False
+    if written_outputs == 0:
+        step_result.warnings.append("match: 本次运行没有有效匹配结果")
     return step_result

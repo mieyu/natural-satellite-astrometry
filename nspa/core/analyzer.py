@@ -178,6 +178,7 @@ def run_comoc(config, fitspath_list, run_id=None):
                     ):
                         write_comoc_lines(f_out, f_final, f_obsdata, f_month, kept_lines)
                     valid_total += stats.kept_count
+                    result.output_files.extend(str(p) for p in (final_obj, day_out, obsdata_out))
 
                     f_oc_summary.write(
                         f"{date_str} & {stats.raw_count:4d} & "
@@ -207,12 +208,6 @@ def run_comoc(config, fitspath_list, run_id=None):
 
                 result.output_files.append(str(final_oc))
                 result.output_files.append(str(all_out))
-                if final_obj.exists():
-                    result.output_files.append(str(final_obj))
-                if day_out.exists():
-                    result.output_files.append(str(day_out))
-                if obsdata_out.exists():
-                    result.output_files.append(str(obsdata_out))
 
         result.output_files.append(str(month_out_path))
         result.output_files.append(str(oc_summary_path))
@@ -220,6 +215,8 @@ def run_comoc(config, fitspath_list, run_id=None):
         _log.info(f"   本日匹配共归算天然卫星目标个数{obj:3d}")
         _log.info("=================================================================")
 
+    if result.failed_items:
+        result.success = False
     if valid_total == 0:
         result.success = False
         result.warnings.append("comoc: 本次运行没有有效 O-C 数据")

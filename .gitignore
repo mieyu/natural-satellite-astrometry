@@ -92,6 +92,8 @@ inputs/images/
 
 # 本地基准数据保持忽略；发布不依赖观测数据的回归测试
 /tests/*
+!/tests/test_pipeline_regressions.py
+!/tests/test_paths_retry.py
 !/tests/test_astrometry_stability.py
 !/tests/test_parallel_memory.py
 !/tests/test_screenshot_regressions.py

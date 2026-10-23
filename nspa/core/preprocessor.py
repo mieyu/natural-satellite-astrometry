@@ -216,6 +216,9 @@ def run_pre(config, fitspath_list):
     """
     pre = config.pre
     result = StepResult("pre")
+    if not fitspath_list:
+        result.success = False
+        result.warnings.append("pre: 未提供观测目录")
     n = len(fitspath_list)
     for idx, fitspath in enumerate(fitspath_list, 1):
         fitspath = Path(fitspath)
@@ -227,12 +230,15 @@ def run_pre(config, fitspath_list):
             _log.info("警告：目录不存在，跳过。")
             result.warnings.append(f"pre: 目录不存在 {fitspath}")
             result.failed_items.append(str(fitspath))
+            result.success = False
             continue
 
         science_files = list_fits(fitspath)
         if not science_files:
             _log.info("未找到 .fit 文件，跳过。")
             result.warnings.append(f"pre: 未发现 .fit {fitspath}")
+            result.failed_items.append(str(fitspath))
+            result.success = False
             continue
         _log.info(f"扫描到原始 .fit 共 {len(science_files)} 个。")
 
