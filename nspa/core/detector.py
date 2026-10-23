@@ -159,6 +159,9 @@ def _run_detect_isolated(config, fitspath_list):
     }
     requested_workers = getattr(detect, "detect_workers", 0)
     result = StepResult("detect")
+    if not fitspath_list:
+        result.success = False
+        result.warnings.append("detect: 未提供观测目录")
     for idx, fitspath in enumerate(fitspath_list, 1):
         fitspath = Path(fitspath)
         _log.info(f"\n第 {idx:03d} 天 - fits 文件夹：{fitspath}")
@@ -168,6 +171,7 @@ def _run_detect_isolated(config, fitspath_list):
         if not fits_files:
             _log.info("    警告：未发现原始 .fit，跳过。")
             result.warnings.append(f"detect: 未发现 .fit {fitspath}")
+            result.failed_items.append(str(fitspath))
             continue
 
         stages = stage_dirs(fitspath)
@@ -238,6 +242,8 @@ def _run_detect_isolated(config, fitspath_list):
 
     _log.info(f"\n{'=' * 50}")
     _log.info("02detect 完成。")
+    if result.failed_items:
+        result.success = False
     return result
 
 

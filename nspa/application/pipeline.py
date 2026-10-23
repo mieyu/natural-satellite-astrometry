@@ -44,10 +44,17 @@ class PipelineRunner:
                 _log.info(step.title)
                 t_step = time.time()
                 result = step.run(ctx)
+                if result.failed_items:
+                    result.success = False
                 result.elapsed = time.time() - t_step
                 _log.info(f"阶段耗时: {result.elapsed:.2f} s")
                 results.append(result)
                 manifest.add_result(result)
+                if not result.success:
+                    message = f"{step.name} 阶段失败，停止后续步骤。"
+                    _log.error(message)
+                    manifest.add_failure(step.name, message)
+                    break
         except Exception as exc:
             manifest.add_failure("pipeline", str(exc))
             raise

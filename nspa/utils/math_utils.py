@@ -69,6 +69,7 @@ def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
 
     剔除策略：
       - oc_limit > 0：|data - mean| < oc_limit * sigma 且 |data| < eps；
+        某方向 sigma 为零时，该方向不再剔除，仍检查另一方向和 eps。
       - oc_limit == 0：|data - mean| < mean_limit。
     返回 (new_lines, new_ra, new_de, mean_ra, mean_de, std_ra, std_de, iloop)。
     """
@@ -99,8 +100,8 @@ def sigma_clip_oc(res_ra, res_de, lines, oc_limit, mean_limit, eps):
         for i in range(len(cur_ra)):
             ra_i, de_i = cur_ra[i], cur_de[i]
             if oc_limit > 0.0:
-                keep = (abs(ra_i - mean_ra) < oc_limit * std_ra and
-                        abs(de_i - mean_de) < oc_limit * std_de and
+                keep = ((std_ra == 0.0 or abs(ra_i - mean_ra) < oc_limit * std_ra) and
+                        (std_de == 0.0 or abs(de_i - mean_de) < oc_limit * std_de) and
                         abs(ra_i) < eps and abs(de_i) < eps)
             else:
                 keep = (abs(ra_i - mean_ra) < mean_limit and

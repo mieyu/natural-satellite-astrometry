@@ -11,7 +11,9 @@ cfg 格式约定：
 """
 
 import os
+import math
 from dataclasses import dataclass, field
+from difflib import get_close_matches
 from typing import Any
 
 from nspa.application.log import get_logger
@@ -196,6 +198,14 @@ class NspaConfig:
 
         if not self.fitspaths:
             errors.append("cfg 中未配置 1fitspath，无法确定观测目录。")
+        elif selected & {"pre", "detect", "match", "comoc"}:
+            from nspa.paths import expand_fitspath, list_fits
+
+            for path in expand_fitspath(self.fitspaths):
+                if not path.is_dir():
+                    errors.append(f"观测目录不存在：{path}")
+                elif not list_fits(path):
+                    errors.append(f"观测目录没有原始 FITS 图像：{path}")
 
         if self.pre.superflag not in {0, 1, 2, 3}:
             errors.append("1superflag 必须为 0/1/2/3。")
@@ -236,6 +246,14 @@ class NspaConfig:
         if selected & {"comoc", "report"} and not self.comoc.output_dir:
             errors.append("未配置 4specified-output。")
 
+        if "comoc" in selected:
+            if not math.isfinite(self.comoc.std_limit) or self.comoc.std_limit < 0:
+                errors.append("4std_limit 必须为有限非负数。")
+            elif self.comoc.std_limit > 0 and (
+                not math.isfinite(self.comoc.eps) or self.comoc.eps <= 0
+            ):
+                errors.append("使用 sigma 剔除时，4eps 必须为有限正数（单位：角秒）。")
+
         if errors:
             raise ConfigError("\n".join(errors))
 
@@ -269,7 +287,8 @@ def parse_config(config_path: str = "nspa.cfg") -> NspaConfig:
     with open(config_path, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
 
-    for line in lines:
+    errors = []
+    for line_number, line in enumerate(lines, 1):
         line = line.strip()
         if not line or line.startswith(("!", ";", "#", "[")) or "=" not in line:
             continue
@@ -279,15 +298,24 @@ def parse_config(config_path: str = "nspa.cfg") -> NspaConfig:
         if not value:
             continue
 
+        # Older configurations may contain the former experimental selector.
+        # Accept its original default, but never silently run a different
+        # algorithm when a removed mode was explicitly requested.
+        if key == "3match_method":
+            if value != "legacy":
+                raise ConfigError("3match_method 已移除；请删除该配置项并使用现有匹配流程。")
+            continue
+
         if key in scalar_index:
             section, attr, typ = scalar_index[key]
             try:
                 _set_section_attr(config, section, attr, _cast(value, typ))
             except ValueError:
-                _log.info(f"警告：无法解析 {key}={value}，保留默认值。")
+                errors.append(f"第 {line_number} 行：无法解析 {key}={value}。")
             continue
 
         # 多值键：匹配前缀，取后面的整数后缀（无后缀视为 1）
+        matched = False
         for prefix in list_index:
             if not key.startswith(prefix):
                 continue
@@ -296,8 +324,25 @@ def parse_config(config_path: str = "nspa.cfg") -> NspaConfig:
                 idx = int(suffix) if suffix else 1
             except ValueError:
                 break
+            if idx < 1:
+                break
             list_buckets[prefix][idx] = _cast(value, str)
+            matched = True
             break
+
+        if not matched:
+            if key in {"1biaspath", "1darkpath", "1flatpath"}:
+                hint = "当前 Python 版不支持此校正路径参数；请先在外部完成相应校正。"
+            else:
+                suggestions = get_close_matches(key, [*scalar_index, *list_index], n=1)
+                replacement = "4std_limit" if key == "4o-c_limit" else (
+                    suggestions[0] if suggestions else None
+                )
+                hint = f"请使用 {replacement}。" if replacement else "请核对参数名称。"
+            errors.append(f"第 {line_number} 行：未知配置参数 {key}。{hint}")
+
+    if errors:
+        raise ConfigError(f"配置文件 {config_path} 有误：\n" + "\n".join(errors))
 
     for prefix, (section, attr, collapse) in list_index.items():
         bucket = list_buckets[prefix]
