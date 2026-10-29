@@ -186,7 +186,24 @@ def _coarse_match_base_angle_fast(
     p0 = par_init[:6]
     radius = (limit_match / 3600.0) * DEG2RAD * _KDTREE_RADIUS_INFLATE
 
-    for j in range(n_det):
+    # 先批量给每个“检测星就是目标”的假设计票。这里的半径查询只给出
+    # 可能匹配数的上界；严格角距和底片拟合仍在下面完成。
+    # 稀疏图中大多数假设连 3 对参考星都凑不齐，可跳过逐候选查询。
+    if n_det <= 200:
+        xn_grid = (det_x_arr[None, :] - det_x_arr[:, None]) * pscale / fl
+        yn_grid = (det_y_arr[None, :] - det_y_arr[:, None]) * pscale / fl
+        points = np.column_stack((
+            (p0[0] * xn_grid + p0[1] * yn_grid + p0[2]).ravel(),
+            (p0[3] * xn_grid + p0[4] * yn_grid + p0[5]).ravel(),
+        ))
+        vote_counts = tree.query_ball_point(points, r=radius, return_length=True)
+        vote_counts = np.asarray(vote_counts).reshape(n_det, n_det).sum(axis=1)
+        candidates = np.flatnonzero(vote_counts >= max(3, modeltype // 2 + 1))
+    else:
+        # 密集图避免生成平方规模的候选矩阵。
+        candidates = range(n_det)
+
+    for j in candidates:
         ox, oy = det_x_arr[j], det_y_arr[j]
         xn_all = (det_x_arr - ox) * pscale / fl
         yn_all = (det_y_arr - oy) * pscale / fl

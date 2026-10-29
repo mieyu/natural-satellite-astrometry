@@ -13,6 +13,7 @@
 """
 
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -136,6 +137,18 @@ def out_dir(fitspath) -> Path:
 # ── 清理工具 ──────────────────────────────────────────────────────────────
 
 
+def _unlink_with_retry(path: Path):
+    """Windows 临时拒绝访问或文件占用时最多重试 15 次；失败仍向上抛出。"""
+    for attempt in range(16):
+        try:
+            path.unlink()
+            return
+        except OSError as exc:
+            if getattr(exc, "winerror", None) not in {5, 32, 33} or attempt == 15:
+                raise
+            time.sleep(0.2)
+
+
 def clean_pre_dir(fitspath):
     """清空 fits_n/ 子目录，确保 pre 阶段每次从干净状态开始。"""
     pre_dir = stage_dirs(fitspath)[PRE_DIR]
@@ -144,7 +157,7 @@ def clean_pre_dir(fitspath):
     removed = 0
     for entry in pre_dir.iterdir():
         if entry.suffix in (".fit", ".fits") and entry.stem.endswith("_n"):
-            entry.unlink()
+            _unlink_with_retry(entry)
             removed += 1
     if removed:
         _log.info(f"已清理旧 _n.fit 共 {removed} 个 <- {pre_dir}")
@@ -162,6 +175,6 @@ def clean_proc_files(fitspath):
             continue
         for entry in d.iterdir():
             if entry.is_file():
-                entry.unlink()
+                _unlink_with_retry(entry)
                 removed += 1
     _log.info(f"  已删除过程文件 {removed} 个（fits_n / fits_reg / fits_ref）")

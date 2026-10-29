@@ -15,15 +15,15 @@ from pathlib import Path
 
 from nspa.paths import STAGE_DIRS, expand_fitspath, list_fits
 
-_EPH_RE = re.compile(r"EPH_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
-_GAIA_RE = re.compile(r"GAIA3_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
+_EPH_RE = re.compile(r"(?:Q_)?EPH_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
+_GAIA_RE = re.compile(r"(?:Q_)?GAIA3_(.+)_(\d{6})\.DAT$", re.IGNORECASE)
 _AUTO_EPH_CHOICE = "自动匹配观测月"
 _ALL_DAYS_CHOICE = "全部观测日"
 
 
 def parse_eph_name(path):
     """EPH_<代号>_<YYYYMM>.DAT -> (代号, 月)；不匹配时月为 None。"""
-    m = _EPH_RE.search(Path(path).name)
+    m = _EPH_RE.fullmatch(Path(path).name)
     if not m:
         return Path(path).stem, None
     return m.group(1), m.group(2)
@@ -71,7 +71,8 @@ def select_eph(eph_files, obs_month=None):
     仅选择与观测月一致的文件；未知月份或缺文件时不猜测。
     """
     groups = {}
-    for f in eph_files:
+    # Q_ 是现有 2006 配置使用的完整历表组；同目标同月优先使用该版本。
+    for f in sorted(eph_files, key=lambda p: (not Path(p).name.upper().startswith("Q_"), str(p))):
         code, month = parse_eph_name(f)
         groups.setdefault(code, []).append((month, f))
     selected = []
@@ -224,8 +225,9 @@ def scan_catalog(repo_root, target, epoch, input_root=None):
     cat_dir = catalogs_root(repo_root, input_root) / target / epoch
     if not cat_dir.is_dir():
         return [], [], cat_dir
-    eph = sorted(str(p) for p in cat_dir.glob("EPH_*.DAT"))
-    gaia = sorted(str(p) for p in cat_dir.glob("GAIA3_*.DAT"))
+    files = [p for p in cat_dir.iterdir() if p.is_file()]
+    eph = sorted(str(p) for p in files if _EPH_RE.fullmatch(p.name))
+    gaia = sorted(str(p) for p in files if _GAIA_RE.fullmatch(p.name))
     return eph, gaia, cat_dir
 
 

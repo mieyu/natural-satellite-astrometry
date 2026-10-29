@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from ui import cfg_writer, inputs_panel, params_panel  # noqa: E402
+from ui.image_viewer import ResultImageViewer  # noqa: E402
 from ui.runner import PipelineRunner  # noqa: E402
 
 DEFAULT_CFG_NAME = "nspa2024.cfg"
@@ -33,6 +34,8 @@ class App(ttk.Frame):
         self.pack(fill="both", expand=True)
         self.runner = PipelineRunner()
         self._img_ref = None
+        self._result_png = None
+        self._image_viewer = None
         self._close_pending = False
         self._selection = None
         self.input_root = REPO_ROOT / "inputs"
@@ -118,8 +121,12 @@ class App(ttk.Frame):
 
         rbox = ttk.LabelFrame(bottom, text="结果 (OC_summary.png) 与产物")
         rbox.pack(side="right", fill="both", expand=True)
+        self.btn_enlarge = ttk.Button(rbox, text="放大查看结果图", command=self._open_result_image,
+                                      state="disabled")
+        self.btn_enlarge.pack(anchor="e", padx=6, pady=(4, 0))
         self.img_label = ttk.Label(rbox, text="（运行后显示）", anchor="center")
         self.img_label.pack(fill="both", expand=True)
+        self.img_label.bind("<Double-Button-1>", self._open_result_image)
         self.files_list = tk.Listbox(rbox, height=6)
         self.files_list.pack(fill="x")
 
@@ -160,8 +167,11 @@ class App(ttk.Frame):
         self.inputs.set_roots(input_root, output_root)
         self._output_dir = None
         self.files_list.delete(0, "end")
+        self._close_image_viewer()
         self._img_ref = None
-        self.img_label.config(image="", text="（运行后显示）")
+        self._result_png = None
+        self.btn_enlarge.config(state="disabled")
+        self.img_label.config(image="", text="（运行后显示）", cursor="")
         if input_changed:
             names = params_panel.list_config_files(REPO_ROOT, input_root)
             self.cb_cfg["values"] = names
@@ -254,8 +264,11 @@ class App(ttk.Frame):
         self._output_dir = (REPO_ROOT / sel["output_dir"]).resolve()
         self._run_started_ns = time.time_ns()
         self.files_list.delete(0, "end")
+        self._close_image_viewer()
         self._img_ref = None
-        self.img_label.config(image="", text="（本次运行后显示）")
+        self._result_png = None
+        self.btn_enlarge.config(state="disabled")
+        self.img_label.config(image="", text="（本次运行后显示）", cursor="")
 
         self.btn_run.config(state="disabled")
         for button in self.path_buttons:
@@ -344,11 +357,31 @@ class App(ttk.Frame):
                 if factor > 1:
                     img = img.subsample(factor, factor)
                 self._img_ref = img
-                self.img_label.config(image=img, text="")
+                self._result_png = png
+                self.btn_enlarge.config(state="normal")
+                self.img_label.config(image=img, text="", cursor="hand2")
             except Exception as exc:
                 self.img_label.config(text=f"无法显示图像：{exc}")
         else:
             self.img_label.config(text="本次运行未生成 OC_summary.png")
+
+    def _open_result_image(self, _event=None):
+        png = self._result_png
+        if png is None or not png.is_file():
+            return
+        if self._image_viewer is not None and self._image_viewer.winfo_exists():
+            self._image_viewer.lift()
+            self._image_viewer.focus_set()
+            return
+        try:
+            self._image_viewer = ResultImageViewer(self.winfo_toplevel(), png)
+        except tk.TclError as exc:
+            messagebox.showerror("无法打开结果图", str(exc))
+
+    def _close_image_viewer(self):
+        if self._image_viewer is not None and self._image_viewer.winfo_exists():
+            self._image_viewer.destroy()
+        self._image_viewer = None
 
     def _open_output(self):
         out = getattr(self, "_output_dir", None)

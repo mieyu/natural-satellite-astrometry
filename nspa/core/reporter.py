@@ -131,11 +131,21 @@ def _load_dat(filepath):
 
 
 def _discover_dat_files(outdir, obj_total, selected_files=None):
-    """按文件名末尾数字归类；有本次文件清单时不扫描历史文件。"""
+    """按完整目标序号归类；独立出图只读取最新批次，旧格式仅作为回退。"""
     found = {obj: [] for obj in range(1, obj_total + 1)}
-    pat = re.compile(r"^(.+?)(\d)$")  # 末尾一位数字 = 卫星编号
+    pat = re.compile(r"^(.+?)(\d+)$")
 
-    files = outdir.glob("*.dat") if selected_files is None else map(Path, selected_files)
+    files = list(outdir.glob("*.dat")) if selected_files is None else list(map(Path, selected_files))
+    if selected_files is None:
+        batches = defaultdict(list)
+        for fp in files:
+            match = re.fullmatch(r"run_(\d{8}_\d{6}_\d{6})_(\d+)\.dat", fp.name)
+            if match and fp.is_file():
+                batches[match.group(1)].append(fp)
+        if batches:
+            latest = max(batches)
+            files = batches[latest]
+            _log.info(f"  独立出图选择最新运行批次：{latest}；不合并历史数据。")
     for fp in sorted(files):
         if fp.suffix.lower() != ".dat" or not fp.is_file():
             continue
@@ -154,7 +164,7 @@ def _object_labels(config, obj_total):
     """报告标签取自所用历表代号，避免 N0 被标作 S1。"""
     labels = {}
     for idx, path in enumerate(config.match.eph_files[:obj_total], 1):
-        match = re.fullmatch(r"EPH_(.+)_\d{6}\.DAT", Path(path).name, re.IGNORECASE)
+        match = re.fullmatch(r"(?:Q_)?EPH_(.+)_\d{6}\.DAT", Path(path).name, re.IGNORECASE)
         if match:
             labels[idx] = match.group(1)
     return labels
