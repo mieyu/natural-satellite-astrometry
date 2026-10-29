@@ -17,9 +17,9 @@ _INPUT_OWNED_SCALAR_KEYS = {
 
 _SECTION_TITLES = {
     "pre": "① 图像预处理",
-    "detect": "② 星点检测与定位",
-    "match": "③ 星表匹配与坐标计算",
-    "comoc": "④ 位置偏差统计（O−C）",
+    "detect": "② 星点检测",
+    "match": "③ 坐标计算",
+    "comoc": "④ 偏差统计（O−C）",
 }
 _SECTION_ORDER = ["pre", "detect", "match", "comoc"]
 _SECTION_DESCRIPTIONS = {
@@ -155,29 +155,119 @@ def load_cfg_form_values(path):
 
 def build_widget(parent):
     import tkinter as tk
-    from tkinter import ttk
+    from tkinter import font, ttk
 
     def add_help(widget, text):
         popup = None
+        pending = None
 
         def hide(_event=None):
-            nonlocal popup
+            nonlocal popup, pending
+            if pending is not None:
+                widget.after_cancel(pending)
+                pending = None
             if popup is not None:
                 popup.destroy()
                 popup = None
 
-        def show(_event):
-            nonlocal popup
-            hide()
+        def show():
+            nonlocal popup, pending
+            pending = None
             popup = tk.Toplevel(widget)
             popup.wm_overrideredirect(True)
             popup.wm_geometry(f"+{widget.winfo_rootx()}+{widget.winfo_rooty() + widget.winfo_height()}")
             ttk.Label(popup, text=text, padding=6, wraplength=340, relief="solid").pack()
 
-        widget.bind("<Enter>", show, add="+")
+        def schedule(_event):
+            nonlocal pending
+            hide()
+            pending = widget.after(600, show)
+
+        widget.bind("<Enter>", schedule, add="+")
         widget.bind("<Leave>", hide, add="+")
         widget.bind("<ButtonPress>", hide, add="+")
+        widget.bind("<FocusOut>", hide, add="+")
+        widget.bind("<MouseWheel>", hide, add="+")
         widget.bind("<Destroy>", hide, add="+")
+
+    class ParameterPage(ttk.Frame):
+        """固定视口宽度，字段自适应排布；滚轮仅作用于当前页。"""
+
+        def __init__(self, master, description):
+            super().__init__(master)
+            self.columnconfigure(0, weight=1)
+            self.rowconfigure(1, weight=1)
+            self.description = ttk.Label(self, text=description, padding=(10, 6))
+            self.description.grid(row=0, column=0, columnspan=2, sticky="ew")
+            self.canvas = tk.Canvas(self, width=1, height=228, highlightthickness=0,
+                                    yscrollincrement=18)
+            self.canvas.grid(row=1, column=0, sticky="nsew")
+            self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+            self.scrollbar.grid(row=1, column=1, sticky="ns")
+            self.canvas.configure(yscrollcommand=self._scrollbar_set)
+            self.form = ttk.Frame(self.canvas, padding=(6, 0, 6, 6))
+            self.window = self.canvas.create_window((0, 0), window=self.form, anchor="nw")
+            self.fields = []
+            self.columns = None
+            self.wheel_tag = f"NSPAParameterWheel:{self}"
+            for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                self.bind_class(self.wheel_tag, sequence, self._scroll)
+            self.canvas.bind("<Configure>", self._resize)
+            self.form.bind("<Configure>", self._update_region)
+            self.bind("<Destroy>", self._cleanup)
+            self.bind_wheel(self)
+
+        def bind_wheel(self, widget):
+            # 在控件类绑定之前处理，避免滚轮顺带改变下拉框中的参数。
+            tags = widget.bindtags()
+            widget.bindtags((tags[0], self.wheel_tag, *tags[1:]))
+            for child in widget.winfo_children():
+                self.bind_wheel(child)
+
+        def _scroll(self, event):
+            if event.num in (4, 5):
+                units = -3 if event.num == 4 else 3
+            elif event.delta:
+                units = -int(event.delta / 120) if abs(event.delta) >= 120 else -int(event.delta)
+            else:
+                return "break"
+            if self.canvas.yview() != (0.0, 1.0):
+                self.canvas.yview_scroll(units, "units")
+            return "break"
+
+        def _scrollbar_set(self, first, last):
+            self.scrollbar.set(first, last)
+            if float(first) <= 0 and float(last) >= 1:
+                self.scrollbar.grid_remove()
+            else:
+                self.scrollbar.grid()
+
+        def _resize(self, event):
+            self.canvas.itemconfigure(self.window, width=event.width)
+            self.description.configure(wraplength=max(1, event.width - 20))
+            columns = 2 if self.winfo_width() >= 820 else 1
+            if columns != self.columns:
+                self.columns = columns
+                for col in range(2):
+                    self.form.columnconfigure(col, weight=int(col < columns),
+                                              uniform="fields" if col < columns else "")
+                row = col = 0
+                for field, full_width in self.fields:
+                    if full_width and col:
+                        row, col = row + 1, 0
+                    field.grid(row=row, column=col, columnspan=columns if full_width else 1,
+                               sticky="ew", padx=6, pady=3)
+                    col += columns if full_width else 1
+                    if col == columns:
+                        row, col = row + 1, 0
+
+        def _update_region(self, _event):
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+        def _cleanup(self, event):
+            if event.widget == self:
+                for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                    self.unbind_class(self.wheel_tag, sequence)
 
     class ParamsPanel(ttk.Frame):
         def __init__(self, master):
@@ -186,17 +276,25 @@ def build_widget(parent):
             self.types = {}    # cfg_key -> python type
             self.widgets = {}
             self.base_states = {}
+            self.notebook = ttk.Notebook(self)
+            self.notebook.pack(fill="both", expand=True)
+            self.notebook.enable_traversal()
 
             grouped = fields_by_section()
-            for col, section in enumerate(_SECTION_ORDER):
-                box = ttk.LabelFrame(self, text=_SECTION_TITLES[section])
-                box.grid(row=0, column=col, sticky="nw", padx=5, pady=4)
-                ttk.Label(box, text=_SECTION_DESCRIPTIONS[section], wraplength=290).grid(
-                    row=0, column=0, columnspan=2, sticky="w", padx=3, pady=(4, 8)
-                )
-                for r, (cfg_key, attr, typ, default) in enumerate(grouped[section], start=1):
-                    label = ttk.Label(box, text=_LABELS.get(cfg_key, cfg_key))
-                    label.grid(row=r, column=0, sticky="w", padx=3, pady=1)
+            for section in _SECTION_ORDER:
+                page = ParameterPage(self.notebook, _SECTION_DESCRIPTIONS[section])
+                self.notebook.add(page, text=_SECTION_TITLES[section])
+                # 常用参数在前；兼容旧配置的保留项和自动汇总目录放到末尾。
+                fields = sorted(grouped[section], key=lambda f: f[0] in _LEGACY_KEYS | {"4specified-output"})
+                label_width = max(font.nametofont("TkDefaultFont").measure(_LABELS.get(f[0], f[0]))
+                                  for f in fields) + 10
+                for cfg_key, _attr, typ, default in fields:
+                    field = ttk.Frame(page.form)
+                    field.columnconfigure(0, minsize=label_width)
+                    field.columnconfigure(1, weight=1)
+                    page.fields.append((field, cfg_key == "4specified-output"))
+                    label = ttk.Label(field, text=_LABELS.get(cfg_key, cfg_key))
+                    label.grid(row=0, column=0, sticky="w", padx=(0, 8))
                     help_text = _HELP.get(cfg_key, _LABELS.get(cfg_key, cfg_key))
                     if cfg_key in _LEGACY_KEYS:
                         help_text += "\n当前版本不执行此项校正；保留模板值，不可在此启用。"
@@ -206,14 +304,13 @@ def build_widget(parent):
                     state = "readonly" if cfg_key in _INPUT_OWNED_SCALAR_KEYS | _LEGACY_KEYS else "normal"
                     if _options(cfg_key):
                         state = "readonly" if cfg_key in _CHOICES else "normal"
-                        widget = ttk.Combobox(box, textvariable=var, width=16,
+                        widget = ttk.Combobox(field, textvariable=var, width=12,
                                               values=list(_options(cfg_key).values()), state=state)
                     else:
-                        widget = ttk.Entry(box, textvariable=var, width=18, state=state)
-                    widget.grid(
-                        row=r, column=1, sticky="w", padx=3, pady=1
-                    )
+                        widget = ttk.Entry(field, textvariable=var, width=12, state=state)
+                    widget.grid(row=0, column=1, sticky="ew")
                     add_help(widget, help_text)
+                    page.bind_wheel(field)
                     self.entries[cfg_key] = var
                     self.types[cfg_key] = typ
                     self.widgets[cfg_key] = widget

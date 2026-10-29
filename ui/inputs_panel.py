@@ -95,23 +95,37 @@ def matching_gaia_name(gaia_files, obs_month, current_name=""):
     return matches[0] if len(matches) == 1 else ""
 
 
-def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph,
-                             gaia_files):
-    """匹配前核对观测月与历表；GAIA 文件可由用户跨月选择。"""
+def ephemeris_selection_errors(months, selected_eph):
+    """每个目标选一份同月历表，避免把重复文件当成两个目标。"""
     if len(months) != 1:
         return ["无法确认唯一观测月；请按月选择图像目录"]
     month = months[0]
     errors = []
+    if not selected_eph:
+        errors.append(f"{month} 没有选中目标历表")
+    codes = set()
+    for path in selected_eph:
+        code, eph_month = parse_eph_name(path)
+        if eph_month != month:
+            errors.append(f"目标历表与观测月 {month} 不一致：{Path(path).name}")
+        if code in codes:
+            errors.append(f"目标 {code} 选中了多份历表；每个目标请只选一份")
+        codes.add(code)
+    return errors
+
+
+def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph,
+                             gaia_files):
+    """匹配前核对观测月与历表；GAIA 文件可由用户跨月选择。"""
+    errors = ephemeris_selection_errors(months, selected_eph)
+    if len(months) != 1:
+        return errors
+    month = months[0]
     available_codes = {parse_eph_name(path)[0] for path in all_eph}
     selected_codes = {parse_eph_name(path)[0] for path in selected_eph}
     missing = sorted(available_codes - selected_codes)
     if missing and auto_eph:
         errors.append(f"{month} 缺少目标历表：{', '.join(missing)}")
-    if not selected_eph:
-        errors.append(f"{month} 没有选中目标历表")
-    for path in selected_eph:
-        if parse_eph_name(path)[1] != month:
-            errors.append(f"目标历表与观测月 {month} 不一致：{Path(path).name}")
     if not gaia_name:
         errors.append(f"{month} 没有选中 GAIA 星表")
     elif gaia_name not in gaia_file_names(gaia_files):
@@ -249,7 +263,89 @@ def relpath(repo_root, path):
 def build_widget(parent, repo_root, on_change, input_root=None, output_root=None):
     """构造输入面板（延迟导入 tkinter，便于纯函数无 GUI 测试）。"""
     import tkinter as tk
-    from tkinter import ttk
+    from tkinter import messagebox, ttk
+
+    class EphemerisDialog(tk.Toplevel):
+        def __init__(self, panel):
+            super().__init__(panel)
+            self.title("选择目标历表（可多选）")
+            self.transient(panel.winfo_toplevel())
+            self.geometry("620x400")
+            self.minsize(480, 300)
+            self.columnconfigure(0, weight=1)
+            self.rowconfigure(1, weight=1)
+            self.panel = panel
+            month = panel._obs_months[0]
+            heading = ttk.Label(self, text=f"观测月：{month}。勾选本次处理的目标，每个目标选择一份历表。",
+                                padding=10, width=1, wraplength=580)
+            heading.grid(row=0, column=0, columnspan=2, sticky="ew")
+            heading.bind("<Configure>", lambda event: heading.configure(wraplength=max(1, event.width - 20)))
+            canvas = tk.Canvas(self, width=1, highlightthickness=0, yscrollincrement=18)
+            canvas.grid(row=1, column=0, sticky="nsew", padx=(10, 0))
+            scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+            scrollbar.grid(row=1, column=1, sticky="ns", padx=(0, 10))
+            canvas.configure(yscrollcommand=scrollbar.set)
+            choices = ttk.Frame(canvas)
+            window = canvas.create_window((0, 0), window=choices, anchor="nw")
+            canvas.bind("<Configure>", lambda event: canvas.itemconfigure(window, width=event.width))
+            choices.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+            def scroll(event):
+                if event.num in (4, 5):
+                    units = -3 if event.num == 4 else 3
+                else:
+                    units = -int(event.delta / 120) if abs(event.delta) >= 120 else -int(event.delta)
+                if canvas.yview() != (0.0, 1.0):
+                    canvas.yview_scroll(units, "units")
+                return "break"
+
+            self.variables = {}
+            selected = set(eph_file_names(panel._eph_files))
+            for name in eph_file_names(panel._all_eph_files):
+                same_month = parse_eph_name(name)[1] == month
+                var = tk.BooleanVar(value=name in selected)
+                self.variables[name] = var
+                checkbox = ttk.Checkbutton(choices, variable=var, command=self._update_count,
+                    text=name if same_month else f"{name}（与观测月不符）",
+                    state="normal" if same_month else "disabled")
+                checkbox.pack(fill="x", pady=3)
+            for widget in (canvas, choices, *choices.winfo_children()):
+                for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                    widget.bind(sequence, scroll)
+            controls = ttk.Frame(self, padding=10)
+            controls.grid(row=2, column=0, columnspan=2, sticky="ew")
+            ttk.Button(controls, text="选择本月全部目标", command=self._select_month).pack(side="left")
+            ttk.Button(controls, text="清空", command=lambda: self._set_checked([])).pack(side="left", padx=6)
+            self.count = ttk.Label(controls)
+            self.count.pack(side="left")
+            actions = ttk.Frame(self, padding=(10, 0, 10, 10))
+            actions.grid(row=3, column=0, columnspan=2, sticky="e")
+            ttk.Button(actions, text="取消", command=self.destroy).pack(side="left", padx=6)
+            ttk.Button(actions, text="应用选择", command=self._apply).pack(side="left")
+            self._update_count()
+            self.bind("<Escape>", lambda _e: self.destroy())
+            self.bind("<Return>", lambda _e: self._apply())
+            self.grab_set()
+
+        def _update_count(self):
+            self.count.configure(text=f"已选 {sum(var.get() for var in self.variables.values())} 份历表")
+
+        def _set_checked(self, names):
+            for name, var in self.variables.items():
+                var.set(name in names)
+            self._update_count()
+
+        def _select_month(self):
+            self._set_checked(eph_file_names(self.panel._auto_eph_files))
+
+        def _apply(self):
+            names = [name for name, var in self.variables.items() if var.get()]
+            try:
+                self.panel.set_eph_names(names)
+            except ValueError as exc:
+                messagebox.showwarning("历表选择不完整", str(exc), parent=self)
+                return
+            self.destroy()
 
     class InputsPanel(ttk.LabelFrame):
         def __init__(self, master):
@@ -262,8 +358,11 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self.var_target = tk.StringVar()
             self.var_epoch = tk.StringVar()
             self.var_sub = tk.StringVar()
-            self.var_eph = tk.StringVar()
+            self.var_eph_summary = tk.StringVar(value="（请先选择目标和观测期）")
             self.var_gaia = tk.StringVar()
+            self._eph_mode = "auto"
+            self._manual_eph_names = []
+            self._eph_dialog = None
             self._all_eph_files = []
             self._auto_eph_files = []
             self._eph_files = []      # 每目标挑选后的历表
@@ -298,10 +397,17 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
 
             row += 1
             ttk.Label(fields, text="目标历表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
-            self.cb_eph = ttk.Combobox(fields, textvariable=self.var_eph,
-                                       state="readonly", width=46)
-            self.cb_eph.grid(row=row, column=1, columnspan=3, sticky="w", padx=4)
-            self.cb_eph.bind("<<ComboboxSelected>>", self._on_eph)
+            eph_controls = ttk.Frame(fields)
+            eph_controls.grid(row=row, column=1, columnspan=5, sticky="ew", padx=4)
+            eph_controls.columnconfigure(0, weight=1)
+            ttk.Entry(eph_controls, textvariable=self.var_eph_summary, state="readonly",
+                      width=46).grid(row=0, column=0, sticky="ew")
+            self.btn_eph = ttk.Button(eph_controls, text="选择历表…（可多选）",
+                                      command=self._choose_eph, state="disabled")
+            self.btn_eph.grid(row=0, column=1, padx=6)
+            self.btn_auto_eph = ttk.Button(eph_controls, text=_AUTO_EPH_CHOICE,
+                                           command=self.set_eph_names, state="disabled")
+            self.btn_auto_eph.grid(row=0, column=2)
 
             row += 1
             ttk.Label(fields, text="GAIA 星表").grid(row=row, column=0, sticky="w", padx=4, pady=3)
@@ -332,15 +438,16 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
         def _on_target(self, _e=None):
             self.var_epoch.set("")
             self.var_sub.set("")
-            self.var_eph.set("")
             self.var_gaia.set("")
             self.cb_sub["values"] = []
-            self.cb_eph["values"] = []
             self.cb_gaia["values"] = []
+            self._eph_mode = "auto"
+            self._manual_eph_names = []
             self._all_eph_files = []
             self._auto_eph_files = []
             self._eph_files = []
             self._gaia_files = []
+            self._apply_eph_choice()
             self.cb_epoch["values"] = list_epochs(repo_root, self.var_target.get(), self.input_root)
             self._fitspath_candidate = None
             self._obs_months = []
@@ -351,6 +458,8 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             t, e = self.var_target.get(), self.var_epoch.get()
             if not (t and e):
                 return
+            self._eph_mode = "auto"
+            self._manual_eph_names = []
             base = images_root(repo_root, self.input_root) / t / e
             self.cb_sub["values"] = [_ALL_DAYS_CHOICE] + data_subdir_choices(base)
             self.var_sub.set(_ALL_DAYS_CHOICE)
@@ -359,10 +468,33 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
         def _on_sub(self, _e=None):
             self._resolve()
 
-        def _on_eph(self, _e=None):
+        def set_eph_names(self, names=None):
+            """None 恢复自动匹配；列表提交手动多选，失败时保留原选择。"""
+            if names is None:
+                self._eph_mode = "auto"
+            else:
+                names = list(dict.fromkeys(names))
+                unknown = set(names) - set(eph_file_names(self._all_eph_files))
+                if unknown:
+                    raise ValueError("历表不在当前数据目录中：" + ", ".join(sorted(unknown)))
+                selected = resolve_eph_names(self._all_eph_files, names)
+                errors = ephemeris_selection_errors(self._obs_months, selected)
+                if errors:
+                    raise ValueError("\n".join(errors))
+                self._manual_eph_names = names
+                self._eph_mode = "manual"
             self._apply_eph_choice()
             self._update_preview()
             self.on_change()
+
+        def _choose_eph(self):
+            if len(self._obs_months) != 1:
+                messagebox.showwarning("请先选择观测月", "请先选择同一月份的观测图像。", parent=self)
+                return
+            if self._eph_dialog is not None and self._eph_dialog.winfo_exists():
+                self._eph_dialog.lift()
+                return
+            self._eph_dialog = EphemerisDialog(self)
 
         def _candidate_path(self):
             t, e, s = self.var_target.get(), self.var_epoch.get(), self.var_sub.get()
@@ -381,16 +513,16 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                     days[0] if len(days) == 1 and days[0].parent == cand else cand
                 )
                 self._preview_days = days
-                self._obs_months = observation_months(days)
+                months = observation_months(days)
+                if months != self._obs_months:
+                    self._eph_mode = "auto"
+                    self._manual_eph_names = []
+                self._obs_months = months
                 t, e = self.var_target.get(), self.var_epoch.get()
                 eph_all, gaia, cat_dir = scan_catalog(repo_root, t, e, self.input_root)
                 self._all_eph_files = eph_all
                 obs_month = self._obs_months[0] if len(self._obs_months) == 1 else None
                 self._auto_eph_files, _count = select_eph(eph_all, obs_month)
-                eph_choices = [_AUTO_EPH_CHOICE] + eph_file_names(eph_all)
-                self.cb_eph["values"] = eph_choices
-                if self.var_eph.get() not in eph_choices:
-                    self.var_eph.set(_AUTO_EPH_CHOICE if eph_all else "")
                 self._apply_eph_choice()
                 self._gaia_files = gaia
                 gaia_choices = gaia_file_names(gaia)
@@ -402,14 +534,15 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._fitspath_candidate = None
                 self._preview_days = []
                 self._obs_months = []
-                self.var_eph.set("")
                 self.var_gaia.set("")
-                self.cb_eph["values"] = []
                 self.cb_gaia["values"] = []
+                self._eph_mode = "auto"
+                self._manual_eph_names = []
                 self._all_eph_files = []
                 self._auto_eph_files = []
                 self._eph_files = []
                 self._gaia_files = []
+                self._apply_eph_choice()
                 self.preview.config(
                     text="当前目录未找到观测图像，请选择具体月份或观测日。"
                          if subdirs else "当前目录没有原始 FITS 图像，请检查数据位置。",
@@ -418,12 +551,20 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self.on_change()
 
         def _apply_eph_choice(self):
-            choice = self.var_eph.get()
-            if choice == _AUTO_EPH_CHOICE:
+            if self._eph_mode == "auto":
                 self._eph_files = list(self._auto_eph_files)
             else:
-                self._eph_files = resolve_eph_names(self._all_eph_files, [choice])
+                self._eph_files = resolve_eph_names(self._all_eph_files, self._manual_eph_names)
             self._obj_total = len(self._eph_files)
+            names = eph_file_names(self._eph_files)
+            mode = _AUTO_EPH_CHOICE if self._eph_mode == "auto" else "手动多选"
+            summary = f"{mode} · 已选 {len(names)} 份"
+            if names:
+                summary += "：" + ", ".join(names[:2]) + (" …" if len(names) > 2 else "")
+            self.var_eph_summary.set(summary)
+            state = "normal" if self._all_eph_files else "disabled"
+            self.btn_eph.configure(state=state)
+            self.btn_auto_eph.configure(state=state)
 
         def _update_preview(self):
             if self._fitspath_candidate is None:
@@ -455,7 +596,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self._all_eph_files,
                 self._eph_files,
                 self.var_gaia.get(),
-                self.var_eph.get() == _AUTO_EPH_CHOICE,
+                self._eph_mode == "auto",
                 self._gaia_files,
             )
 

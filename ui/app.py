@@ -88,23 +88,11 @@ class App(ttk.Frame):
         self.btn_stop.pack(side="left", padx=(0, 6))
         ttk.Button(bar, text="打开输出目录", command=self._open_output).pack(side="left")
 
-        # 参数表单（横向和纵向可滚）
-        pbox = ttk.LabelFrame(self, text="处理参数：图像预处理 → 星点检测 → 坐标计算 → 位置偏差统计")
+        # 按阶段切换参数，表单在页内自适应宽度。
+        pbox = ttk.LabelFrame(self, text="处理参数（按阶段切换，修改会保留）")
         pbox.pack(fill="x", pady=(0, 6))
-        canvas = tk.Canvas(pbox, height=245, highlightthickness=0)
-        vbar = ttk.Scrollbar(pbox, orient="vertical", command=canvas.yview)
-        hbar = ttk.Scrollbar(pbox, orient="horizontal", command=canvas.xview)
-        canvas.configure(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
-        pbox.columnconfigure(0, weight=1)
-        pbox.rowconfigure(0, weight=1)
-        canvas.grid(row=0, column=0, sticky="ew")
-        vbar.grid(row=0, column=1, sticky="ns")
-        hbar.grid(row=1, column=0, sticky="ew")
-        self.params = params_panel.build_widget(canvas)
-        canvas.create_window((0, 0), window=self.params, anchor="nw")
-        self.params.bind("<Configure>",
-                         lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        self._bind_mousewheel(canvas)
+        self.params = params_panel.build_widget(pbox)
+        self.params.pack(fill="both", expand=True, padx=4, pady=4)
         self._load_selected_cfg(log=False)
 
         # 下方：日志 + 结果
@@ -207,28 +195,6 @@ class App(ttk.Frame):
                 self._append(f"已从 {cfg_name} 载入非路径参数。")
         else:
             messagebox.showwarning("提示", f"未找到 {cfg_path}")
-
-    def _bind_mousewheel(self, canvas):
-        def on_mousewheel(event):
-            direction = -1 if event.delta > 0 else 1
-            if event.state & 0x1:
-                canvas.xview_scroll(direction, "units")
-            else:
-                canvas.yview_scroll(direction, "units")
-            return "break"
-
-        def on_linux_up(_event):
-            canvas.yview_scroll(-3, "units")
-            return "break"
-
-        def on_linux_down(_event):
-            canvas.yview_scroll(3, "units")
-            return "break"
-
-        canvas.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", on_mousewheel))
-        canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
-        canvas.bind("<Button-4>", on_linux_up)
-        canvas.bind("<Button-5>", on_linux_down)
 
     # ── 运行 ──
     def _run(self):
