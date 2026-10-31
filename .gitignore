@@ -54,6 +54,7 @@ Thumbs.db
 
 # ===== UI 生成的临时配置 =====
 inputs/configs/_ui_run.cfg
+inputs/catalogs/_downloaded/
 
 # ===== Fortran build artifacts =====
 *.o
@@ -98,6 +99,10 @@ inputs/images/
 !/tests/test_parallel_memory.py
 !/tests/test_screenshot_regressions.py
 !/tests/test_rotation_acquisition.py
+!/tests/test_reference_preparation.py
+!/tests/test_reference_providers.py
+!/tests/test_reference_ui.py
+!/tests/reference_fixtures.py
 
 # 本地演示项目和逐次试算结果
 /ppt_projects/

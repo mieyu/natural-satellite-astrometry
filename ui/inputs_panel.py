@@ -115,20 +115,20 @@ def ephemeris_selection_errors(months, selected_eph):
 
 
 def catalog_selection_errors(months, all_eph, selected_eph, gaia_name, auto_eph,
-                             gaia_files):
+                             gaia_files, *, require_eph=True, require_gaia=True):
     """匹配前核对观测月与历表；GAIA 文件可由用户跨月选择。"""
-    errors = ephemeris_selection_errors(months, selected_eph)
+    errors = ephemeris_selection_errors(months, selected_eph) if require_eph else []
     if len(months) != 1:
-        return errors
+        return ["无法确认唯一观测月；请按月选择图像目录"]
     month = months[0]
     available_codes = {parse_eph_name(path)[0] for path in all_eph}
     selected_codes = {parse_eph_name(path)[0] for path in selected_eph}
     missing = sorted(available_codes - selected_codes)
-    if missing and auto_eph:
+    if missing and auto_eph and require_eph:
         errors.append(f"{month} 缺少目标历表：{', '.join(missing)}")
-    if not gaia_name:
+    if require_gaia and not gaia_name:
         errors.append(f"{month} 没有选中 GAIA 星表")
-    elif gaia_name not in gaia_file_names(gaia_files):
+    elif require_gaia and gaia_name not in gaia_file_names(gaia_files):
         errors.append(f"GAIA 星表不在当前数据目录中：{gaia_name}")
     return errors
 
@@ -264,6 +264,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
     """构造输入面板（延迟导入 tkinter，便于纯函数无 GUI 测试）。"""
     import tkinter as tk
     from tkinter import messagebox, ttk
+    from ui.reference_panel import ReferencePanel, TARGETS
 
     class EphemerisDialog(tk.Toplevel):
         def __init__(self, panel):
@@ -414,7 +415,12 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self.cb_gaia = ttk.Combobox(fields, textvariable=self.var_gaia,
                                         state="readonly", width=46)
             self.cb_gaia.grid(row=row, column=1, columnspan=3, sticky="w", padx=4)
-            self.cb_gaia.bind("<<ComboboxSelected>>", lambda _e: self._update_preview())
+            self.cb_gaia.bind("<<ComboboxSelected>>", self._on_gaia)
+            self.gaia_download_label = ttk.Label(fields, text="自动按全部目标轨迹确定 Gaia DR3 天区", width=46)
+            self._gaia_row = row
+
+            self.references = ReferencePanel(self, self._on_reference_change)
+            self.references.pack(fill="x", pady=(4, 0))
 
             self.preview = ttk.Label(self, text="（请选择目标/观测期）", foreground="#555",
                                      width=1, anchor="w", justify="left", wraplength=400)
@@ -447,6 +453,8 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             self._auto_eph_files = []
             self._eph_files = []
             self._gaia_files = []
+            self.references.download_targets = []
+            self._fitspath_candidate = None
             self._apply_eph_choice()
             self.cb_epoch["values"] = list_epochs(repo_root, self.var_target.get(), self.input_root)
             self._fitspath_candidate = None
@@ -467,6 +475,41 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
 
         def _on_sub(self, _e=None):
             self._resolve()
+
+        def _on_gaia(self, _e=None):
+            self._update_preview()
+            self.on_change()
+
+        def _on_reference_change(self):
+            self._apply_eph_choice()
+            self._update_preview()
+            self.on_change()
+
+        def set_download_targets(self, targets):
+            if not targets or len(set(targets)) != len(targets) or any(t not in TARGETS for t in targets):
+                raise ValueError('请选择不重复的有效卫星目标。')
+            self.references.download_targets = list(targets)
+            self.references.changed()
+
+        def _sync_sources(self):
+            if not hasattr(self, 'references'):
+                return
+            if self.references.auto_eph:
+                names = self.references.download_targets
+                self.var_eph_summary.set(f'自动下载 · {len(names)} 个目标：' + ', '.join(names))
+                self.btn_eph.configure(text='选择目标…（可多选）',
+                                       state='normal' if self._fitspath_candidate is not None else 'disabled')
+                self.btn_auto_eph.grid_remove()
+            else:
+                self.btn_eph.configure(text='选择历表…（可多选）',
+                                       state='normal' if self._all_eph_files else 'disabled')
+                self.btn_auto_eph.grid()
+            if self.references.auto_gaia:
+                self.cb_gaia.grid_remove()
+                self.gaia_download_label.grid(row=self._gaia_row, column=1, columnspan=3, sticky='w', padx=4)
+            else:
+                self.gaia_download_label.grid_remove()
+                self.cb_gaia.grid()
 
         def set_eph_names(self, names=None):
             """None 恢复自动匹配；列表提交手动多选，失败时保留原选择。"""
@@ -490,6 +533,10 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
         def _choose_eph(self):
             if len(self._obs_months) != 1:
                 messagebox.showwarning("请先选择观测月", "请先选择同一月份的观测图像。", parent=self)
+                return
+            if self.references.auto_eph:
+                system = self.var_target.get()[:1].upper()
+                self.references.choose_targets(system)
                 return
             if self._eph_dialog is not None and self._eph_dialog.winfo_exists():
                 self._eph_dialog.lift()
@@ -529,6 +576,13 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                 self.cb_gaia["values"] = gaia_choices
                 self.var_gaia.set(matching_gaia_name(
                     gaia, obs_month, self.var_gaia.get()))
+                if not self.references.download_targets:
+                    choices = [parse_eph_name(p)[0] for p in self._eph_files]
+                    if not choices and self.var_target.get() in TARGETS:
+                        choices = [self.var_target.get()]
+                    self.references.download_targets = [c for c in choices if c in TARGETS]
+                self.references.infer_station(self._eph_files)
+                self._sync_sources()
                 self._update_preview()
             else:
                 self._fitspath_candidate = None
@@ -565,21 +619,23 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             state = "normal" if self._all_eph_files else "disabled"
             self.btn_eph.configure(state=state)
             self.btn_auto_eph.configure(state=state)
+            self._sync_sources()
 
         def _update_preview(self):
             if self._fitspath_candidate is None:
                 return
             day_names = ", ".join(d.parent.name for d in self._preview_days[:6])
-            eph_names = ", ".join(Path(p).name for p in self._eph_files[:4])
-            if len(self._eph_files) > 4:
+            active = self.references.download_targets if self.references.auto_eph else self._eph_files
+            eph_names = ", ".join(Path(p).name for p in active[:4])
+            if len(active) > 4:
                 eph_names += " ..."
             gaia_count = len(self.cb_gaia["values"])
-            selected_gaia = self.var_gaia.get()
+            selected_gaia = '自动下载 Gaia DR3' if self.references.auto_gaia else self.var_gaia.get()
             issues = self.selection_errors("match")
             self.preview.config(
                 text=f"✓ 解析到 {len(self._preview_days)} 个观测日："
                      f"{day_names}{' ...' if len(self._preview_days) > 6 else ''}"
-                     f"  |  目标数 {self._obj_total}，历表 {len(self._eph_files)} 个"
+                     f"  |  目标数 {len(active)}，{'待下载历表' if self.references.auto_eph else '历表'} {len(active)} 个"
                      f"{f'：{eph_names}' if eph_names else ''}"
                      f"，GAIA 已选 {1 if selected_gaia else 0}/{gaia_count}"
                      f"{f'：{selected_gaia}' if selected_gaia else ''}"
@@ -591,14 +647,19 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
             """匹配前核对观测月与所选历表；其他步骤不依赖这些星表。"""
             if step not in {"all", "match"}:
                 return []
-            return catalog_selection_errors(
+            errors = catalog_selection_errors(
                 self._obs_months,
                 self._all_eph_files,
                 self._eph_files,
                 self.var_gaia.get(),
                 self._eph_mode == "auto",
                 self._gaia_files,
+                require_eph=not self.references.auto_eph,
+                require_gaia=not self.references.auto_gaia,
             )
+            if self.references.auto_eph and not self.references.download_targets:
+                errors.append('请通过“选择目标”指定需要下载历表的卫星，可多选。')
+            return errors
 
         # —— 对外取值 ——
         def get_selection(self):
@@ -612,7 +673,7 @@ def build_widget(parent, repo_root, on_change, input_root=None, output_root=None
                                 if self.var_gaia.get() else "",
                 "output_dir": relpath(repo_root, default_output_dir(repo_root, t, e, self.output_root)),
                 "run_manifest_dir": relpath(repo_root, self.output_root / "runs"),
-                "obj_total": self._obj_total,
+                "obj_total": len(self.references.download_targets) if self.references.auto_eph else self._obj_total,
             }
 
     return InputsPanel(parent)

@@ -98,7 +98,8 @@ def list_fits(fitspath) -> list[Path]:
     return sorted(
         p
         for p in candidates
-        if not p.name.endswith("_n.fit") and not p.name.endswith("_n.fits")
+        if not p.name.startswith('._')
+        and not p.name.endswith("_n.fit") and not p.name.endswith("_n.fits")
     )
 
 

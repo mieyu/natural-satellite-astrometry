@@ -1,0 +1,927 @@
+{
+  "M1": {
+    "satellite": "4001",
+    "name": "M1 Phobos",
+    "system": "M"
+  },
+  "M2": {
+    "satellite": "4002",
+    "name": "M2 Deimos",
+    "system": "M"
+  },
+  "M0": {
+    "satellite": "4000",
+    "name": "Center of Mars",
+    "system": "M"
+  },
+  "J1": {
+    "satellite": "5001",
+    "name": "J1 - Io",
+    "system": "J"
+  },
+  "J2": {
+    "satellite": "5002",
+    "name": "J2 - Europe",
+    "system": "J"
+  },
+  "J3": {
+    "satellite": "5003",
+    "name": "J3 - Ganymede",
+    "system": "J"
+  },
+  "J4": {
+    "satellite": "5004",
+    "name": "J4 - Callisto",
+    "system": "J"
+  },
+  "J5": {
+    "satellite": "5005",
+    "name": "J5 - Amalthea",
+    "system": "J"
+  },
+  "J14": {
+    "satellite": "5006",
+    "name": "J14 - Thebe",
+    "system": "J"
+  },
+  "J15": {
+    "satellite": "5007",
+    "name": "J15 - Adrastea",
+    "system": "J"
+  },
+  "J16": {
+    "satellite": "5008",
+    "name": "J16 - Metis",
+    "system": "J"
+  },
+  "J0": {
+    "satellite": "5000",
+    "name": "Jupiter center",
+    "system": "J"
+  },
+  "J_BARYCENTER": {
+    "satellite": "5999",
+    "name": "Jovian system barycenter",
+    "system": "J"
+  },
+  "J6": {
+    "satellite": "10001",
+    "name": "J6 Himalia",
+    "system": "J"
+  },
+  "J7": {
+    "satellite": "10002",
+    "name": "J7 Elara",
+    "system": "J"
+  },
+  "J8": {
+    "satellite": "10003",
+    "name": "J8 Pasiphae",
+    "system": "J"
+  },
+  "J9": {
+    "satellite": "10004",
+    "name": "J9 Sinope",
+    "system": "J"
+  },
+  "J10": {
+    "satellite": "10005",
+    "name": "J10 Lysithea",
+    "system": "J"
+  },
+  "J11": {
+    "satellite": "10006",
+    "name": "J11 Carme",
+    "system": "J"
+  },
+  "J12": {
+    "satellite": "10007",
+    "name": "J12 Ananke",
+    "system": "J"
+  },
+  "J13": {
+    "satellite": "10008",
+    "name": "J13 Leda",
+    "system": "J"
+  },
+  "J17": {
+    "satellite": "10009",
+    "name": "J17 Callirrhoe",
+    "system": "J"
+  },
+  "J18": {
+    "satellite": "10010",
+    "name": "J18 Themisto",
+    "system": "J"
+  },
+  "J19": {
+    "satellite": "10011",
+    "name": "J19 Megaclite",
+    "system": "J"
+  },
+  "J20": {
+    "satellite": "10012",
+    "name": "J20 Taygete",
+    "system": "J"
+  },
+  "J21": {
+    "satellite": "10013",
+    "name": "J21 Chaldene",
+    "system": "J"
+  },
+  "J22": {
+    "satellite": "10014",
+    "name": "J22 Harpalyke",
+    "system": "J"
+  },
+  "J23": {
+    "satellite": "10015",
+    "name": "J23 Kalyke",
+    "system": "J"
+  },
+  "J24": {
+    "satellite": "10016",
+    "name": "J24 Iocaste",
+    "system": "J"
+  },
+  "J25": {
+    "satellite": "10017",
+    "name": "J25 Erinome",
+    "system": "J"
+  },
+  "J26": {
+    "satellite": "10018",
+    "name": "J26 Isonoe",
+    "system": "J"
+  },
+  "J27": {
+    "satellite": "10019",
+    "name": "J27 Praxidike",
+    "system": "J"
+  },
+  "J28": {
+    "satellite": "10020",
+    "name": "J28 Autonoe S/2001_J1",
+    "system": "J"
+  },
+  "J29": {
+    "satellite": "10021",
+    "name": "J29 Thyone S/2001_J2",
+    "system": "J"
+  },
+  "J30": {
+    "satellite": "10022",
+    "name": "J30 Hermippe S/2001_J3",
+    "system": "J"
+  },
+  "J31": {
+    "satellite": "10023",
+    "name": "J31 Aitne S/2001_J11",
+    "system": "J"
+  },
+  "J32": {
+    "satellite": "10024",
+    "name": "J32 Eurydome S/2001_J4",
+    "system": "J"
+  },
+  "J33": {
+    "satellite": "10025",
+    "name": "J33 Euanthe S/2001_J7",
+    "system": "J"
+  },
+  "J34": {
+    "satellite": "10026",
+    "name": "J34 Euporie S/2001_J10",
+    "system": "J"
+  },
+  "J35": {
+    "satellite": "10027",
+    "name": "J35 Orthosie S/2001_J9",
+    "system": "J"
+  },
+  "J36": {
+    "satellite": "10028",
+    "name": "J36 Sponde S/2001_J5",
+    "system": "J"
+  },
+  "J37": {
+    "satellite": "10029",
+    "name": "J37 Kale S/2001_J8",
+    "system": "J"
+  },
+  "J38": {
+    "satellite": "10030",
+    "name": "J38 Pasithee S/2001_J6",
+    "system": "J"
+  },
+  "J43": {
+    "satellite": "10031",
+    "name": "J43 Arche S/2002_J1",
+    "system": "J"
+  },
+  "J47": {
+    "satellite": "10032",
+    "name": "J47 Eukelade S/2003_J1",
+    "system": "J"
+  },
+  "S_2003_J2": {
+    "satellite": "10033",
+    "name": "S/2003_J2",
+    "system": "J"
+  },
+  "S_2003_J3": {
+    "satellite": "10034",
+    "name": "S/2003_J3",
+    "system": "J"
+  },
+  "S_2003_J4": {
+    "satellite": "10035",
+    "name": "S/2003_J4",
+    "system": "J"
+  },
+  "S_2003_J5": {
+    "satellite": "10036",
+    "name": "S/2003_J5",
+    "system": "J"
+  },
+  "J45": {
+    "satellite": "10037",
+    "name": "J45 Helike S/2003_J6",
+    "system": "J"
+  },
+  "J41": {
+    "satellite": "10038",
+    "name": "J41 Aoede S/2003_J7",
+    "system": "J"
+  },
+  "J39": {
+    "satellite": "10039",
+    "name": "J39 Hegemone S/2003_J8",
+    "system": "J"
+  },
+  "S_2003_J9": {
+    "satellite": "10040",
+    "name": "S/2003_J9",
+    "system": "J"
+  },
+  "S_2003_J10": {
+    "satellite": "10041",
+    "name": "S/2003_J10",
+    "system": "J"
+  },
+  "J44": {
+    "satellite": "10042",
+    "name": "J44 Kallichore S/2003_J11",
+    "system": "J"
+  },
+  "S_2003_J12": {
+    "satellite": "10043",
+    "name": "S/2003_J12",
+    "system": "J"
+  },
+  "J48": {
+    "satellite": "10044",
+    "name": "J48 Cyllene S/2003_J13",
+    "system": "J"
+  },
+  "J49": {
+    "satellite": "10045",
+    "name": "J49 Kore S/2003_J14",
+    "system": "J"
+  },
+  "S_2003_J15": {
+    "satellite": "10046",
+    "name": "S/2003_J15",
+    "system": "J"
+  },
+  "S_2003_J16": {
+    "satellite": "10047",
+    "name": "S/2003_J16",
+    "system": "J"
+  },
+  "J50": {
+    "satellite": "10048",
+    "name": "J50 Herse S/2003_J17",
+    "system": "J"
+  },
+  "S_2003_J18": {
+    "satellite": "10049",
+    "name": "S/2003_J18",
+    "system": "J"
+  },
+  "S_2003_J19": {
+    "satellite": "10050",
+    "name": "S/2003_J19",
+    "system": "J"
+  },
+  "J46": {
+    "satellite": "10051",
+    "name": "J46 Carpo S/2003_J20",
+    "system": "J"
+  },
+  "J40": {
+    "satellite": "10052",
+    "name": "J40 Mneme S/2003_J21",
+    "system": "J"
+  },
+  "J42": {
+    "satellite": "10053",
+    "name": "J42 Thelxinoe S/2003_J22",
+    "system": "J"
+  },
+  "S_2003_J23": {
+    "satellite": "10054",
+    "name": "S/2003_J23",
+    "system": "J"
+  },
+  "S_2000_J11": {
+    "satellite": "10055",
+    "name": "S/2000_J11",
+    "system": "J"
+  },
+  "S_2010_J1": {
+    "satellite": "10056",
+    "name": "S/2010_J1",
+    "system": "J"
+  },
+  "S_2010_J2": {
+    "satellite": "10057",
+    "name": "S/2010_J2",
+    "system": "J"
+  },
+  "S_2011_J1": {
+    "satellite": "10058",
+    "name": "S/2011_J1",
+    "system": "J"
+  },
+  "S_2011_J2": {
+    "satellite": "10059",
+    "name": "S/2011_J2",
+    "system": "J"
+  },
+  "J_BARYCENTER_OUTER": {
+    "satellite": "10000",
+    "name": "Jovian system barycenter",
+    "system": "J"
+  },
+  "S1": {
+    "satellite": "6001",
+    "name": "S1 Mimas",
+    "system": "S"
+  },
+  "S2": {
+    "satellite": "6002",
+    "name": "S2 Enceladus",
+    "system": "S"
+  },
+  "S3": {
+    "satellite": "6003",
+    "name": "S3 Tethys",
+    "system": "S"
+  },
+  "S4": {
+    "satellite": "6004",
+    "name": "S4 Dione",
+    "system": "S"
+  },
+  "S5": {
+    "satellite": "6005",
+    "name": "S5 Rhea",
+    "system": "S"
+  },
+  "S6": {
+    "satellite": "6006",
+    "name": "S6 Titan",
+    "system": "S"
+  },
+  "S7": {
+    "satellite": "6007",
+    "name": "S7 Hyperion",
+    "system": "S"
+  },
+  "S8": {
+    "satellite": "6008",
+    "name": "S8 Iapetus",
+    "system": "S"
+  },
+  "S9": {
+    "satellite": "6009",
+    "name": "S9 Phoebe",
+    "system": "S"
+  },
+  "S10": {
+    "satellite": "6010",
+    "name": "S10 Janus",
+    "system": "S"
+  },
+  "S11": {
+    "satellite": "6011",
+    "name": "S11 Epimetheus",
+    "system": "S"
+  },
+  "S12": {
+    "satellite": "6012",
+    "name": "S12 Helene",
+    "system": "S"
+  },
+  "S13": {
+    "satellite": "6013",
+    "name": "S13 Telesto",
+    "system": "S"
+  },
+  "S14": {
+    "satellite": "6014",
+    "name": "S14 Calypso",
+    "system": "S"
+  },
+  "S15": {
+    "satellite": "6015",
+    "name": "S15 Atlas",
+    "system": "S"
+  },
+  "S16": {
+    "satellite": "6016",
+    "name": "S16 Prometheus",
+    "system": "S"
+  },
+  "S17": {
+    "satellite": "6017",
+    "name": "S17 Pandora",
+    "system": "S"
+  },
+  "S18": {
+    "satellite": "6018",
+    "name": "S18 Pan",
+    "system": "S"
+  },
+  "S19": {
+    "satellite": "6019",
+    "name": "S19 Ymir S/2000 S 1",
+    "system": "S"
+  },
+  "S20": {
+    "satellite": "6020",
+    "name": "S20 Paaliaq S/2000 S 2",
+    "system": "S"
+  },
+  "S21": {
+    "satellite": "6021",
+    "name": "S21 Tarvos S/2000 S 4",
+    "system": "S"
+  },
+  "S22": {
+    "satellite": "6022",
+    "name": "S22 Ijiraq S/2000 S 6",
+    "system": "S"
+  },
+  "S23": {
+    "satellite": "6023",
+    "name": "S23 Suttungr S/2000 S 12",
+    "system": "S"
+  },
+  "S24": {
+    "satellite": "6024",
+    "name": "S24 Kiviuq S/2000 S 5",
+    "system": "S"
+  },
+  "S25": {
+    "satellite": "6025",
+    "name": "S25 Mundilfari S/2000 S 9",
+    "system": "S"
+  },
+  "S26": {
+    "satellite": "6026",
+    "name": "S26 Albiorix S/2000 S 11",
+    "system": "S"
+  },
+  "S27": {
+    "satellite": "6027",
+    "name": "S27 Skathi S/2000 S 8",
+    "system": "S"
+  },
+  "S28": {
+    "satellite": "6028",
+    "name": "S28 Erriapo S/2000 S 10",
+    "system": "S"
+  },
+  "S29": {
+    "satellite": "6029",
+    "name": "S29 Siarnaq S/2000 S 3",
+    "system": "S"
+  },
+  "S30": {
+    "satellite": "6030",
+    "name": "S30 Thrymr S/2000 S 7",
+    "system": "S"
+  },
+  "S31": {
+    "satellite": "6031",
+    "name": "S31 Narvi S/2003 S 1",
+    "system": "S"
+  },
+  "S32": {
+    "satellite": "6044",
+    "name": "S32 Methone",
+    "system": "S"
+  },
+  "S33": {
+    "satellite": "6045",
+    "name": "S33 Pallene",
+    "system": "S"
+  },
+  "S34": {
+    "satellite": "6046",
+    "name": "S34 Polydeuce",
+    "system": "S"
+  },
+  "S_2004_S_7": {
+    "satellite": "6032",
+    "name": "S/2004 S 7",
+    "system": "S"
+  },
+  "S42": {
+    "satellite": "6033",
+    "name": "S42 Fornjot S/2004 S 8",
+    "system": "S"
+  },
+  "S40": {
+    "satellite": "6034",
+    "name": "S40 Farbauti S/2004 S 9",
+    "system": "S"
+  },
+  "S36": {
+    "satellite": "6035",
+    "name": "S36 Aegir S/2004 S 10",
+    "system": "S"
+  },
+  "S37": {
+    "satellite": "6036",
+    "name": "S37 Bebhionn S/2004 S 11",
+    "system": "S"
+  },
+  "S_2004_S_12": {
+    "satellite": "6037",
+    "name": "S/2004 S 12",
+    "system": "S"
+  },
+  "S_2004_S_13": {
+    "satellite": "6038",
+    "name": "S/2004 S 13",
+    "system": "S"
+  },
+  "S43": {
+    "satellite": "6039",
+    "name": "S43 Hati S/2004 S 14",
+    "system": "S"
+  },
+  "S38": {
+    "satellite": "6040",
+    "name": "S38 Bergelmir S/2004 S 15",
+    "system": "S"
+  },
+  "S41": {
+    "satellite": "6041",
+    "name": "S41 Fenrir S/2004 S 16",
+    "system": "S"
+  },
+  "S_2004_S_17": {
+    "satellite": "6042",
+    "name": "S/2004 S 17",
+    "system": "S"
+  },
+  "S39": {
+    "satellite": "6043",
+    "name": "S39 Bestla S/2004 S 18",
+    "system": "S"
+  },
+  "S44": {
+    "satellite": "6047",
+    "name": "S44 Hyrrokkin S/2004 S 19",
+    "system": "S"
+  },
+  "S_2006_S_1": {
+    "satellite": "6048",
+    "name": "S/2006 S 1",
+    "system": "S"
+  },
+  "S45": {
+    "satellite": "6049",
+    "name": "S45 Kari S/2006 S 2",
+    "system": "S"
+  },
+  "S_2006_S_3": {
+    "satellite": "6050",
+    "name": "S/2006 S 3",
+    "system": "S"
+  },
+  "S51": {
+    "satellite": "6051",
+    "name": "S51 Greip S/2006 S 4",
+    "system": "S"
+  },
+  "S46": {
+    "satellite": "6052",
+    "name": "S46 Loge S/2006 S 5",
+    "system": "S"
+  },
+  "S50": {
+    "satellite": "6053",
+    "name": "S50 Jarnsaxa S/2006 S 6",
+    "system": "S"
+  },
+  "S48": {
+    "satellite": "6054",
+    "name": "S48 Surtur S/2006 S 7",
+    "system": "S"
+  },
+  "S47": {
+    "satellite": "6055",
+    "name": "S47 Skoll S/2006 S 8",
+    "system": "S"
+  },
+  "S52": {
+    "satellite": "6056",
+    "name": "S52 Tarqeq S/2007 S 1",
+    "system": "S"
+  },
+  "S_2007_S_2": {
+    "satellite": "6057",
+    "name": "S/2007 S 2",
+    "system": "S"
+  },
+  "S_2007_S_3": {
+    "satellite": "6058",
+    "name": "S/2007 S 3",
+    "system": "S"
+  },
+  "S35": {
+    "satellite": "6059",
+    "name": "S35 Daphnis",
+    "system": "S"
+  },
+  "S49": {
+    "satellite": "6060",
+    "name": "S49 Anthe",
+    "system": "S"
+  },
+  "S0": {
+    "satellite": "6000",
+    "name": "Saturn's center",
+    "system": "S"
+  },
+  "S_BARYCENTER": {
+    "satellite": "6999",
+    "name": "Saturnian system barycenter",
+    "system": "S"
+  },
+  "U1": {
+    "satellite": "7001",
+    "name": "U1 Ariel",
+    "system": "U"
+  },
+  "U2": {
+    "satellite": "7002",
+    "name": "U2 Umbriel",
+    "system": "U"
+  },
+  "U3": {
+    "satellite": "7003",
+    "name": "U3 Titania",
+    "system": "U"
+  },
+  "U4": {
+    "satellite": "7004",
+    "name": "U4 Oberon",
+    "system": "U"
+  },
+  "U5": {
+    "satellite": "7005",
+    "name": "U5 Miranda",
+    "system": "U"
+  },
+  "U6": {
+    "satellite": "7006",
+    "name": "U6 Cordelia",
+    "system": "U"
+  },
+  "U7": {
+    "satellite": "7007",
+    "name": "U7 Ophelia",
+    "system": "U"
+  },
+  "U8": {
+    "satellite": "7008",
+    "name": "U8 Bianca",
+    "system": "U"
+  },
+  "U9": {
+    "satellite": "7009",
+    "name": "U9 Cressida",
+    "system": "U"
+  },
+  "U10": {
+    "satellite": "7010",
+    "name": "U10 Desdemona",
+    "system": "U"
+  },
+  "U11": {
+    "satellite": "7011",
+    "name": "U11 Juliet",
+    "system": "U"
+  },
+  "U12": {
+    "satellite": "7012",
+    "name": "U12 Portia",
+    "system": "U"
+  },
+  "U13": {
+    "satellite": "7013",
+    "name": "U13 Rosalind",
+    "system": "U"
+  },
+  "U14": {
+    "satellite": "7014",
+    "name": "U14 Belinda",
+    "system": "U"
+  },
+  "U15": {
+    "satellite": "7015",
+    "name": "U15 Puck",
+    "system": "U"
+  },
+  "U16": {
+    "satellite": "7016",
+    "name": "U16 Caliban",
+    "system": "U"
+  },
+  "U17": {
+    "satellite": "7017",
+    "name": "U17 Sycorax",
+    "system": "U"
+  },
+  "U18": {
+    "satellite": "7018",
+    "name": "U18 Prospero",
+    "system": "U"
+  },
+  "U19": {
+    "satellite": "7019",
+    "name": "U19 Setebos",
+    "system": "U"
+  },
+  "U20": {
+    "satellite": "7020",
+    "name": "U20 Stephano",
+    "system": "U"
+  },
+  "U21": {
+    "satellite": "7021",
+    "name": "U21 Trinculo S/2001 U 1",
+    "system": "U"
+  },
+  "U24": {
+    "satellite": "7022",
+    "name": "U24 Ferdinand S/2001 U 2",
+    "system": "U"
+  },
+  "U22": {
+    "satellite": "7023",
+    "name": "U22 Francisco S/2001 U 3",
+    "system": "U"
+  },
+  "U23": {
+    "satellite": "7024",
+    "name": "U23 Margaret S/2003 U 3",
+    "system": "U"
+  },
+  "U26": {
+    "satellite": "7025",
+    "name": "U26 Mab S/2003 U 1",
+    "system": "U"
+  },
+  "U27": {
+    "satellite": "7026",
+    "name": "U27 Cupid S/2003 U 2",
+    "system": "U"
+  },
+  "U25": {
+    "satellite": "7027",
+    "name": "U25 Perdita S/1986 U 10",
+    "system": "U"
+  },
+  "U0": {
+    "satellite": "7000",
+    "name": "Center of Uranus",
+    "system": "U"
+  },
+  "U_BARYCENTER": {
+    "satellite": "7999",
+    "name": "Uranian system barycenter",
+    "system": "U"
+  },
+  "N1": {
+    "satellite": "8001",
+    "name": "N1 Triton",
+    "system": "N"
+  },
+  "N2": {
+    "satellite": "8002",
+    "name": "N2 Nereid",
+    "system": "N"
+  },
+  "N3": {
+    "satellite": "8008",
+    "name": "N3 Naiade",
+    "system": "N"
+  },
+  "N4": {
+    "satellite": "8007",
+    "name": "N4 Thalassa",
+    "system": "N"
+  },
+  "N5": {
+    "satellite": "8005",
+    "name": "N5 Despina",
+    "system": "N"
+  },
+  "N6": {
+    "satellite": "8006",
+    "name": "N6 Galatea",
+    "system": "N"
+  },
+  "N7": {
+    "satellite": "8004",
+    "name": "N7 Larissa",
+    "system": "N"
+  },
+  "S_2004_N1": {
+    "satellite": "8014",
+    "name": "S/2004_N1",
+    "system": "N"
+  },
+  "N8": {
+    "satellite": "8003",
+    "name": "N8 Proteus",
+    "system": "N"
+  },
+  "N9": {
+    "satellite": "8009",
+    "name": "N9 Halimede (S/2002_N1)",
+    "system": "N"
+  },
+  "N11": {
+    "satellite": "8010",
+    "name": "N11 Sao (S/2002_N2)",
+    "system": "N"
+  },
+  "N12": {
+    "satellite": "8011",
+    "name": "N12 Laomedeia (S/2002_N3)",
+    "system": "N"
+  },
+  "N13": {
+    "satellite": "8012",
+    "name": "N13 Neso (S/2002_N4)",
+    "system": "N"
+  },
+  "N10": {
+    "satellite": "8013",
+    "name": "N10 Psamathe (S/2003_N1)",
+    "system": "N"
+  },
+  "N0": {
+    "satellite": "8000",
+    "name": "Center of Neptune",
+    "system": "N"
+  },
+  "N_BARYCENTER": {
+    "satellite": "8999",
+    "name": "Neptunian system barycenter",
+    "system": "N"
+  },
+  "P1": {
+    "satellite": "9001",
+    "name": "P1 Charon",
+    "system": "P"
+  },
+  "P2": {
+    "satellite": "9002",
+    "name": "P2 Nix (S/2005 P2)",
+    "system": "P"
+  },
+  "P3": {
+    "satellite": "9003",
+    "name": "P3 Hydra (S/2005 P1)",
+    "system": "P"
+  },
+  "P0": {
+    "satellite": "9004",
+    "name": "Pluto center",
+    "system": "P"
+  },
+  "P_BARYCENTER": {
+    "satellite": "9000",
+    "name": "Pluto-Charon barycenter",
+    "system": "P"
+  }
+}

@@ -199,7 +199,7 @@ def build_widget(parent):
             self.rowconfigure(1, weight=1)
             self.description = ttk.Label(self, text=description, padding=(10, 6))
             self.description.grid(row=0, column=0, columnspan=2, sticky="ew")
-            self.canvas = tk.Canvas(self, width=1, height=228, highlightthickness=0,
+            self.canvas = tk.Canvas(self, width=1, height=200, highlightthickness=0,
                                     yscrollincrement=18)
             self.canvas.grid(row=1, column=0, sticky="nsew")
             self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
